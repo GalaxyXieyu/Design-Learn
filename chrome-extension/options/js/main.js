@@ -6,12 +6,14 @@ import { StorageManager } from './utils/storage.js';
 import { Notification } from './utils/notification.js';
 import { ModelManager } from './components/ModelManager.js';
 import { PromptPreview } from './components/PromptPreview.js';
+import { PromptTemplateManager } from './components/PromptTemplateManager.js';
 
 class OptionsApp {
   constructor() {
     this.storage = new StorageManager();
     this.currentPage = 'models';
     this.modelManager = null;
+    this.templateManager = null;
     this.promptPreview = null;
     this.history = [];
     this.init();
@@ -20,6 +22,8 @@ class OptionsApp {
   async init() {
     await this.initComponents();
     this.bindGlobalEvents();
+    await this.loadExtractOptions();
+    await this.loadGenerateConfig();
     await this.loadStats();
   }
 
@@ -30,8 +34,11 @@ class OptionsApp {
     // 初始化模型管理器
     this.modelManager = new ModelManager();
 
-    // 初始化提示词预览
-    this.promptPreview = new PromptPreview();
+    // 初始化模板管理器
+    this.templateManager = new PromptTemplateManager();
+
+    // 初始化提示词预览（传入模板管理器）
+    this.promptPreview = new PromptPreview(this.templateManager);
   }
 
   /**
@@ -45,7 +52,24 @@ class OptionsApp {
       });
     });
 
-    // 生成配置保存
+    // 提取选项变化自动保存
+    ['extractInlineCSS', 'extractCollectImages', 'extractCollectFonts'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => {
+        this.saveExtractOptions();
+      });
+    });
+    
+    // 生成配置变化自动保存
+    ['includeColors', 'includeTypography', 'includeLayout', 'includeComponents', 'includeAccessibility', 'includeRecommendations', 'language'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          this.saveGenerateConfig();
+        });
+      }
+    });
+    
+    // 生成配置保存按钮（兼容旧版本）
     document.getElementById('saveGenerateConfigBtn')?.addEventListener('click', () => {
       this.saveGenerateConfig();
     });
@@ -89,6 +113,60 @@ class OptionsApp {
     if (page === 'history') {
       this.loadHistory();
       this.loadStats();
+    }
+  }
+
+  /**
+   * 加载提取选项
+   */
+  async loadExtractOptions() {
+    try {
+      const result = await chrome.storage.local.get(['extractOptions']);
+      const options = result.extractOptions || {
+        inlineCSS: true,
+        collectImages: true,
+        collectFonts: true
+      };
+
+      document.getElementById('extractInlineCSS').checked = options.inlineCSS;
+      document.getElementById('extractCollectImages').checked = options.collectImages;
+      document.getElementById('extractCollectFonts').checked = options.collectFonts;
+    } catch (error) {
+      console.error('加载提取选项失败:', error);
+    }
+  }
+
+  /**
+   * 保存提取选项
+   */
+  async saveExtractOptions() {
+    const options = {
+      inlineCSS: document.getElementById('extractInlineCSS').checked,
+      collectImages: document.getElementById('extractCollectImages').checked,
+      collectFonts: document.getElementById('extractCollectFonts').checked
+    };
+
+    await chrome.storage.local.set({ extractOptions: options });
+    Notification.success('提取选项已保存');
+  }
+
+  /**
+   * 加载生成配置
+   */
+  async loadGenerateConfig() {
+    try {
+      const config = await this.storage.getConfig('generateConfig');
+      if (config) {
+        document.getElementById('includeColors').checked = config.includeColors ?? true;
+        document.getElementById('includeTypography').checked = config.includeTypography ?? true;
+        document.getElementById('includeLayout').checked = config.includeLayout ?? true;
+        document.getElementById('includeComponents').checked = config.includeComponents ?? true;
+        document.getElementById('includeAccessibility').checked = config.includeAccessibility ?? true;
+        document.getElementById('includeRecommendations').checked = config.includeRecommendations ?? true;
+        document.getElementById('language').value = config.language || 'zh-CN';
+      }
+    } catch (error) {
+      console.error('加载生成配置失败:', error);
     }
   }
 
@@ -146,8 +224,90 @@ class OptionsApp {
       return;
     }
 
-    list.innerHTML = items.map(item => this.createHistoryItem(item)).join('');
+    // 按域名分组
+    const groupedByDomain = this.groupByDomain(items);
+    list.innerHTML = this.createDomainGroups(groupedByDomain);
     this.bindHistoryEvents();
+  }
+
+  /**
+   * 按域名分组历史记录
+   */
+  groupByDomain(items) {
+    const groups = {};
+    
+    items.forEach(item => {
+      try {
+        const url = new URL(item.url);
+        const domain = url.hostname;
+        
+        if (!groups[domain]) {
+          groups[domain] = {
+            domain,
+            items: [],
+            totalSize: 0
+          };
+        }
+        
+        groups[domain].items.push(item);
+        groups[domain].totalSize += item.html.length + item.css.length;
+      } catch (e) {
+        // 如果 URL 解析失败，归类到 "其他"
+        if (!groups['其他']) {
+          groups['其他'] = {
+            domain: '其他',
+            items: [],
+            totalSize: 0
+          };
+        }
+        groups['其他'].items.push(item);
+      }
+    });
+    
+    // 转换为数组并按记录数量排序
+    return Object.values(groups).sort((a, b) => b.items.length - a.items.length);
+  }
+
+  /**
+   * 创建域名分组 HTML
+   */
+  createDomainGroups(groups) {
+    return groups.map(group => {
+      const isExpanded = this.expandedDomains?.has(group.domain) ?? true;
+      const hasMarkdown = group.items.filter(item => item.markdown).length;
+      const unanalyzed = group.items.filter(item => !item.markdown).length;
+      
+      return `
+        <div class="domain-group" data-domain="${group.domain}">
+          <div class="domain-header">
+            <div class="domain-info" data-action="toggleDomain" data-domain="${group.domain}">
+              <svg class="collapse-icon ${isExpanded ? 'expanded' : ''}" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div>
+                <div class="domain-name">${group.domain}</div>
+                <div class="domain-stats">
+                  <span>${group.items.length} 条记录</span>
+                  <span>${hasMarkdown} 条已分析</span>
+                  <span>${(group.totalSize / 1024).toFixed(2)} KB</span>
+                </div>
+              </div>
+            </div>
+            ${unanalyzed > 0 ? `
+              <button class="domain-analyze-btn" data-action="analyzeAll" data-domain="${group.domain}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>批量分析 (${unanalyzed})</span>
+              </button>
+            ` : ''}
+          </div>
+          <div class="domain-items ${isExpanded ? 'expanded' : ''}">
+            ${group.items.map(item => this.createHistoryItem(item)).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   /**
@@ -196,13 +356,62 @@ class OptionsApp {
    * 绑定历史记录事件
    */
   bindHistoryEvents() {
+    // 初始化展开状态
+    if (!this.expandedDomains) {
+      this.expandedDomains = new Set();
+      // 默认展开所有域名
+      document.querySelectorAll('.domain-group').forEach(group => {
+        this.expandedDomains.add(group.dataset.domain);
+      });
+    }
+
+    // 域名折叠/展开
+    document.querySelectorAll('.domain-info[data-action="toggleDomain"]').forEach(info => {
+      info.addEventListener('click', (e) => {
+        const domain = e.currentTarget.dataset.domain;
+        this.toggleDomain(domain);
+      });
+    });
+
+    // 批量分析按钮
+    document.querySelectorAll('.domain-analyze-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const domain = e.currentTarget.dataset.domain;
+        this.analyzeAllInDomain(domain);
+      });
+    });
+
+    // 历史记录操作按钮
     document.querySelectorAll('.action-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止触发域名折叠
         const action = e.currentTarget.dataset.action;
         const id = e.currentTarget.dataset.id;
         this.handleHistoryAction(action, id);
       });
     });
+  }
+
+  /**
+   * 切换域名展开/折叠状态
+   */
+  toggleDomain(domain) {
+    const group = document.querySelector(`.domain-group[data-domain="${domain}"]`);
+    if (!group) return;
+
+    const items = group.querySelector('.domain-items');
+    const icon = group.querySelector('.collapse-icon');
+    
+    if (this.expandedDomains.has(domain)) {
+      this.expandedDomains.delete(domain);
+      items.classList.remove('expanded');
+      icon.classList.remove('expanded');
+    } else {
+      this.expandedDomains.add(domain);
+      items.classList.add('expanded');
+      icon.classList.add('expanded');
+    }
   }
 
   /**
@@ -248,14 +457,63 @@ class OptionsApp {
   }
 
   /**
+   * 批量分析域名下所有未分析的记录
+   */
+  async analyzeAllInDomain(domain) {
+    const items = this.history.filter(item => {
+      try {
+        const url = new URL(item.url);
+        return url.hostname === domain && !item.markdown;
+      } catch {
+        return domain === '其他' && !item.markdown;
+      }
+    });
+
+    if (items.length === 0) {
+      Notification.info('该域名下没有需要分析的记录');
+      return;
+    }
+
+    Notification.info(`开始批量分析 ${items.length} 条记录...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      try {
+        const result = await this.generateMarkdown(item, true);
+        if (result) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+        console.error('分析失败:', error);
+      }
+    }
+
+    // 刷新显示
+    await this.loadHistory();
+    await this.loadStats();
+
+    if (failCount === 0) {
+      Notification.success(`批量分析完成！成功 ${successCount} 条`);
+    } else {
+      Notification.warning(`批量分析完成！成功 ${successCount} 条，失败 ${failCount} 条`);
+    }
+  }
+
+  /**
    * 生成 Markdown
    */
-  async generateMarkdown(item) {
+  async generateMarkdown(item, silent = false) {
     try {
       const btn = document.querySelector(`.action-btn.primary[data-action="viewMarkdown"][data-id="${item.id}"]`) ||
                   document.querySelector(`.action-btn[data-action="generate"][data-id="${item.id}"]`);
       if (btn) {
         btn.disabled = true;
+        btn.textContent = '分析中...';
       }
 
       const response = await chrome.runtime.sendMessage({
@@ -265,15 +523,28 @@ class OptionsApp {
 
       if (response.success) {
         item.markdown = response.markdown;
-        this.displayHistory(this.history);
-        this.loadStats();
-        const fmt = response.format === 'json' ? '（结构化）' : '（文本）';
-        Notification.success('分析已生成并弹出下载 ' + fmt);
+        if (!silent) {
+          this.displayHistory(this.history);
+          this.loadStats();
+          const fmt = response.format === 'json' ? '（结构化）' : '（文本）';
+          Notification.success('分析已生成并弹出下载 ' + fmt);
+        }
+        return true;
       } else {
-        Notification.error('分析失败：' + response.error);
+        const errorMsg = response.error || '未知错误';
+        if (!silent) {
+          Notification.error('分析失败：' + errorMsg);
+        }
+        console.error('分析失败:', errorMsg);
+        return false;
       }
     } catch (error) {
-      Notification.error('分析失败：' + (error.message || '未知错误'));
+      const errorMsg = error.message || '未知错误';
+      if (!silent) {
+        Notification.error('分析失败：' + errorMsg);
+      }
+      console.error('分析异常:', error);
+      return false;
     } finally {
       const btn = document.querySelector(`.action-btn[data-action="generate"][data-id="${item.id}"]`);
       if (btn) btn.disabled = false;

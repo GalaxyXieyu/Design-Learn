@@ -11,36 +11,48 @@ class PopupController {
   }
   
   async init() {
-    // 获取当前标签页
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    this.currentTab = tab;
-    
-    // 显示页面信息
-    this.displayPageInfo(tab);
-    
-    // 加载配置和模型选项
-    await this.loadConfig();
-    
-    // 绑定事件
-    this.bindEvents();
-    
-    // 加载任务列表
-    await this.loadTasks();
-    
-    // 监听后台任务更新
-    this.listenTaskUpdates();
+    try {
+      // 获取当前标签页
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      this.currentTab = tab;
+      
+      // 显示页面信息
+      this.displayPageInfo(tab);
+      
+      // 绑定事件（先绑定事件，确保 DOM 元素存在）
+      this.bindEvents();
+      
+      // 加载配置和模型选项
+      await this.loadConfig();
+      
+      // 加载任务列表
+      await this.loadTasks();
+      
+      // 监听后台任务更新
+      this.listenTaskUpdates();
+    } catch (error) {
+      console.error('初始化失败:', error);
+    }
   }
   
   /**
    * 显示页面信息
    */
   displayPageInfo(tab) {
-    document.getElementById('pageTitle').textContent = tab.title || '未命名页面';
-    try {
-      const url = new URL(tab.url);
-      document.getElementById('pageUrl').textContent = url.hostname;
-    } catch {
-      document.getElementById('pageUrl').textContent = tab.url;
+    const pageTitle = document.getElementById('pageTitle');
+    const pageUrl = document.getElementById('pageUrl');
+    
+    if (pageTitle) {
+      pageTitle.textContent = tab.title || '未命名页面';
+    }
+    
+    if (pageUrl) {
+      try {
+        const url = new URL(tab.url);
+        pageUrl.textContent = url.hostname;
+      } catch {
+        pageUrl.textContent = tab.url;
+      }
     }
   }
   
@@ -62,6 +74,10 @@ class PopupController {
    */
   displayModelSelector(defaultModel, allModels) {
     const container = document.getElementById('modelSelectorContainer');
+    
+    if (!container) {
+      return;
+    }
     
     if (!defaultModel || !defaultModel.apiKey || !defaultModel.modelId) {
       // 显示空状态
@@ -88,9 +104,12 @@ class PopupController {
       `;
       
       // 绑定前往设置按钮
-      document.getElementById('goToSettingsBtn').addEventListener('click', () => {
-        chrome.runtime.openOptionsPage();
-      });
+      const goToSettingsBtn = document.getElementById('goToSettingsBtn');
+      if (goToSettingsBtn) {
+        goToSettingsBtn.addEventListener('click', () => {
+          chrome.runtime.openOptionsPage();
+        });
+      }
     } else {
       // 显示模型卡片
       const modelInitial = defaultModel.name.substring(0, 2).toUpperCase();
@@ -121,25 +140,55 @@ class PopupController {
    * 绑定事件
    */
   bindEvents() {
+    // URL 输入框事件
+    const urlInput = document.getElementById('customUrlInput');
+    const clearBtn = document.getElementById('clearUrlBtn');
+    
+    if (urlInput && clearBtn) {
+      urlInput.addEventListener('input', () => {
+        clearBtn.style.display = urlInput.value ? 'flex' : 'none';
+      });
+      
+      clearBtn.addEventListener('click', () => {
+        urlInput.value = '';
+        clearBtn.style.display = 'none';
+        urlInput.focus();
+      });
+    }
+    
     // 设置按钮
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-      chrome.runtime.openOptionsPage();
-    });
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+      });
+    }
     
     // 任务队列按钮
-    document.getElementById('tasksBtn').addEventListener('click', () => {
-      this.openTasksModal();
-    });
+    const tasksBtn = document.getElementById('tasksBtn');
+    if (tasksBtn) {
+      tasksBtn.addEventListener('click', () => {
+        this.openTasksModal();
+      });
+    } else {
+      console.warn('未找到任务按钮元素 (tasksBtn)');
+    }
     
     // 关闭弹窗
-    document.getElementById('closeModalBtn').addEventListener('click', () => {
-      this.closeTasksModal();
-    });
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', () => {
+        this.closeTasksModal();
+      });
+    }
     
     // 点击弹窗背景关闭
-    document.querySelector('.modal-overlay')?.addEventListener('click', () => {
-      this.closeTasksModal();
-    });
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', () => {
+        this.closeTasksModal();
+      });
+    }
     
     // 模式切换
     document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -149,22 +198,20 @@ class PopupController {
     });
     
     // 立即提取按钮
-    document.getElementById('extractBtn').addEventListener('click', () => {
-      this.extract();
-    });
+    const extractBtn = document.getElementById('extractBtn');
+    if (extractBtn) {
+      extractBtn.addEventListener('click', () => {
+        this.extract();
+      });
+    }
     
     // 清除已完成任务
-    document.getElementById('clearCompletedBtn').addEventListener('click', () => {
-      this.clearCompleted();
-    });
-    
-    // 模型选择变化时保存
-    document.getElementById('modelSelect').addEventListener('change', async (e) => {
-      const result = await chrome.storage.local.get(['aiConfig']);
-      const aiConfig = result.aiConfig || {};
-      aiConfig.modelName = e.target.value;
-      await chrome.storage.local.set({ aiConfig });
-    });
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+    if (clearCompletedBtn) {
+      clearCompletedBtn.addEventListener('click', () => {
+        this.clearCompleted();
+      });
+    }
   }
   
   /**
@@ -183,43 +230,72 @@ class PopupController {
    * 打开任务队列弹窗
    */
   openTasksModal() {
-    document.getElementById('tasksModal').style.display = 'flex';
-    this.loadTasks();
+    const modal = document.getElementById('tasksModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      this.loadTasks();
+    }
   }
   
   /**
    * 关闭任务队列弹窗
    */
   closeTasksModal() {
-    document.getElementById('tasksModal').style.display = 'none';
+    const modal = document.getElementById('tasksModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
   }
   
   /**
    * 提取
    */
   async extract() {
-    const options = {
-      inlineCSS: document.getElementById('inlineCSS').checked,
-      collectImages: document.getElementById('collectImages').checked,
-      collectFonts: document.getElementById('collectFonts').checked
+    // 从存储中获取配置，如果没有则使用默认值（全选）
+    const result = await chrome.storage.local.get(['extractOptions']);
+    const options = result.extractOptions || {
+      inlineCSS: true,
+      collectImages: true,
+      collectFonts: true
     };
     
+    // 获取自定义 URL（如果有）
+    const customUrl = document.getElementById('customUrlInput').value.trim();
+    
     if (this.currentMode === 'current') {
-      await this.extractCurrent(options);
+      await this.extractCurrent(options, customUrl);
     } else {
-      await this.extractAll(options);
+      await this.extractAll(options, customUrl);
     }
   }
   
   /**
    * 提取当前页面
    */
-  async extractCurrent(options) {
+  async extractCurrent(options, customUrl) {
     try {
+      // 使用自定义 URL 或当前标签页 URL
+      const targetUrl = customUrl || this.currentTab?.url;
+      
+      if (!targetUrl) {
+        this.showNotification('error', '无法获取目标 URL');
+        return;
+      }
+      
+      // 验证 URL
+      if (customUrl) {
+        try {
+          new URL(customUrl);
+        } catch (e) {
+          this.showNotification('error', '请输入有效的 URL');
+          return;
+        }
+      }
+      
       // 添加到后台任务
       const response = await chrome.runtime.sendMessage({
         type: 'ADD_TASK',
-        url: this.currentTab.url,
+        url: targetUrl,
         options
       });
       
@@ -236,9 +312,36 @@ class PopupController {
   /**
    * 提取所有页面
    */
-  async extractAll(options) {
+  async extractAll(options, customUrl) {
     try {
+      // 如果有自定义 URL，只提取该 URL，忽略扫描路由
+      if (customUrl) {
+        try {
+          new URL(customUrl);
+        } catch (e) {
+          this.showNotification('error', '请输入有效的 URL');
+          return;
+        }
+        
+        const response = await chrome.runtime.sendMessage({
+          type: 'ADD_TASK',
+          url: customUrl,
+          options
+        });
+        
+        if (response.success) {
+          this.openTasksModal();
+          this.showNotification('success', '任务已添加到队列');
+        }
+        return;
+      }
+      
       // 先扫描路由
+      if (!this.currentTab?.id || !this.currentTab?.url) {
+        this.showNotification('error', '无法获取当前标签页信息');
+        return;
+      }
+      
       const response = await chrome.tabs.sendMessage(this.currentTab.id, {
         action: 'scanRoutes'
       });
@@ -415,23 +518,32 @@ class PopupController {
       if (response.success) {
         const stats = response.stats;
         
-        document.getElementById('totalTasks').textContent = stats.total;
-        document.getElementById('runningTasks').textContent = stats.running;
-        document.getElementById('completedTasks').textContent = stats.completed;
-        document.getElementById('failedTasks').textContent = stats.failed;
+        const totalTasks = document.getElementById('totalTasks');
+        const runningTasks = document.getElementById('runningTasks');
+        const completedTasks = document.getElementById('completedTasks');
+        const failedTasks = document.getElementById('failedTasks');
+        
+        if (totalTasks) totalTasks.textContent = stats.total;
+        if (runningTasks) runningTasks.textContent = stats.running;
+        if (completedTasks) completedTasks.textContent = stats.completed;
+        if (failedTasks) failedTasks.textContent = stats.failed;
         
         // 更新任务徽章
         const badge = document.getElementById('taskBadge');
-        if (stats.running > 0) {
-          badge.textContent = stats.running;
-          badge.style.display = 'flex';
-        } else {
-          badge.style.display = 'none';
+        if (badge) {
+          if (stats.running > 0) {
+            badge.textContent = stats.running;
+            badge.style.display = 'flex';
+          } else {
+            badge.style.display = 'none';
+          }
         }
         
         // 显示/隐藏统计
         const summary = document.getElementById('tasksSummary');
-        summary.style.display = stats.total > 0 ? 'grid' : 'none';
+        if (summary) {
+          summary.style.display = stats.total > 0 ? 'grid' : 'none';
+        }
       }
     } catch (error) {
       console.error('更新统计失败:', error);

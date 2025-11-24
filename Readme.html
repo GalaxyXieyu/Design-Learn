@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Style Generator - 一键提取网页设计风格</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            DEFAULT: '#EA4C89', // Dribbble pink-ish
+                            hover: '#D63D7B',
+                            light: '#FCE7F3',
+                        },
+                        dark: {
+                            bg: '#0F172A', // Slate 900
+                            card: '#1E293B', // Slate 800
+                            border: '#334155', // Slate 700
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #EA4C89, #F472B6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0F172A; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        .feature-icon-wrapper {
+            background: linear-gradient(135deg, rgba(234, 76, 137, 0.1) 0%, rgba(234, 76, 137, 0.05) 100%);
+        }
+
+        /* Reveal on scroll class */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-slate-50 antialiased selection:bg-brand selection:text-white transition-colors duration-300">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 top-0 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="#" class="flex items-center space-x-2 group">
+                        <div class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform">
+                            <i class="fas fa-paint-brush text-white text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-tight">Style Generator</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-slate-300 hover:text-white transition-colors text-sm font-medium">核心功能</a>
+                    <a href="#how-it-works" class="text-slate-300 hover:text-white transition-colors text-sm font-medium">使用指南</a>
+                    <a href="#tech-stack" class="text-slate-300 hover:text-white transition-colors text-sm font-medium">技术栈</a>
+                    <a href="https://github.com/GalaxyXieyu/frontend-style-generator" target="_blank" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md text-sm font-medium transition-all border border-white/10 flex items-center gap-2">
+                        <i class="fab fa-github"></i>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-slate-300 hover:text-white focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-dark-card border-b border-dark-border absolute w-full">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="#features" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700">核心功能</a>
+                <a href="#how-it-works" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700">使用指南</a>
+                <a href="#tech-stack" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700">技术栈</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <!-- Background decoration -->
+        <div class="absolute top-0 left-1/2 w-full -translate-x-1/2 h-full z-0 pointer-events-none">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-brand/20 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px]"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700 text-brand text-xs font-semibold mb-8 animate-fade-in-up">
+                <span class="flex h-2 w-2 rounded-full bg-brand animate-pulse"></span>
+                v0.1.0 现已发布
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight animate-fade-in-up" style="animation-delay: 0.1s;">
+                一键提取 <br>
+                <span class="gradient-text">网页设计风格</span>
+            </h1>
+            
+            <p class="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-slate-400 animate-fade-in-up" style="animation-delay: 0.2s;">
+                零依赖的 Chrome 插件，无需 Node.js。
+                <br class="hidden md:block">
+                一键获取 HTML、CSS、图片与字体，瞬间捕获设计灵感。
+            </p>
+            
+            <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4 animate-fade-in-up" style="animation-delay: 0.3s;">
+                <a href="#how-it-works" class="px-8 py-4 bg-brand hover:bg-brand-hover text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg shadow-brand/25 flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i>
+                    <span>立即安装</span>
+                </a>
+                <a href="https://github.com/GalaxyXieyu/frontend-style-generator" target="_blank" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fab fa-github"></i>
+                    <span>查看源码</span>
+                </a>
+            </div>
+
+            <!-- Mockup Preview -->
+            <div class="mt-20 relative max-w-4xl mx-auto animate-fade-in-up" style="animation-delay: 0.5s;">
+                <div class="glass-card rounded-xl p-2 shadow-2xl">
+                    <div class="bg-dark-bg rounded-lg overflow-hidden border border-slate-800 relative aspect-[16/9] md:aspect-[21/9] flex items-center justify-center group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800"></div>
+                        
+                        <!-- Code Mockup -->
+                        <div class="absolute inset-4 font-mono text-sm text-slate-400 overflow-hidden opacity-60">
+                            <div class="flex gap-2 mb-4">
+                                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            </div>
+                            <p><span class="text-purple-400">const</span> <span class="text-blue-400">snapshot</span> = {</p>
+                            <p class="pl-4"><span class="text-blue-300">id</span>: <span class="text-green-400">"snapshot_170000..."</span>,</p>
+                            <p class="pl-4"><span class="text-blue-300">url</span>: <span class="text-green-400">"https://stripe.com"</span>,</p>
+                            <p class="pl-4"><span class="text-blue-300">assets</span>: {</p>
+                            <p class="pl-8"><span class="text-blue-300">images</span>: [...],</p>
+                            <p class="pl-8"><span class="text-blue-300">fonts</span>: [...]</p>
+                            <p class="pl-4">},</p>
+                            <p class="pl-4"><span class="text-blue-300">metadata</span>: { ... }</p>
+                            <p>}</p>
+                        </div>
+
+                        <!-- Floating UI Card Mockup -->
+                        <div class="absolute transform transition-transform duration-500 group-hover:-translate-y-2 z-10">
+                            <div class="bg-dark-card border border-slate-600 rounded-lg shadow-2xl p-6 w-80 text-left">
+                                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                                    <span class="font-bold text-white flex items-center gap-2">
+                                        <i class="fas fa-paint-brush text-brand"></i> Style Gen
+                                    </span>
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                </div>
+                                <div class="space-y-3 mb-4">
+                                    <div class="flex items-center justify-between text-sm text-slate-300">
+                                        <span>内联 CSS</span>
+                                        <i class="fas fa-check-circle text-brand"></i>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm text-slate-300">
+                                        <span>图片资源</span>
+                                        <i class="fas fa-check-circle text-brand"></i>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm text-slate-300">
+                                        <span>字体文件</span>
+                                        <i class="fas fa-check-circle text-brand"></i>
+                                    </div>
+                                </div>
+                                <button class="w-full bg-brand hover:bg-brand-hover text-white py-2 rounded transition-colors font-medium text-sm">
+                                    提取页面风格
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem/Solution Stats -->
+    <section class="py-20 border-t border-slate-800 bg-dark-bg/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div class="reveal p-6 glass-card rounded-xl hover:border-brand/50 transition-colors">
+                    <div class="text-4xl font-bold text-brand mb-2">0</div>
+                    <div class="text-lg font-semibold text-white mb-2">外部依赖</div>
+                    <p class="text-slate-400 text-sm">无需安装 Node.js 或 Playwright，纯浏览器原生体验</p>
+                </div>
+                <div class="reveal p-6 glass-card rounded-xl hover:border-brand/50 transition-colors" style="transition-delay: 100ms;">
+                    <div class="text-4xl font-bold text-brand mb-2">5s</div>
+                    <div class="text-lg font-semibold text-white mb-2">平均提取时间</div>
+                    <p class="text-slate-400 text-sm">闪电般的速度，即刻获取完整页面快照</p>
+                </div>
+                <div class="reveal p-6 glass-card rounded-xl hover:border-brand/50 transition-colors" style="transition-delay: 200ms;">
+                    <div class="text-4xl font-bold text-brand mb-2">100%</div>
+                    <div class="text-lg font-semibold text-white mb-2">数据本地化</div>
+                    <p class="text-slate-400 text-sm">IndexedDB 本地存储，无需后端，隐私安全</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section id="features" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">全能型设计助手</h2>
+                <p class="text-slate-400 max-w-2xl mx-auto">专为前端开发者和 UI 设计师打造，从灵感到实现的捷径。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-bolt text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">一键提取</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        只需点击插件图标，即可自动解析当前页面的 DOM 结构和所有样式规则。
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group" style="transition-delay: 100ms;">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-box-open text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">完整快照</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        不仅仅是 HTML，还包括内联 CSS、计算后的样式、图片资源、Web 字体和元数据。
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group" style="transition-delay: 200ms;">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-database text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">离线存储</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        基于 IndexedDB 技术，所有数据保存在您的本地浏览器中，随时随地查看历史记录。
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group" style="transition-delay: 300ms;">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-eye text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">即时预览</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        在独立的沙箱环境中预览提取的页面，确保样式还原度 100%，所见即所得。
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group" style="transition-delay: 400ms;">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-file-export text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">导出分享</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        支持将整个页面快照导出为独立的 HTML 文件，方便团队协作和设计归档。
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="reveal glass-card rounded-xl p-8 hover:-translate-y-2 transition-transform duration-300 group" style="transition-delay: 500ms;">
+                    <div class="w-12 h-12 rounded-lg feature-icon-wrapper flex items-center justify-center mb-6 group-hover:bg-brand/20 transition-colors">
+                        <i class="fas fa-shield-alt text-brand text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">隐私优先</h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        无数据上传，无后台追踪。您的设计灵感只属于您自己。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="py-24 bg-dark-card/30 border-y border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">只需三步，轻松掌握</h2>
+                <p class="text-slate-400">极简的工作流，让设计分析变得前所未有的简单。</p>
+            </div>
+
+            <div class="relative">
+                <!-- Connecting Line -->
+                <div class="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-slate-700 -translate-y-1/2 z-0"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                    <!-- Step 1 -->
+                    <div class="relative z-10 bg-dark-bg p-6 rounded-xl border border-slate-700 text-center reveal group hover:border-brand transition-colors">
+                        <div class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center border-4 border-dark-bg text-xl font-bold text-brand mb-4 group-hover:scale-110 transition-transform">1</div>
+                        <h3 class="text-xl font-bold text-white mb-2">安装插件</h3>
+                        <p class="text-slate-400 text-sm">加载 chrome-extension 目录到开发者模式</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="relative z-10 bg-dark-bg p-6 rounded-xl border border-slate-700 text-center reveal group hover:border-brand transition-colors" style="transition-delay: 150ms;">
+                        <div class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center border-4 border-dark-bg text-xl font-bold text-brand mb-4 group-hover:scale-110 transition-transform">2</div>
+                        <h3 class="text-xl font-bold text-white mb-2">打开网页</h3>
+                        <p class="text-slate-400 text-sm">访问任何您喜欢的网站，点击插件图标</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative z-10 bg-dark-bg p-6 rounded-xl border border-slate-700 text-center reveal group hover:border-brand transition-colors" style="transition-delay: 300ms;">
+                        <div class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center border-4 border-dark-bg text-xl font-bold text-brand mb-4 group-hover:scale-110 transition-transform">3</div>
+                        <h3 class="text-xl font-bold text-white mb-2">获取风格</h3>
+                        <p class="text-slate-400 text-sm">即刻预览、下载或保存到历史记录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section id="tech-stack" class="py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">现代化技术栈</h2>
+                <p class="text-slate-400">构建于稳健且先进的 Web 技术之上。</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="reveal p-6 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col items-center justify-center hover:bg-slate-800 transition-colors">
+                    <i class="fab fa-chrome text-4xl text-blue-500 mb-3"></i>
+                    <span class="font-semibold text-white">Manifest V3</span>
+                    <span class="text-xs text-slate-400 mt-1">Chrome 标准</span>
+                </div>
+                <div class="reveal p-6 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col items-center justify-center hover:bg-slate-800 transition-colors" style="transition-delay: 100ms;">
+                    <i class="fab fa-js text-4xl text-yellow-400 mb-3"></i>
+                    <span class="font-semibold text-white">Pure JS</span>
+                    <span class="text-xs text-slate-400 mt-1">无构建依赖</span>
+                </div>
+                <div class="reveal p-6 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col items-center justify-center hover:bg-slate-800 transition-colors" style="transition-delay: 200ms;">
+                    <i class="fas fa-database text-4xl text-purple-500 mb-3"></i>
+                    <span class="font-semibold text-white">IndexedDB</span>
+                    <span class="text-xs text-slate-400 mt-1">本地存储</span>
+                </div>
+                <div class="reveal p-6 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col items-center justify-center hover:bg-slate-800 transition-colors" style="transition-delay: 300ms;">
+                    <i class="fas fa-paint-roller text-4xl text-pink-500 mb-3"></i>
+                    <span class="font-semibold text-white">Style API</span>
+                    <span class="text-xs text-slate-400 mt-1">深度解析</span>
+                </div>
+            </div>
+            
+            <!-- Future Plan -->
+            <div class="mt-16 reveal p-8 border border-dashed border-slate-700 rounded-xl bg-slate-900/50">
+                <h3 class="text-xl font-bold text-white mb-6 text-center">🚀 未来规划：Next.js 后台</h3>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <span class="px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">Next.js 15</span>
+                    <span class="px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">TypeScript 5</span>
+                    <span class="px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">Drizzle ORM</span>
+                    <span class="px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">PostgreSQL</span>
+                    <span class="px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">AI 风格分析</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="bg-gradient-to-br from-brand/20 to-purple-600/20 rounded-2xl p-12 border border-brand/20 reveal">
+                <h2 class="text-3xl font-bold text-white mb-6">准备好提升您的设计效率了吗？</h2>
+                <p class="text-slate-300 mb-8 text-lg">加入使用 Frontend Style Generator，让每一次浏览都成为设计积累。</p>
+                <a href="https://github.com/GalaxyXieyu/frontend-style-generator" target="_blank" class="inline-flex items-center px-8 py-4 bg-white text-brand font-bold rounded-lg hover:bg-slate-100 transition-colors">
+                    <i class="fab fa-github mr-2"></i>
+                    前往 GitHub 下载
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark-card border-t border-slate-800 pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-6 h-6 bg-brand rounded flex items-center justify-center">
+                            <i class="fas fa-paint-brush text-white text-xs"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white">Style Generator</span>
+                    </div>
+                    <p class="text-slate-400 max-w-sm">
+                        Frontend Style Generator 是一个致力于帮助开发者和设计师更好地理解、学习和保存网页设计的开源工具。
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 class="text-white font-semibold mb-4">链接</h4>
+                    <ul class="space-y-2 text-slate-400">
+                        <li><a href="#" class="hover:text-brand transition-colors">首页</a></li>
+                        <li><a href="#features" class="hover:text-brand transition-colors">功能</a></li>
+                        <li><a href="https://github.com/GalaxyXieyu/frontend-style-generator/issues" target="_blank" class="hover:text-brand transition-colors">问题反馈</a></li>
+                        <li><a href="/chrome-extension/INSTALL.md" class="hover:text-brand transition-colors">安装指南</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-semibold mb-4">关注作者</h4>
+                    <div class="flex space-x-4">
+                        <a href="https://github.com/GalaxyXieyu" target="_blank" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-brand hover:text-white transition-all">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-400 hover:text-white transition-all">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition-all">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-slate-500 text-sm">
+                    &copy; 2025 GalaxyXieyu. All rights reserved.
+                </p>
+                <div class="flex items-center gap-2 text-slate-500 text-sm mt-4 md:mt-0">
+                    <span>Made with</span>
+                    <i class="fas fa-heart text-red-500 animate-pulse"></i>
+                    <span>using Windsurf</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar transparency on scroll
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('bg-dark-bg/90', 'backdrop-blur-md', 'shadow-lg');
+            } else {
+                navbar.classList.remove('bg-dark-bg/90', 'backdrop-blur-md', 'shadow-lg');
+            }
+            reveal();
+        });
+
+        // Reveal animations on scroll
+        function reveal() {
+            var reveals = document.querySelectorAll(".reveal");
+            for (var i = 0; i < reveals.length; i++) {
+                var windowHeight = window.innerHeight;
+                var elementTop = reveals[i].getBoundingClientRect().top;
+                var elementVisible = 150;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active");
+                }
+            }
+        }
+
+        // Initial check
+        reveal();
+
+        // Mobile Menu Toggle
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>

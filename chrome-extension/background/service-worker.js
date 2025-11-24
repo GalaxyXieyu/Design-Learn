@@ -14,7 +14,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     // 首次安装，显示欢迎页面
     chrome.tabs.create({
-      url: 'https://github.com/yourusername/frontend-style-generator'
+      url: 'https://github.com/GalaxyXieyu/frontend-style-generator'
     });
   }
 });

@@ -1,13 +1,16 @@
 /**
  * AI 提示词预览组件
- * 根据配置生成和显示提示词
+ * 根据配置生成和显示提示词，支持模板编辑
  */
 import { StorageManager } from '../utils/storage.js';
+import { Notification } from '../utils/notification.js';
 
 export class PromptPreview {
-  constructor() {
+  constructor(templateManager) {
     this.storage = new StorageManager();
+    this.templateManager = templateManager;
     this.config = {};
+    this.isEditing = false;
     this.init();
   }
 
@@ -43,6 +46,26 @@ export class PromptPreview {
       this.refreshPrompt();
     });
 
+    // 编辑按钮
+    document.getElementById('editPromptBtn')?.addEventListener('click', () => {
+      this.toggleEdit();
+    });
+
+    // 保存编辑按钮
+    document.getElementById('savePromptEditBtn')?.addEventListener('click', () => {
+      this.savePromptEdit();
+    });
+
+    // 取消编辑按钮
+    document.getElementById('cancelPromptEditBtn')?.addEventListener('click', () => {
+      this.cancelEdit();
+    });
+
+    // 另存为模板按钮
+    document.getElementById('saveAsTemplateBtn')?.addEventListener('click', () => {
+      this.saveAsTemplate();
+    });
+
     // 监听所有复选框变化
     const checkboxes = [
       'includeColors',
@@ -55,12 +78,21 @@ export class PromptPreview {
 
     checkboxes.forEach(id => {
       document.getElementById(id)?.addEventListener('change', () => {
-        this.generatePrompt();
+        if (!this.isEditing) {
+          this.generatePrompt();
+        }
       });
     });
 
     // 监听语言选择变化
     document.getElementById('language')?.addEventListener('change', () => {
+      if (!this.isEditing) {
+        this.generatePrompt();
+      }
+    });
+
+    // 监听模板切换事件
+    window.addEventListener('templateChanged', () => {
       this.generatePrompt();
     });
   }
@@ -74,9 +106,100 @@ export class PromptPreview {
   }
 
   /**
+   * 切换编辑模式
+   */
+  toggleEdit() {
+    this.isEditing = !this.isEditing;
+    const previewContainer = document.getElementById('promptPreview');
+    const editContainer = document.getElementById('promptEdit');
+    const normalActions = document.getElementById('promptNormalActions');
+    const editActions = document.getElementById('promptEditActions');
+
+    if (this.isEditing) {
+      // 进入编辑模式
+      const currentContent = document.getElementById('promptContent')?.textContent || '';
+      document.getElementById('promptEditArea').value = currentContent;
+      
+      previewContainer.style.display = 'none';
+      editContainer.style.display = 'block';
+      normalActions.style.display = 'none';
+      editActions.style.display = 'flex';
+    } else {
+      // 退出编辑模式
+      previewContainer.style.display = 'block';
+      editContainer.style.display = 'none';
+      normalActions.style.display = 'flex';
+      editActions.style.display = 'none';
+    }
+  }
+
+  /**
+   * 保存编辑
+   */
+  async savePromptEdit() {
+    const editedContent = document.getElementById('promptEditArea')?.value.trim();
+    
+    if (!editedContent) {
+      Notification.error('提示词内容不能为空');
+      return;
+    }
+
+    // 更新当前模板
+    if (this.templateManager) {
+      const currentTemplate = this.templateManager.getCurrentTemplate();
+      if (currentTemplate) {
+        currentTemplate.content = editedContent;
+        currentTemplate.updatedAt = new Date().toISOString();
+        await this.templateManager.saveTemplates();
+        Notification.success('提示词已更新');
+      }
+    }
+
+    this.displayPrompt(editedContent);
+    this.toggleEdit();
+  }
+
+  /**
+   * 取消编辑
+   */
+  cancelEdit() {
+    this.toggleEdit();
+  }
+
+  /**
+   * 另存为新模板
+   */
+  saveAsTemplate() {
+    const editedContent = document.getElementById('promptEditArea')?.value.trim();
+    
+    if (!editedContent) {
+      Notification.error('提示词内容不能为空');
+      return;
+    }
+
+    // 填充内容并显示新建模板对话框
+    if (this.templateManager) {
+      this.templateManager.showTemplateModal();
+      setTimeout(() => {
+        document.getElementById('templateContent').value = editedContent;
+      }, 100);
+    }
+  }
+
+  /**
    * 生成提示词
    */
   generatePrompt() {
+    // 优先使用当前模板的内容
+    if (this.templateManager) {
+      const currentTemplate = this.templateManager.getCurrentTemplate();
+      if (currentTemplate) {
+        this.displayPrompt(currentTemplate.content);
+        return;
+      }
+    }
+
+    // 如果没有模板，使用配置生成
     const config = this.getCurrentConfig();
     const prompt = this.buildPrompt(config);
     this.displayPrompt(prompt);
