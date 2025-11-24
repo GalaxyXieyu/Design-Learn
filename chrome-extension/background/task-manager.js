@@ -46,6 +46,7 @@ class TaskManager {
     const task = {
       id: taskId,
       url,
+      domain: new URL(url).hostname,
       title: new URL(url).pathname,
       options,
       status: 'pending',
@@ -162,13 +163,13 @@ class TaskManager {
         try {
           const analysis = await this.analyzeSnapshot(response.snapshot);
           
-          task.progress = 95;
-          await this.saveTasks();
-          this.notifyUpdate();
-          
-          // 自动下载 Markdown
+      task.progress = 95;
+      await this.saveTasks();
+      this.notifyUpdate();
+      
+      // 自动下载 Markdown
           if (analysis && analysis.markdown) {
-            await this.downloadMarkdown(analysis.markdown, response.snapshot.title);
+            await this.downloadMarkdown(analysis.markdown, response.snapshot.title, false);
           }
           
           task.status = 'completed';
@@ -176,7 +177,8 @@ class TaskManager {
           task.result = {
             snapshotId: response.snapshot.id,
             size: response.snapshot.html.length + response.snapshot.css.length,
-            hasAnalysis: !!analysis
+            hasAnalysis: !!analysis,
+            analysisFormat: analysis && analysis.format ? analysis.format : (analysis && analysis.raw ? 'raw' : 'json')
           };
         } catch (analysisError) {
           console.error('[TaskManager] AI 分析失败:', analysisError);
@@ -253,6 +255,30 @@ class TaskManager {
       };
     });
   }
+
+  /**
+   * 更新快照（写入 Markdown 等）
+   */
+  async updateSnapshot(snapshot) {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('StyleGenerator', 1);
+      
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('snapshots', 'readwrite');
+        const store = tx.objectStore('snapshots');
+        store.put(snapshot);
+        tx.oncomplete = () => resolve();
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('snapshots')) {
+          db.createObjectStore('snapshots', { keyPath: 'id' });
+        }
+      };
+    });
+  }
   
   /**
    * AI 分析快照
@@ -275,26 +301,20 @@ class TaskManager {
   /**
    * 下载 Markdown 文件
    */
-  async downloadMarkdown(markdown, title) {
+  async downloadMarkdown(markdown, title, saveAs = false) {
     try {
       // 生成文件名
       const filename = `${title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}_style.md`;
       
-      // 创建 Blob
-      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-      
-      // 使用 Chrome Downloads API
-      const url = URL.createObjectURL(blob);
-      
+      // 使用 data URL（MV3 service worker 不支持 createObjectURL）
+      const url = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(markdown);
+
       await chrome.downloads.download({
         url: url,
         filename: filename,
-        saveAs: false // 自动保存到默认下载文件夹
+        saveAs
       });
-      
-      // 清理 URL
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      
+
       console.log('[TaskManager] Markdown 已下载:', filename);
     } catch (error) {
       console.error('[TaskManager] Markdown 下载失败:', error);
@@ -323,10 +343,11 @@ class TaskManager {
    */
   getStats() {
     const tasks = this.getAllTasks();
+    const runningCount = tasks.filter(t => t.status === 'running' || t.status === 'analyzing').length;
     return {
       total: tasks.length,
       pending: tasks.filter(t => t.status === 'pending').length,
-      running: tasks.filter(t => t.status === 'running').length,
+      running: runningCount,
       completed: tasks.filter(t => t.status === 'completed').length,
       failed: tasks.filter(t => t.status === 'failed').length
     };
@@ -431,6 +452,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     taskManager.cancelTask(request.taskId)
       .then(() => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'ANALYZE_SNAPSHOT') {
+    (async () => {
+      try {
+        const snapshot = request.snapshot;
+        const analysis = await taskManager.analyzeSnapshot(snapshot);
+        const updated = { ...snapshot, markdown: analysis.markdown };
+        await taskManager.updateSnapshot(updated);
+        if (analysis && analysis.markdown) {
+          await taskManager.downloadMarkdown(analysis.markdown, snapshot.title, true);
+        }
+        sendResponse({ success: true, markdown: analysis.markdown, format: analysis.format });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
     return true;
   }
 });

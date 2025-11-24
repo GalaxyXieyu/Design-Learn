@@ -6,6 +6,7 @@ class PopupController {
     this.currentTab = null;
     this.currentMode = 'current'; // 'current' or 'all'
     this.tasks = [];
+    this.domainCollapse = {};
     this.init();
   }
   
@@ -304,10 +305,50 @@ class PopupController {
     }
     
     list.innerHTML = '';
-    
-    tasks.forEach(task => {
-      const item = this.createTaskItem(task);
-      list.appendChild(item);
+    const groups = {};
+    tasks.forEach(t => {
+      const domain = (() => { try { return new URL(t.url).hostname; } catch { return '未知域名'; } })();
+      if (!groups[domain]) groups[domain] = [];
+      groups[domain].push(t);
+    });
+
+    Object.entries(groups).forEach(([domain, domainTasks]) => {
+      const group = document.createElement('div');
+      const header = document.createElement('div');
+      const arrow = document.createElement('span');
+      const count = document.createElement('span');
+      const body = document.createElement('div');
+
+      group.style.marginBottom = '8px';
+      header.style.cssText = 'padding:10px 8px; border-radius:8px; background:#f8fafc; display:flex; align-items:center; gap:8px; cursor:pointer;';
+      arrow.textContent = '▶';
+      arrow.style.cssText = 'display:inline-block; transition:transform .2s; color: var(--text-secondary);';
+      header.appendChild(arrow);
+      const title = document.createElement('span');
+      title.textContent = domain;
+      title.style.cssText = 'font-weight:600; font-size:12px; color: var(--text-secondary);';
+      header.appendChild(title);
+      count.textContent = domainTasks.length;
+      count.style.cssText = 'margin-left:auto; font-size:12px; color: var(--text-secondary);';
+      header.appendChild(count);
+
+      const collapsed = this.domainCollapse[domain] !== false;
+      if (!collapsed) arrow.style.transform = 'rotate(90deg)';
+
+      body.style.cssText = 'margin-top:8px;';
+      body.style.display = collapsed ? 'none' : 'block';
+      domainTasks.forEach(task => body.appendChild(this.createTaskItem(task)));
+
+      header.addEventListener('click', () => {
+        const isCollapsed = body.style.display === 'none';
+        body.style.display = isCollapsed ? 'block' : 'none';
+        arrow.style.transform = isCollapsed ? 'rotate(90deg)' : 'rotate(0deg)';
+        this.domainCollapse[domain] = isCollapsed ? false : true;
+      });
+
+      group.appendChild(header);
+      group.appendChild(body);
+      list.appendChild(group);
     });
   }
   
@@ -321,6 +362,7 @@ class PopupController {
     const statusIcons = {
       pending: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>',
       running: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>',
+      analyzing: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8a4 4 0 1 0 4 4" stroke="currentColor" stroke-width="2"/>',
       completed: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>',
       failed: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2"/>'
     };
@@ -328,6 +370,7 @@ class PopupController {
     const statusTexts = {
       pending: '等待中',
       running: '进行中',
+      analyzing: '分析中',
       completed: '已完成',
       failed: '失败'
     };
@@ -345,8 +388,9 @@ class PopupController {
             ${task.url}
           </div>
         </div>
-        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">
-          ${task.progress}%
+        <div style="display:flex; align-items:center; gap:8px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">
+          <span>${statusTexts[task.status]}</span>
+          <span>${task.progress}%</span>
         </div>
       </div>
       ${task.progress > 0 && task.progress < 100 ? `

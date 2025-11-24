@@ -40,14 +40,9 @@ class AIAnalyzer {
     
     // 解析响应
     const analysis = this.parseResponse(response);
-    
-    // 生成 Markdown
     const markdown = this.generateMarkdown(snapshot, analysis);
-    
-    return {
-      analysis,
-      markdown
-    };
+    const format = analysis && analysis.raw ? 'raw' : 'json';
+    return { analysis, markdown, format };
   }
   
   /**
@@ -55,52 +50,71 @@ class AIAnalyzer {
    */
   buildPrompt(snapshot) {
     const sections = [];
-    
-    sections.push(`你是一位资深的前端设计系统专家。请分析以下网页的设计风格。`);
-    sections.push(`\n## 页面信息`);
-    sections.push(`- URL: ${snapshot.url}`);
-    sections.push(`- 标题: ${snapshot.title}`);
-    sections.push(`- 视口: ${snapshot.metadata.viewport.width}x${snapshot.metadata.viewport.height}`);
-    
-    sections.push(`\n## HTML 结构`);
-    sections.push(`\`\`\`html`);
-    sections.push(snapshot.html.substring(0, 5000)); // 限制长度
-    sections.push(`\`\`\``);
-    
-    sections.push(`\n## CSS 样式`);
-    sections.push(`\`\`\`css`);
-    sections.push(snapshot.css.substring(0, 10000)); // 限制长度
-    sections.push(`\`\`\``);
-    
-    sections.push(`\n## 分析要求`);
-    sections.push(`请以 JSON 格式输出分析结果，包含以下字段：`);
-    
-    if (this.config.generate.includeColors) {
-      sections.push(`- colors: 色彩方案（primary, secondary, accent, neutral）`);
-    }
-    
-    if (this.config.generate.includeTypography) {
-      sections.push(`- typography: 字体系统（fontFamilies, sizes, weights）`);
-    }
-    
-    if (this.config.generate.includeLayout) {
-      sections.push(`- layout: 布局分析（type, grid, responsive）`);
-    }
-    
-    if (this.config.generate.includeComponents) {
-      sections.push(`- components: 组件风格（buttons, cards, forms）`);
-    }
-    
-    if (this.config.generate.includeAccessibility) {
-      sections.push(`- accessibility: 可访问性评估（score, issues）`);
-    }
-    
-    if (this.config.generate.includeRecommendations) {
-      sections.push(`- recommendations: 改进建议数组`);
-    }
-    
-    sections.push(`- summary: 200字以内的总结`);
-    
+    const vp = `${snapshot.metadata.viewport.width}x${snapshot.metadata.viewport.height}`;
+    const lang = this.config.generate.language || 'zh-CN';
+    const preferZh = lang === 'zh-CN';
+    const intro = preferZh ? '你是一位资深的前端设计系统专家，请根据提供的页面快照输出高精度的风格分析。' : 'You are a senior design system expert. Produce a high-fidelity style analysis.';
+    sections.push(intro);
+    sections.push(preferZh ? `页面: ${snapshot.title} | URL: ${snapshot.url} | 视口: ${vp}` : `Page: ${snapshot.title} | URL: ${snapshot.url} | Viewport: ${vp}`);
+
+    sections.push(preferZh ? `请严格按以下 JSON Schema 输出（不要包含除 JSON 以外的任何文本）：` : `Output strictly as JSON (no extra text), following this schema:`);
+    sections.push(`\n\`\`\`json`);
+    sections.push(JSON.stringify({
+      overview: {
+        design_language: '',
+        tech_stack: '',
+        theme_mechanism: '',
+        components_pattern: ''
+      },
+      design_tokens: {
+        fonts: { primary: [], mono: [] },
+        colors: { base: {}, brand: '', mapping: { light: {}, dark: {} }, tailwind_expose: [] },
+        shadows: [],
+        backgrounds: [],
+        motions: []
+      },
+      color_palette: {
+        text: { primary: '', secondary: [], brand: '' },
+        backgrounds: { page: {}, card: {}, overlay: {}, accent: {} },
+        borders: { divide: '' }
+      },
+      typography: {
+        fonts: { primary: '', mono: '' },
+        headings: { page: {}, section: {}, sub: {}, kicker: {} },
+        body: { prose: '', weights: {}, tracking: 'tracking-tight' }
+      },
+      spacing_system: {
+        container: { max: 'max-w-7xl', padding: ['px-4','md:px-8'], vertical: ['py-16','py-20','py-40'] },
+        grid: { cols: ['grid-cols-1','md:grid-cols-2','lg:grid-cols-3'], gaps: ['gap-4','gap-6','gap-10','gap-20'] },
+        atoms: { sizes: [], minH: [] }
+      },
+      components: {
+        navbar: {},
+        button: {},
+        card: {},
+        table: {},
+        badge: {},
+        input: {}
+      },
+      shadows_elevation: [],
+      animations_transitions: [],
+      border_radius: {},
+      opacity_transparency: {},
+      tailwind_usage: [],
+      examples: {},
+      a11y: { contrast: '>=4.5:1', focus: '' },
+      summary: ''
+    }, null, 2));
+    sections.push(`\n\`\`\``);
+
+    sections.push(preferZh ? `输入快照（截断）HTML:` : `Snapshot (truncated) HTML:`);
+    sections.push('```html');
+    sections.push(snapshot.html.substring(0, 8000));
+    sections.push('```');
+    sections.push(preferZh ? `输入快照（截断）CSS:` : `Snapshot (truncated) CSS:`);
+    sections.push('```css');
+    sections.push(snapshot.css.substring(0, 12000));
+    sections.push('```');
     return sections.join('\n');
   }
   
@@ -129,7 +143,7 @@ class AIAnalyzer {
           messages: [
             {
               role: 'system',
-              content: '你是一位专业的前端设计系统分析专家。请以 JSON 格式输出分析结果。'
+              content: '你是一位专业的前端设计系统分析专家。严格输出 JSON（不可包含除 JSON 外任何文本），遵循给定 schema。'
             },
             {
               role: 'user',
@@ -137,7 +151,8 @@ class AIAnalyzer {
             }
           ],
           max_tokens: maxTokens || 4000,
-          temperature: temperature || 0.7
+          temperature: (typeof temperature === 'number' ? temperature : 0.2)
+          // 某些提供商可能支持：response_format: { type: 'json_object' }
         })
       });
       
@@ -158,21 +173,21 @@ class AIAnalyzer {
    * 解析 AI 响应
    */
   parseResponse(response) {
-    // 尝试提取 JSON
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error('JSON 解析失败:', e);
-      }
+    const fenced = response.match(/```json\s*([\s\S]*?)```/i);
+    if (fenced) {
+      try { return JSON.parse(fenced[1]); } catch {}
     }
-    
-    // 如果无法解析，返回原始响应
-    return {
-      summary: response,
-      raw: true
-    };
+    try {
+      const trimmed = response.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        return JSON.parse(trimmed);
+      }
+    } catch {}
+    const brace = response.match(/\{[\s\S]*\}/);
+    if (brace) {
+      try { return JSON.parse(brace[0]); } catch {}
+    }
+    return { summary: response, raw: true };
   }
   
   /**
@@ -180,142 +195,138 @@ class AIAnalyzer {
    */
   generateMarkdown(snapshot, analysis) {
     const lines = [];
-    
-    // 标题
     lines.push(`# ${snapshot.title} - 设计风格分析报告`);
-    lines.push(``);
+    lines.push('');
     lines.push(`> **分析时间**: ${new Date().toLocaleString('zh-CN')}`);
     lines.push(`> **页面 URL**: ${snapshot.url}`);
     lines.push(`> **采集时间**: ${new Date(snapshot.extractedAt).toLocaleString('zh-CN')}`);
     lines.push(`> **视口尺寸**: ${snapshot.metadata.viewport.width} x ${snapshot.metadata.viewport.height}`);
-    lines.push(``);
-    lines.push(`---`);
-    lines.push(``);
-    
-    // 概览
-    lines.push(`## 📊 概览`);
-    lines.push(``);
-    lines.push(analysis.summary || '无总结');
-    lines.push(``);
-    lines.push(`---`);
-    lines.push(``);
-    
-    // 色彩方案
-    if (analysis.colors) {
-      lines.push(`## 🎨 色彩方案`);
-      lines.push(``);
-      
-      if (analysis.colors.primary) {
-        lines.push(`### 主色调`);
-        analysis.colors.primary.forEach(color => {
-          lines.push(`- ${color}`);
-        });
-        lines.push(``);
-      }
-      
-      if (analysis.colors.secondary) {
-        lines.push(`### 辅助色`);
-        analysis.colors.secondary.forEach(color => {
-          lines.push(`- ${color}`);
-        });
-        lines.push(``);
-      }
-      
-      lines.push(`---`);
-      lines.push(``);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+
+    const pushKV = (obj) => {
+      Object.entries(obj || {}).forEach(([k,v]) => {
+        if (v == null) return;
+        if (typeof v === 'object') {
+          lines.push(`- ${k}:`);
+          lines.push('');
+          lines.push('```json');
+          lines.push(JSON.stringify(v, null, 2));
+          lines.push('```');
+        } else {
+          lines.push(`- ${k}: ${v}`);
+        }
+      });
+    };
+
+    if (analysis.overview) {
+      lines.push(`## 概览`);
+      pushKV(analysis.overview);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
     }
-    
-    // 字体系统
+
+    if (analysis.design_tokens) {
+      lines.push(`## 设计令牌`);
+      pushKV(analysis.design_tokens);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+    }
+
+    if (analysis.color_palette) {
+      lines.push(`## 配色系统`);
+      pushKV(analysis.color_palette);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+    }
+
     if (analysis.typography) {
-      lines.push(`## ✍️ 字体系统`);
-      lines.push(``);
-      
-      if (analysis.typography.fontFamilies) {
-        lines.push(`### 字体族`);
-        analysis.typography.fontFamilies.forEach(font => {
-          lines.push(`- ${font}`);
-        });
-        lines.push(``);
-      }
-      
-      lines.push(`---`);
-      lines.push(``);
+      lines.push(`## 排版`);
+      pushKV(analysis.typography);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
     }
-    
-    // 布局分析
-    if (analysis.layout) {
-      lines.push(`## 📐 布局分析`);
-      lines.push(``);
-      lines.push(`- **布局方式**: ${analysis.layout.type || '未知'}`);
-      if (analysis.layout.grid) {
-        lines.push(`- **栅格系统**: ${analysis.layout.grid}`);
-      }
-      lines.push(``);
-      lines.push(`---`);
-      lines.push(``);
+
+    if (analysis.spacing_system) {
+      lines.push(`## 间距系统`);
+      pushKV(analysis.spacing_system);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
     }
-    
-    // 组件风格
+
     if (analysis.components) {
-      lines.push(`## 🧩 组件风格`);
-      lines.push(``);
-      
+      lines.push(`## 组件风格`);
       Object.entries(analysis.components).forEach(([name, style]) => {
         lines.push(`### ${name}`);
-        lines.push(``);
-        if (typeof style === 'string') {
-          lines.push(style);
-        } else {
-          lines.push(`\`\`\`json`);
-          lines.push(JSON.stringify(style, null, 2));
-          lines.push(`\`\`\``);
-        }
-        lines.push(``);
+        lines.push('');
+        lines.push('```json');
+        lines.push(JSON.stringify(style, null, 2));
+        lines.push('```');
+        lines.push('');
       });
-      
-      lines.push(`---`);
-      lines.push(``);
+      lines.push('---');
+      lines.push('');
     }
-    
-    // 可访问性
-    if (analysis.accessibility) {
-      lines.push(`## ♿ 可访问性评估`);
-      lines.push(``);
-      lines.push(`- **评分**: ${analysis.accessibility.score || 'N/A'}`);
-      if (analysis.accessibility.issues) {
-        lines.push(``);
-        lines.push(`### 问题`);
-        analysis.accessibility.issues.forEach(issue => {
-          lines.push(`- ${issue}`);
-        });
+
+    if (analysis.shadows_elevation) {
+      lines.push(`## 阴影与层次`);
+      lines.push('```json');
+      lines.push(JSON.stringify(analysis.shadows_elevation, null, 2));
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (analysis.animations_transitions) {
+      lines.push(`## 动效与过渡`);
+      lines.push('```json');
+      lines.push(JSON.stringify(analysis.animations_transitions, null, 2));
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (analysis.border_radius) {
+      lines.push(`## 圆角`);
+      pushKV(analysis.border_radius);
+      lines.push('');
+    }
+
+    if (analysis.opacity_transparency) {
+      lines.push(`## 透明度与磨砂`);
+      pushKV(analysis.opacity_transparency);
+      lines.push('');
+    }
+
+    if (analysis.tailwind_usage) {
+      lines.push(`## 常用 Tailwind 使用模式`);
+      if (Array.isArray(analysis.tailwind_usage)) {
+        analysis.tailwind_usage.forEach(i => lines.push(`- ${i}`));
       }
-      lines.push(``);
-      lines.push(`---`);
-      lines.push(``);
+      lines.push('');
     }
-    
-    // 改进建议
-    if (analysis.recommendations) {
-      lines.push(`## 💡 改进建议`);
-      lines.push(``);
-      analysis.recommendations.forEach((rec, index) => {
-        lines.push(`### ${index + 1}. ${rec.title || rec}`);
-        if (rec.description) {
-          lines.push(``);
-          lines.push(rec.description);
-        }
-        lines.push(``);
-      });
-      lines.push(`---`);
-      lines.push(``);
+
+    if (analysis.a11y) {
+      lines.push(`## 无障碍与对比度`);
+      pushKV(analysis.a11y);
+      lines.push('');
     }
-    
-    // 页脚
-    lines.push(`---`);
-    lines.push(``);
+
+    if (analysis.summary) {
+      lines.push('---');
+      lines.push('');
+      lines.push(analysis.summary);
+      lines.push('');
+    }
+
+    lines.push('---');
+    lines.push('');
     lines.push(`*本报告由 Frontend Style Generator AI 自动生成*`);
     lines.push(`*生成时间: ${new Date().toLocaleString('zh-CN')}*`);
-    
     return lines.join('\n');
   }
 }

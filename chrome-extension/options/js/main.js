@@ -251,7 +251,33 @@ class OptionsApp {
    * 生成 Markdown
    */
   async generateMarkdown(item) {
-    Notification.info('AI 分析功能待实现');
+    try {
+      const btn = document.querySelector(`.action-btn.primary[data-action="viewMarkdown"][data-id="${item.id}"]`) ||
+                  document.querySelector(`.action-btn[data-action="generate"][data-id="${item.id}"]`);
+      if (btn) {
+        btn.disabled = true;
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        type: 'ANALYZE_SNAPSHOT',
+        snapshot: item
+      });
+
+      if (response.success) {
+        item.markdown = response.markdown;
+        this.displayHistory(this.history);
+        this.loadStats();
+        const fmt = response.format === 'json' ? '（结构化）' : '（文本）';
+        Notification.success('分析已生成并弹出下载 ' + fmt);
+      } else {
+        Notification.error('分析失败：' + response.error);
+      }
+    } catch (error) {
+      Notification.error('分析失败：' + (error.message || '未知错误'));
+    } finally {
+      const btn = document.querySelector(`.action-btn[data-action="generate"][data-id="${item.id}"]`);
+      if (btn) btn.disabled = false;
+    }
   }
 
   /**
@@ -348,13 +374,13 @@ class OptionsApp {
    * 清除数据
    */
   async clearData() {
-    if (!confirm('⚠️ 确定要清除所有数据吗？\n\n这将删除所有快照和分析报告，此操作不可恢复！')) {
+    if (!confirm('⚠️ 确定要清除任务与快照吗？\n\n这将删除所有任务记录与页面快照，模型与生成配置将被保留。此操作不可恢复！')) {
       return;
     }
     
     try {
       await this.storage.clearSnapshots();
-      await this.storage.clearConfig();
+      await this.storage.removeKeys(['tasks']);
       
       Notification.success('所有数据已清除');
       setTimeout(() => location.reload(), 1000);

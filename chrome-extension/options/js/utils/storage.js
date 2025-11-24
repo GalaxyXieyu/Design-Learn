@@ -30,6 +30,14 @@ export class StorageManager {
   }
 
   /**
+   * Chrome Storage - 删除指定键
+   */
+  async removeKeys(keys) {
+    if (!Array.isArray(keys)) return;
+    return await chrome.storage.local.remove(keys);
+  }
+
+  /**
    * IndexedDB - 打开数据库
    */
   openDB() {
