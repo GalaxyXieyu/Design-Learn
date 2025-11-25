@@ -475,7 +475,7 @@ class OptionsController {
    */
   openDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('StyleGenerator', 1);
+      const request = indexedDB.open('StyleGenerator', 2);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
       request.onupgradeneeded = (event) => {

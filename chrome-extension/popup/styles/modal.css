@@ -235,11 +235,11 @@
 }
 
 .task-item {
-  padding: 16px;
+  padding: 12px;
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   transition: all 0.2s;
 }
 
@@ -436,6 +436,22 @@
 
 .add-task-btn:active {
   transform: translateY(0);
+}
+
+/* 加载动画 */
+.spinner {
+  border: 2px solid rgba(107, 157, 214, 0.2);
+  border-radius: 50%;
+  border-top: 2px solid #6b9dd6;
+  width: 16px;
+  height: 16px;
+  -webkit-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .add-task-btn:disabled {

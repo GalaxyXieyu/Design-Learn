@@ -70,8 +70,34 @@ class TaskManager {
       header.appendChild(arrow);
       const title = document.createElement('span');
       title.textContent = domain;
-      title.style.cssText = 'font-weight:600; font-size:12px; color: var(--text-secondary);';
+      title.style.cssText = 'font-weight:600; font-size:12px; color: var(--text-secondary); flex: 1;';
       header.appendChild(title);
+
+      // 计算分组状态
+      const runningCount = domainTasks.filter(t => t.status === 'running' || t.status === 'analyzing').length;
+      const completedCount = domainTasks.filter(t => t.status === 'completed').length;
+      const failedCount = domainTasks.filter(t => t.status === 'failed').length;
+      
+      // 状态摘要
+      const summary = document.createElement('div');
+      summary.style.cssText = 'font-size: 11px; color: var(--text-tertiary); margin-right: 8px; display: flex; align-items: center; gap: 6px;';
+      
+      if (runningCount > 0) {
+        summary.innerHTML = `
+          <div class="spinner" style="width: 12px; height: 12px; border-width: 2px;"></div>
+          <span style="color: var(--accent-color);">处理中 ${runningCount}/${domainTasks.length}</span>
+        `;
+      } else if (completedCount === domainTasks.length) {
+        summary.innerHTML = `<span style="color: var(--success-color);">全部完成</span>`;
+      } else {
+        const parts = [];
+        if (completedCount > 0) parts.push(`${completedCount} 完成`);
+        if (failedCount > 0) parts.push(`${failedCount} 失败`);
+        if (domainTasks.length - completedCount - failedCount > 0) parts.push(`${domainTasks.length - completedCount - failedCount} 等待`);
+        summary.textContent = parts.join(' · ');
+      }
+      header.appendChild(summary);
+
       count.textContent = domainTasks.length;
       count.style.cssText = 'margin-left:auto; font-size:12px; color: var(--text-secondary);';
       header.appendChild(count);
@@ -230,14 +256,16 @@ class TaskManager {
     const statusIcons = {
       pending: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>',
       running: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>',
+      extracted: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2"/>',
       analyzing: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8a4 4 0 1 0 4 4" stroke="currentColor" stroke-width="2"/>',
       completed: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>',
       failed: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2"/>'
     };
-    
+
     const statusTexts = {
       pending: '等待中',
       running: '进行中',
+      extracted: '已提取',
       analyzing: '分析中',
       completed: '已完成',
       failed: '失败'
@@ -246,26 +274,27 @@ class TaskManager {
     const isSelected = this.controller.selectedTasks.has(task.id);
     
     item.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
         <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isSelected ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          ${statusIcons[task.status]}
-        </svg>
         <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <div style="font-size: 13px; font-weight: 500; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${task.title}
           </div>
-          <div style="font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${task.url}
+          <div style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+            <span style="opacity: 0.7;">${task.url}</span>
+            ${task.stage ? `<span style="background: ${task.status === 'failed' ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.05)'}; padding: 1px 5px; border-radius: 3px; font-size: 10px; color: ${task.status === 'failed' ? '#ef4444' : 'var(--text-primary)'};">${task.stage}</span>` : ''}
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">
+        <div style="display:flex; align-items:center; gap:6px; font-size: 11px; font-weight: 600; color: var(--text-secondary); flex-shrink: 0;">
+          <svg class="task-status-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
+            ${statusIcons[task.status]}
+          </svg>
           <span>${statusTexts[task.status]}</span>
           <span>${task.progress}%</span>
         </div>
       </div>
       ${task.progress > 0 && task.progress < 100 ? `
-        <div style="margin-top: 12px; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+        <div style="margin-top: 8px; height: 3px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
           <div style="height: 100%; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); width: ${task.progress}%; transition: width 0.3s;"></div>
         </div>
       ` : ''}
