@@ -1,6 +1,6 @@
-# Frontend Style Generator
+# Design-Learn
 
-> 一键提取网页设计风格的 Chrome 插件 - 零依赖，开箱即用
+> 一键提取网页设计风格，AI 智能分析，零依赖开箱即用
 
 ## 🎯 项目简介
 
@@ -101,38 +101,17 @@
 ## 📦 项目结构
 
 ```
-frontend-style-generator/
-├── chrome-extension/              # Chrome 插件（已完成）
+Design-Learn/
+├── chrome-extension/              # Chrome 插件
 │   ├── manifest.json             # 插件配置
 │   ├── popup/                    # 弹出窗口 UI
 │   ├── content/                  # 页面提取器
 │   ├── background/               # 后台服务
 │   ├── lib/                      # AI 分析器
 │   ├── options/                  # 设置页面
-│   │   ├── options.html          # 设置界面
-│   │   ├── options.css           # 样式
-│   │   ├── js/
-│   │   │   ├── main.js           # 主控制器
-│   │   │   ├── components/       # UI 组件
-│   │   │   │   ├── ModelManager.js         # AI 模型管理
-│   │   │   │   ├── PromptTemplateManager.js # 提示词模板管理 ⭐️
-│   │   │   │   └── PromptPreview.js        # 提示词预览/编辑 ⭐️
-│   │   │   └── utils/            # 工具类
-│   │   ├── TEMPLATE_FEATURE.md   # 模板功能说明 ⭐️
-│   │   └── README.md             # 设置页面说明
-│   ├── icons/                    # 图标文件
-│   ├── README.md                 # 插件说明
-│   ├── INSTALL.md                # 安装指南
-│   ├── SUMMARY.md                # 功能总结
-│   └── TEST.md                   # 测试指南
-│
-├── web/                          # Next.js 后台（待开发）
-│   └── (未来的管理后台系统)
+│   └── icons/                    # 图标文件
 │
 └── docs/                         # 项目文档
-    ├── requirements.md           # 需求分析
-    ├── ai-prompt-guide.md        # AI 分析指南
-    └── chrome-extension-design.md # 插件设计文档
 ```
 
 ## 🎨 功能展示
@@ -156,7 +135,7 @@ frontend-style-generator/
 - **模板分类**: 支持内置模板和自定义模板
 - **实时预览**: 编辑时实时预览提示词效果
 
-详细文档：[提示词模板功能说明](chrome-extension/options/TEMPLATE_FEATURE.md)
+
 
 ### 2. 页面提取
 
@@ -322,20 +301,14 @@ frontend-style-generator/
 
 ## 📖 文档
 
-### 插件文档
-- 本地安装与使用指南：见本文档“安装插件（1 分钟）”与“本地安装详细指南”章节
-
-### 开发文档
-- [需求分析](docs/requirements.md)
-- [AI 分析指南](docs/ai-prompt-guide.md)
-- [插件设计文档](docs/chrome-extension-design.md)
-
+- 安装与使用：见本文档"安装插件"与"本地安装详细指南"章节
+- 更多文档：见 `docs/` 目录
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
 ### 最新更新 ⭐️
-**v3.0 (2024-11-24)**
+**v3.0 (2025-11-27)**
 - ✅ 新增提示词模板管理系统
 - ✅ 支持多版本模板保存
 - ✅ 可编辑提示词内容
@@ -360,9 +333,8 @@ MIT License
 
 **GalaxyXieyu**
 
-- 项目地址: `/Users/galaxyxieyu/Documents/Coding/frontend-style-generator`
-- 版本: 3.0.0 ⭐️
-- 更新日期: 2024-11-24
+- 版本: 3.0.0
+- 更新日期: 2025-11-27
 
 ---
 
