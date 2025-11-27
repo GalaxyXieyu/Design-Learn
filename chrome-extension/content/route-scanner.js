@@ -9,10 +9,27 @@ class RouteScanner {
   }
   
   /**
+   * 添加路径到集合（统一处理去重）
+   */
+  addPath(path) {
+    if (!path) return;
+    
+    // 移除末尾斜杠（除了根路径）
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+    
+    this.routes.add(path);
+  }
+  
+  /**
    * 扫描当前页面的所有链接
    */
-  scanCurrentPage() {
+  async scanCurrentPage() {
     console.log('[RouteScanner] 开始扫描路由...');
+    
+    // 0. 添加当前页面
+    this.addPath(this.baseUrl.pathname);
     
     // 1. 收集所有链接
     const links = document.querySelectorAll('a[href]');
@@ -27,9 +44,7 @@ class RouteScanner {
         
         // 只保留同域名的链接
         if (url.origin === this.baseUrl.origin) {
-          // 移除 hash 和 query
-          const cleanPath = url.pathname;
-          this.routes.add(cleanPath);
+          this.addPath(url.pathname);
         }
       } catch (e) {
         // 忽略无效的 URL
@@ -40,7 +55,7 @@ class RouteScanner {
     this.scanNavigation();
     
     // 3. 扫描 sitemap（如果存在）
-    this.scanSitemap();
+    await this.scanSitemap();
     
     const routeList = Array.from(this.routes).sort();
     console.log('[RouteScanner] 发现', routeList.length, '个路由');
@@ -71,7 +86,7 @@ class RouteScanner {
           
           const url = new URL(href, this.baseUrl);
           if (url.origin === this.baseUrl.origin) {
-            this.routes.add(url.pathname);
+            this.addPath(url.pathname);
           }
         } catch (e) {}
       });
@@ -82,27 +97,36 @@ class RouteScanner {
    * 尝试获取 sitemap
    */
   async scanSitemap() {
-    try {
-      const sitemapUrl = new URL('/sitemap.xml', this.baseUrl);
-      const response = await fetch(sitemapUrl.toString());
-      
-      if (response.ok) {
-        const text = await response.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, 'text/xml');
+    const sitemapPaths = ['/sitemap.xml', '/wp-sitemap.xml', '/sitemap_index.xml'];
+    
+    for (const path of sitemapPaths) {
+      try {
+        const sitemapUrl = new URL(path, this.baseUrl);
+        const response = await fetch(sitemapUrl.toString());
         
-        const urls = xml.querySelectorAll('url loc');
-        urls.forEach(loc => {
-          try {
-            const url = new URL(loc.textContent);
-            if (url.origin === this.baseUrl.origin) {
-              this.routes.add(url.pathname);
-            }
-          } catch (e) {}
-        });
+        if (response.ok) {
+          console.log('[RouteScanner] 发现 sitemap:', path);
+          const text = await response.text();
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(text, 'text/xml');
+          
+          const urls = xml.querySelectorAll('url loc');
+          urls.forEach(loc => {
+            try {
+              const url = new URL(loc.textContent);
+              if (url.origin === this.baseUrl.origin) {
+                this.addPath(url.pathname);
+              }
+            } catch (e) {}
+          });
+          
+          // 如果找到了有效的 sitemap，就不再尝试其他的
+          if (urls.length > 0) break;
+        }
+      } catch (e) {
+        // Sitemap 不存在或无法访问，继续尝试下一个
+        console.log('[RouteScanner] 无法访问 sitemap:', path);
       }
-    } catch (e) {
-      // Sitemap 不存在或无法访问
     }
   }
   
@@ -187,24 +211,36 @@ class RouteScanner {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'scanRoutes') {
     const scanner = new RouteScanner();
-    const routes = scanner.scanCurrentPage();
     
-    // 按深度排序并限制为最多10个
-    const filteredRoutes = scanner.filterRoutes(routes, {
-      limit: 10
-    });
+    // 异步执行扫描
+    (async () => {
+      try {
+        const routes = await scanner.scanCurrentPage();
+        
+        // 按深度排序并限制为最多10个
+        const filteredRoutes = scanner.filterRoutes(routes, {
+          limit: 10
+        });
+        
+        const groups = scanner.groupRoutes(filteredRoutes);
+        
+        sendResponse({
+          success: true,
+          routes: filteredRoutes,
+          groups,
+          total: filteredRoutes.length,
+          totalFound: routes.length
+        });
+      } catch (error) {
+        console.error('[RouteScanner] 扫描失败:', error);
+        sendResponse({
+          success: false,
+          error: error.message
+        });
+      }
+    })();
     
-    const groups = scanner.groupRoutes(filteredRoutes);
-    
-    sendResponse({
-      success: true,
-      routes: filteredRoutes,
-      groups,
-      total: filteredRoutes.length,
-      totalFound: routes.length
-    });
-    
-    return true;
+    return true; // 保持消息通道开启以进行异步响应
   }
 });
 
