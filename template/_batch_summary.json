@@ -1,9 +1,9 @@
 {
-  "processedAt": "2025-12-03T23:56:22.552Z",
-  "totalTime": "5.19",
-  "success": 0,
-  "skipped": 4,
-  "failed": 96,
+  "processedAt": "2025-12-04T09:28:15.481Z",
+  "totalTime": "5087.25",
+  "success": 80,
+  "skipped": 5,
+  "failed": 15,
   "results": [
     {
       "url": "https://www.notion.com",
@@ -13,8 +13,9 @@
     },
     {
       "url": "https://linear.app",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://linear.app/\nCall log:\n\u001b[2m  - navigating to \"https://linear.app/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "linear_app",
+      "pages": 10
     },
     {
       "url": "https://monday.com",
@@ -24,13 +25,15 @@
     },
     {
       "url": "https://www.figma.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.figma.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.figma.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_figma_com",
+      "pages": 10
     },
     {
       "url": "https://slack.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://slack.com/\nCall log:\n\u001b[2m  - navigating to \"https://slack.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "slack_com",
+      "pages": 10
     },
     {
       "url": "https://stripe.com",
@@ -40,13 +43,15 @@
     },
     {
       "url": "https://www.revolut.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.revolut.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.revolut.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_revolut_com",
+      "pages": 1
     },
     {
       "url": "https://www.coinbase.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.coinbase.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.coinbase.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_coinbase_com",
+      "pages": 1
     },
     {
       "url": "https://www.paypal.com",
@@ -56,458 +61,534 @@
     },
     {
       "url": "https://squareup.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://squareup.com/\nCall log:\n\u001b[2m  - navigating to \"https://squareup.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "squareup_com",
+      "pages": 10
     },
     {
       "url": "https://www.shopify.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.shopify.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.shopify.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_shopify_com",
+      "pages": 10
     },
     {
       "url": "https://www.allbirds.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.allbirds.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.allbirds.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_allbirds_com",
+      "pages": 10
     },
     {
       "url": "https://www.gymshark.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.gymshark.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.gymshark.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_gymshark_com",
+      "pages": 10
     },
     {
       "url": "https://www.kyliecosmetics.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.kyliecosmetics.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.kyliecosmetics.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_kyliecosmetics_com",
+      "pages": 9
     },
     {
       "url": "https://www.puravidabracelets.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.puravidabracelets.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.puravidabracelets.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_puravidabracelets_com",
+      "pages": 10
     },
     {
       "url": "https://www.apple.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.apple.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.apple.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_apple_com",
+      "pages": 10
     },
     {
       "url": "https://www.tesla.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.tesla.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.tesla.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_tesla_com",
+      "pages": 1
     },
     {
       "url": "https://www.airbnb.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.airbnb.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.airbnb.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://www.airbnb.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://about.google",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://about.google/\nCall log:\n\u001b[2m  - navigating to \"https://about.google/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "about_google",
+      "pages": 10
     },
     {
       "url": "https://www.microsoft.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.microsoft.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.microsoft.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_microsoft_com",
+      "pages": 10
     },
     {
       "url": "https://www.netflix.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.netflix.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.netflix.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_netflix_com",
+      "pages": 5
     },
     {
       "url": "https://www.theverge.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.theverge.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.theverge.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_theverge_com",
+      "pages": 10
     },
     {
       "url": "https://medium.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://medium.com/\nCall log:\n\u001b[2m  - navigating to \"https://medium.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "medium_com",
+      "pages": 1
     },
     {
       "url": "https://techcrunch.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://techcrunch.com/\nCall log:\n\u001b[2m  - navigating to \"https://techcrunch.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "techcrunch_com",
+      "pages": 10
     },
     {
       "url": "https://www.behance.net",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.behance.net/\nCall log:\n\u001b[2m  - navigating to \"https://www.behance.net/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation"
     },
     {
       "url": "https://www.canva.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.canva.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.canva.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_canva_com",
+      "pages": 1
     },
     {
       "url": "https://www.framer.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.framer.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.framer.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_framer_com",
+      "pages": 10
     },
     {
       "url": "https://webflow.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://webflow.com/\nCall log:\n\u001b[2m  - navigating to \"https://webflow.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "请求超时"
     },
     {
       "url": "https://www.adobe.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.adobe.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.adobe.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_HTTP2_PROTOCOL_ERROR at https://www.adobe.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.adobe.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://dribbble.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://dribbble.com/\nCall log:\n\u001b[2m  - navigating to \"https://dribbble.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "dribbble_com",
+      "pages": 10
     },
     {
       "url": "https://openai.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://openai.com/\nCall log:\n\u001b[2m  - navigating to \"https://openai.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "openai_com",
+      "pages": 1
     },
     {
       "url": "https://www.anthropic.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.anthropic.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.anthropic.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_anthropic_com",
+      "pages": 10
     },
     {
       "url": "https://www.midjourney.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.midjourney.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.midjourney.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_midjourney_com",
+      "pages": 1
     },
     {
       "url": "https://www.perplexity.ai",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.perplexity.ai/\nCall log:\n\u001b[2m  - navigating to \"https://www.perplexity.ai/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_perplexity_ai",
+      "pages": 1
     },
     {
       "url": "https://huggingface.co",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://huggingface.co/\nCall log:\n\u001b[2m  - navigating to \"https://huggingface.co/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "huggingface_co",
+      "pages": 10
     },
     {
       "url": "https://www.patagonia.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.patagonia.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.patagonia.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_patagonia_com",
+      "pages": 1
     },
     {
       "url": "https://www.glossier.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.glossier.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.glossier.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_glossier_com",
+      "pages": 9
     },
     {
       "url": "https://www.awaytravel.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.awaytravel.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.awaytravel.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "请求超时"
     },
     {
       "url": "https://www.allbirds.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.allbirds.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.allbirds.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_allbirds_com",
+      "skipped": true
     },
     {
       "url": "https://www.everlane.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.everlane.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.everlane.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_everlane_com",
+      "pages": 10
     },
     {
       "url": "https://github.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://github.com/\nCall log:\n\u001b[2m  - navigating to \"https://github.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "github_com",
+      "pages": 10
     },
     {
       "url": "https://vercel.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://vercel.com/\nCall log:\n\u001b[2m  - navigating to \"https://vercel.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "vercel_com",
+      "pages": 10
     },
     {
       "url": "https://supabase.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://supabase.com/\nCall log:\n\u001b[2m  - navigating to \"https://supabase.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "supabase_com",
+      "pages": 10
     },
     {
       "url": "https://railway.app",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://railway.app/\nCall log:\n\u001b[2m  - navigating to \"https://railway.app/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "railway_app",
+      "pages": 10
     },
     {
       "url": "https://render.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://render.com/\nCall log:\n\u001b[2m  - navigating to \"https://render.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "render_com",
+      "pages": 10
     },
     {
       "url": "https://www.coursera.org",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.coursera.org/\nCall log:\n\u001b[2m  - navigating to \"https://www.coursera.org/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_coursera_org",
+      "pages": 10
     },
     {
       "url": "https://www.udemy.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.udemy.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.udemy.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_udemy_com",
+      "pages": 1
     },
     {
       "url": "https://www.duolingo.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.duolingo.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.duolingo.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_duolingo_com",
+      "pages": 10
     },
     {
       "url": "https://www.khanacademy.org",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.khanacademy.org/\nCall log:\n\u001b[2m  - navigating to \"https://www.khanacademy.org/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_khanacademy_org",
+      "pages": 10
     },
     {
       "url": "https://www.skillshare.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.skillshare.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.skillshare.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_skillshare_com",
+      "pages": 1
     },
     {
       "url": "https://www.dingtalk.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.dingtalk.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.dingtalk.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_dingtalk_com",
+      "pages": 9
     },
     {
       "url": "https://www.feishu.cn",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.feishu.cn/\nCall log:\n\u001b[2m  - navigating to \"https://www.feishu.cn/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_feishu_cn",
+      "pages": 10
     },
     {
       "url": "https://work.weixin.qq.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://work.weixin.qq.com/\nCall log:\n\u001b[2m  - navigating to \"https://work.weixin.qq.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "work_weixin_qq_com",
+      "pages": 10
     },
     {
       "url": "https://docs.qq.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://docs.qq.com/\nCall log:\n\u001b[2m  - navigating to \"https://docs.qq.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "docs_qq_com",
+      "pages": 3
     },
     {
       "url": "https://cloud.wps.cn",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://cloud.wps.cn/\nCall log:\n\u001b[2m  - navigating to \"https://cloud.wps.cn/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://cloud.wps.cn/\nCall log:\n\u001b[2m  - navigating to \"https://cloud.wps.cn/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://www.alipay.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.alipay.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.alipay.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_alipay_com",
+      "pages": 1
     },
     {
       "url": "https://pay.weixin.qq.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://pay.weixin.qq.com/\nCall log:\n\u001b[2m  - navigating to \"https://pay.weixin.qq.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "pay_weixin_qq_com",
+      "pages": 10
     },
     {
       "url": "https://www.antgroup.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.antgroup.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.antgroup.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_antgroup_com",
+      "pages": 9
     },
     {
       "url": "https://jr.jd.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://jr.jd.com/\nCall log:\n\u001b[2m  - navigating to \"https://jr.jd.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "jr_jd_com",
+      "pages": 1
     },
     {
       "url": "https://consumer.alipay.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://consumer.alipay.com/\nCall log:\n\u001b[2m  - navigating to \"https://consumer.alipay.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_CLOSED at https://consumer.alipay.com/\nCall log:\n\u001b[2m  - navigating to \"https://consumer.alipay.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://www.taobao.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.taobao.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.taobao.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_taobao_com",
+      "pages": 1
     },
     {
       "url": "https://www.tmall.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.tmall.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.tmall.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_tmall_com",
+      "pages": 2
     },
     {
       "url": "https://www.pinduoduo.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.pinduoduo.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.pinduoduo.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_pinduoduo_com",
+      "pages": 10
     },
     {
       "url": "https://www.jd.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.jd.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.jd.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_jd_com",
+      "pages": 10
     },
     {
       "url": "https://www.vip.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.vip.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.vip.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_vip_com",
+      "pages": 10
     },
     {
       "url": "https://www.xiaohongshu.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.xiaohongshu.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.xiaohongshu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_xiaohongshu_com",
+      "pages": 1
     },
     {
       "url": "https://www.douyin.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.douyin.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.douyin.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_douyin_com",
+      "pages": 10
     },
     {
       "url": "https://www.bilibili.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.bilibili.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.bilibili.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_bilibili_com",
+      "pages": 10
     },
     {
       "url": "https://www.zhihu.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.zhihu.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.zhihu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_zhihu_com",
+      "pages": 10
     },
     {
       "url": "https://www.douban.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.douban.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.douban.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_douban_com",
+      "pages": 10
     },
     {
       "url": "https://fxg.jinritemai.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://fxg.jinritemai.com/\nCall log:\n\u001b[2m  - navigating to \"https://fxg.jinritemai.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "fxg_jinritemai_com",
+      "pages": 7
     },
     {
       "url": "https://shop.kuaishou.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://shop.kuaishou.com/\nCall log:\n\u001b[2m  - navigating to \"https://shop.kuaishou.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_CLOSED at https://shop.kuaishou.com/\nCall log:\n\u001b[2m  - navigating to \"https://shop.kuaishou.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://mall.xiaohongshu.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://mall.xiaohongshu.com/\nCall log:\n\u001b[2m  - navigating to \"https://mall.xiaohongshu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "mall_xiaohongshu_com",
+      "pages": 1
     },
     {
       "url": "https://shop.bilibili.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://shop.bilibili.com/\nCall log:\n\u001b[2m  - navigating to \"https://shop.bilibili.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "shop_bilibili_com",
+      "pages": 1
     },
     {
       "url": "https://www.ixigua.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.ixigua.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.ixigua.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation"
     },
     {
       "url": "https://www.aliyun.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.aliyun.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.aliyun.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_aliyun_com",
+      "pages": 9
     },
     {
       "url": "https://cloud.tencent.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://cloud.tencent.com/\nCall log:\n\u001b[2m  - navigating to \"https://cloud.tencent.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "请求超时"
     },
     {
       "url": "https://www.huaweicloud.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.huaweicloud.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.huaweicloud.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_huaweicloud_com",
+      "pages": 6
     },
     {
       "url": "https://cloud.baidu.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://cloud.baidu.com/\nCall log:\n\u001b[2m  - navigating to \"https://cloud.baidu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "cloud_baidu_com",
+      "pages": 10
     },
     {
       "url": "https://www.ucloud.cn",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.ucloud.cn/\nCall log:\n\u001b[2m  - navigating to \"https://www.ucloud.cn/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_ucloud_cn",
+      "pages": 9
     },
     {
       "url": "https://www.canva.cn",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.canva.cn/\nCall log:\n\u001b[2m  - navigating to \"https://www.canva.cn/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_canva_cn",
+      "pages": 1
     },
     {
       "url": "https://www.gaoding.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.gaoding.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.gaoding.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_gaoding_com",
+      "pages": 1
     },
     {
       "url": "https://www.eqxiu.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.eqxiu.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.eqxiu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_eqxiu_com",
+      "pages": 10
     },
     {
       "url": "https://www.fkw.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.fkw.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.fkw.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "请求超时"
     },
     {
       "url": "https://www.weimob.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.weimob.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.weimob.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_weimob_com",
+      "pages": 10
     },
     {
       "url": "https://ai.baidu.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://ai.baidu.com/\nCall log:\n\u001b[2m  - navigating to \"https://ai.baidu.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "站点处理超时（>180s）"
     },
     {
       "url": "https://tongyi.aliyun.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://tongyi.aliyun.com/\nCall log:\n\u001b[2m  - navigating to \"https://tongyi.aliyun.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "tongyi_aliyun_com",
+      "pages": 1
     },
     {
       "url": "https://hunyuan.tencent.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://hunyuan.tencent.com/\nCall log:\n\u001b[2m  - navigating to \"https://hunyuan.tencent.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "hunyuan_tencent_com",
+      "pages": 1
     },
     {
       "url": "https://www.iflytek.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.iflytek.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.iflytek.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_iflytek_com",
+      "pages": 10
     },
     {
       "url": "https://www.sensetime.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.sensetime.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.sensetime.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_sensetime_com",
+      "pages": 10
     },
     {
       "url": "https://www.mi.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.mi.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.mi.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_mi_com",
+      "pages": 10
     },
     {
       "url": "https://www.oppo.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.oppo.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.oppo.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_oppo_com",
+      "pages": 10
     },
     {
       "url": "https://www.163.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.163.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.163.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_163_com",
+      "pages": 10
     },
     {
       "url": "https://www.bytedance.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.bytedance.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.bytedance.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_bytedance_com",
+      "pages": 5
     },
     {
       "url": "https://www.kuaishou.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.kuaishou.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.kuaishou.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_kuaishou_com",
+      "pages": 6
     },
     {
       "url": "https://www.meiyouwanmei.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.meiyouwanmei.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.meiyouwanmei.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_CLOSED at https://www.meiyouwanmei.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.meiyouwanmei.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://www.yuanqisenlin.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.yuanqisenlin.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.yuanqisenlin.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_yuanqisenlin_com",
+      "pages": 8
     },
     {
       "url": "https://www.heytea.com",
-      "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.heytea.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.heytea.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "success": true,
+      "domain": "www_heytea_com",
+      "pages": 1
     },
     {
       "url": "https://www.ofo.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.ofo.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.ofo.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://www.ofo.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.ofo.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "url": "https://www.shihuituan.com",
       "success": false,
-      "error": "page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.shihuituan.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.shihuituan.com/\", waiting until \"networkidle\"\u001b[22m\n"
+      "error": "page.goto: net::ERR_CONNECTION_RESET at https://www.shihuituan.com/\nCall log:\n\u001b[2m  - navigating to \"https://www.shihuituan.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
     }
   ]
 }
