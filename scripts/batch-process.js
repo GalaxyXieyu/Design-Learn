@@ -406,7 +406,7 @@ async function extractOnly(browser, url, screenshotDir = null) {
 }
 
 /**
- * 从 Excel 读取 URL 列表
+ * 从 Excel 读取 URL 列表（带分类信息）
  */
 function readUrlsFromExcel(filePath, urlColumn = 'URL') {
   const workbook = XLSX.readFile(filePath);
@@ -414,27 +414,37 @@ function readUrlsFromExcel(filePath, urlColumn = 'URL') {
   const sheet = workbook.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json(sheet);
   
-  const urls = data
-    .map(row => row[urlColumn])
-    .filter(url => url && typeof url === 'string' && url.startsWith('http'));
+  const sites = data
+    .filter(row => row[urlColumn] && typeof row[urlColumn] === 'string' && row[urlColumn].startsWith('http'))
+    .map(row => ({
+      url: row[urlColumn],
+      source: row['来源'] || '',      // 国内/国外
+      category: row['分类2'] || '',   // 协作工具/技术驱动等
+      name: row['网站名称'] || ''
+    }));
   
-  return { urls, total: data.length, data };
+  return { sites, urls: sites.map(s => s.url), total: data.length, data };
 }
 
 /**
  * 批量处理多个独立网站（每个网站下钻多页）
  */
-async function batchProcessMultiSites(urls, options = {}) {
+async function batchProcessMultiSites(sites, options = {}) {
   const { 
     concurrency = CONFIG.concurrency, 
     skipAI = false, 
     headless = true,
-    pagesPerSite = 10,  // 每个网站抓取的页面数
-    siteTimeout = 180000  // 每个站点的总超时时间（默认 3 分钟）
+    pagesPerSite = 10,
+    siteTimeout = 180000
   } = options;
+  
+  // 兼容旧格式（纯 URL 数组）
+  const siteList = Array.isArray(sites) && typeof sites[0] === 'string' 
+    ? sites.map(url => ({ url, source: '', category: '' }))
+    : sites;
 
   console.log(chalk.blue('\n🚀 多站点批量处理模式\n'));
-  console.log(chalk.gray(`站点数量: ${urls.length}`));
+  console.log(chalk.gray(`站点数量: ${siteList.length}`));
   console.log(chalk.gray(`每站页数: ${pagesPerSite}`));
   console.log(chalk.gray(`并发数: ${concurrency}`));
   console.log(chalk.gray(`跳过 AI: ${skipAI}`));
@@ -468,27 +478,32 @@ async function batchProcessMultiSites(urls, options = {}) {
   };
 
   try {
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      const progress = `[${i + 1}/${urls.length}]`;
+    for (let i = 0; i < siteList.length; i++) {
+      const site = siteList[i];
+      const url = site.url;
+      const progress = `[${i + 1}/${siteList.length}]`;
       
       const siteStartTime = Date.now();
       try {
         const domain = new URL(url).hostname.replace(/\./g, '_');
-        const siteDir = join(CONFIG.outputDir, domain);
+        // 按 来源/分类2/域名 组织目录
+        const subDir = (site.source && site.category) 
+          ? join(site.source, site.category, domain)
+          : domain;
+        const siteDir = join(CONFIG.outputDir, subDir);
         const screenshotDir = join(siteDir, 'screenshots');
         const styleguideFile = join(siteDir, 'styleguide.md');
         
         // 检查是否已处理过
         if (existsSync(styleguideFile)) {
-          logProgress(i + 1, urls.length, '跳过', domain);
+          logProgress(i + 1, siteList.length, '跳过', domain);
           skipCount++;
           results.push({ url, success: true, domain, skipped: true });
           continue;
         }
         
         await mkdir(screenshotDir, { recursive: true });
-        logProgress(i + 1, urls.length, '扫描路由', domain);
+        logProgress(i + 1, siteList.length, '扫描路由', domain);
 
         // 1. 扫描路由
         const checkTimeout = () => {
@@ -508,7 +523,7 @@ async function batchProcessMultiSites(urls, options = {}) {
         checkTimeout();
 
         const pageUrls = buildFullUrls(url, routes);
-        logProgress(i + 1, urls.length, `提取${pageUrls.length}页`, domain);
+        logProgress(i + 1, siteList.length, `提取${pageUrls.length}页`, domain);
 
         // 2. 并行提取所有页面
         const snapshots = [];
@@ -548,7 +563,7 @@ async function batchProcessMultiSites(urls, options = {}) {
         // 3. AI 分析
         checkTimeout();
         if (!skipAI) {
-          logProgress(i + 1, urls.length, `AI分析${snapshots.length}页`, domain);
+          logProgress(i + 1, siteList.length, `AI分析${snapshots.length}页`, domain);
           const analyzer = new AIAnalyzer({ language: CONFIG.language });
           const screenshotRelDir = 'screenshots';
           const batchResult = await analyzer.analyzeBatch(snapshots, { screenshotRelDir });
@@ -559,12 +574,12 @@ async function batchProcessMultiSites(urls, options = {}) {
 
         const siteTime = Date.now() - siteStartTime;
         avgTimePerSite.push(siteTime);
-        logProgress(i + 1, urls.length, '完成', `${domain} (${snapshots.length}页, ${(siteTime/1000).toFixed(1)}s)`);
+        logProgress(i + 1, siteList.length, '完成', `${domain} (${snapshots.length}页, ${(siteTime/1000).toFixed(1)}s)`);
         successCount++;
         results.push({ url, success: true, domain, pages: snapshots.length });
 
       } catch (error) {
-        logProgress(i + 1, urls.length, '失败', `${url} - ${error.message}`);
+        logProgress(i + 1, siteList.length, '失败', `${url} - ${error.message}`);
         failCount++;
         results.push({ url, success: false, error: error.message });
       }
@@ -648,17 +663,17 @@ async function main() {
   // Excel 批量模式
   if (options.excelFile) {
     console.log(chalk.blue(`📊 读取 Excel: ${options.excelFile}`));
-    const { urls, total } = readUrlsFromExcel(options.excelFile, options.urlColumn);
-    console.log(chalk.gray(`找到 ${urls.length}/${total} 个有效 URL`));
+    const { sites, total } = readUrlsFromExcel(options.excelFile, options.urlColumn);
+    console.log(chalk.gray(`找到 ${sites.length}/${total} 个有效 URL`));
     
-    // 支持 limit 限制处理数量（Excel 模式默认不限制）
+    // 支持 limit 限制处理数量
     const hasExplicitLimit = process.argv.some(arg => arg.startsWith('--limit='));
-    const limitedUrls = hasExplicitLimit ? urls.slice(0, options.limit) : urls;
-    if (hasExplicitLimit && options.limit < urls.length) {
+    const limitedSites = hasExplicitLimit ? sites.slice(0, options.limit) : sites;
+    if (hasExplicitLimit && options.limit < sites.length) {
       console.log(chalk.gray(`限制处理前 ${options.limit} 个`));
     }
     
-    await batchProcessMultiSites(limitedUrls, {
+    await batchProcessMultiSites(limitedSites, {
       concurrency: options.concurrency,
       skipAI: options.skipAI,
       headless: options.headless
