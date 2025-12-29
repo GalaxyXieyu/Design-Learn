@@ -35,6 +35,7 @@ class OptionsApp {
     // 4. 加载数据
     await this.loadExtractOptions();
     await this.loadGenerateConfig();
+    await this.initSyncStatus();
     await this.loadStats();
     
     console.log('[OptionsApp] ✓ 初始化完成');
@@ -259,6 +260,152 @@ class OptionsApp {
     if (autoDetectServer) autoDetectServer.checked = syncConfig.autoDetect !== false;
   }
 
+  async initSyncStatus() {
+    const refreshBtn = document.getElementById('syncStatusRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.refreshSyncStatus();
+      });
+    }
+
+    const startBtn = document.getElementById('syncStatusStart');
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        this.startLocalServer();
+      });
+    }
+
+    await this.refreshSyncStatus();
+  }
+
+  async refreshSyncStatus() {
+    const row = document.getElementById('syncStatusRow');
+    const textEl = document.getElementById('syncStatusText');
+    const startBtn = document.getElementById('syncStatusStart');
+
+    if (!row || !textEl) {
+      return;
+    }
+
+    row.classList.remove('is-connected', 'is-disconnected');
+    textEl.textContent = '服务状态：检测中...';
+    if (startBtn) {
+      startBtn.style.display = 'none';
+    }
+
+    const syncConfig = await this.getSyncConfig();
+    const result = await this.resolveSyncStatus(syncConfig);
+
+    if (result.connected) {
+      row.classList.add('is-connected');
+      textEl.textContent = `服务状态：已连接 ${this.formatServerLabel(result.url)}`;
+    } else {
+      row.classList.add('is-disconnected');
+      textEl.textContent = `服务状态：未连接（${result.reason}）`;
+      if (startBtn && result.showStart !== false) {
+        startBtn.style.display = 'inline-flex';
+      }
+    }
+  }
+
+  async getSyncConfig() {
+    const syncConfigResult = await this.storage.getConfig(['syncConfig']);
+    const syncConfig = syncConfigResult.syncConfig || {};
+    return {
+      serverUrl: typeof syncConfig.serverUrl === 'string' ? syncConfig.serverUrl.trim() : '',
+      autoDetect: syncConfig.autoDetect !== false
+    };
+  }
+
+  async resolveSyncStatus(syncConfig) {
+    if (syncConfig.serverUrl) {
+      const ok = await this.pingServer(syncConfig.serverUrl);
+      if (ok) {
+        return { connected: true, url: syncConfig.serverUrl };
+      }
+      if (!syncConfig.autoDetect) {
+        return {
+          connected: false,
+          reason: '手动地址不可用，请检查服务是否启动',
+          showStart: true
+        };
+      }
+    }
+
+    if (!syncConfig.autoDetect) {
+      return {
+        connected: false,
+        reason: '未开启自动检测，请填写服务地址或开启检测',
+        showStart: true
+      };
+    }
+
+    const detected = await this.detectServerUrl();
+    if (detected) {
+      await this.storage.setConfig({ syncConfig: { ...syncConfig, serverUrl: detected } });
+      return { connected: true, url: detected };
+    }
+
+    return {
+      connected: false,
+      reason: '自动检测未找到本地服务，请启动服务',
+      showStart: true
+    };
+  }
+
+  async detectServerUrl() {
+    const candidates = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3100',
+      'http://127.0.0.1:3100'
+    ];
+
+    for (const candidate of candidates) {
+      const ok = await this.pingServer(candidate);
+      if (ok) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  async pingServer(serverUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    try {
+      const response = await fetch(`${serverUrl.replace(/\/+$/, '')}/api/health`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  formatServerLabel(serverUrl) {
+    if (!serverUrl) return '';
+    try {
+      const url = new URL(serverUrl);
+      return `${url.hostname}:${url.port || (url.protocol === 'https:' ? '443' : '80')}`;
+    } catch {
+      return serverUrl;
+    }
+  }
+
+  async startLocalServer() {
+    try {
+      await chrome.tabs.create({ url: 'vscode://command/design-learn.toggleServer' });
+      Notification.info('已尝试打开 VSCode 启动服务');
+    } catch {
+      Notification.info('请在 VSCode 中运行 Design-Learn: 启动/停止 Design-Learn 服务');
+    }
+  }
+
   /**
    * 保存生成配置
    */
@@ -282,6 +429,7 @@ class OptionsApp {
 
     await this.storage.setConfig({ generateConfig, syncConfig });
     Notification.success('生成配置与同步设置已保存');
+    await this.refreshSyncStatus();
   }
 
   /**

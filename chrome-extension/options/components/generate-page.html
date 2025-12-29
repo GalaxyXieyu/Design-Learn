@@ -172,6 +172,12 @@
 
   <div class="card" style="margin-top: 20px;">
     <h3 class="card-title">同步设置</h3>
+    <div class="sync-status-row" id="syncStatusRow">
+      <span class="sync-status-dot" id="syncStatusDot"></span>
+      <span class="sync-status-text" id="syncStatusText">服务状态：检测中...</span>
+      <button class="btn-secondary btn-sm" id="syncStatusStart" style="display: none;">启动服务</button>
+      <button class="btn-secondary btn-sm" id="syncStatusRefresh">刷新</button>
+    </div>
     <div class="form-group">
       <label>服务地址</label>
       <input id="serverUrl" type="text" class="input" placeholder="http://localhost:3000">

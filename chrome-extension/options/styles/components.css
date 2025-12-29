@@ -41,6 +41,39 @@
   color: var(--text-secondary);
 }
 
+.sync-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.sync-status-row.is-connected .sync-status-dot {
+  background: #22c55e;
+}
+
+.sync-status-row.is-disconnected .sync-status-dot {
+  background: #f59e0b;
+}
+
+.sync-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+
+.sync-status-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .input {
   width: 100%;
   padding: 12px 16px;

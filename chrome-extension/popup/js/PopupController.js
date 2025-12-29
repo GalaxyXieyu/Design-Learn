@@ -91,7 +91,12 @@ class PopupController {
     const actionBtn = document.getElementById('syncStatusAction');
     if (actionBtn) {
       actionBtn.addEventListener('click', () => {
-        chrome.runtime.openOptionsPage();
+        const action = actionBtn.dataset.action || 'start';
+        if (action === 'settings') {
+          chrome.runtime.openOptionsPage();
+          return;
+        }
+        this.startLocalServer();
       });
     }
 
@@ -124,6 +129,8 @@ class PopupController {
       textEl.textContent = `服务状态：未连接（${result.reason}）`;
       if (actionBtn) {
         actionBtn.style.display = 'inline-flex';
+        actionBtn.textContent = result.actionLabel || '启动服务';
+        actionBtn.dataset.action = result.action || 'start';
       }
     }
   }
@@ -158,12 +165,22 @@ class PopupController {
         return { connected: true, url: syncConfig.serverUrl };
       }
       if (!syncConfig.autoDetect) {
-        return { connected: false, reason: '手动地址不可用，请检查服务是否启动' };
+        return {
+          connected: false,
+          reason: '手动地址不可用，请检查服务是否启动',
+          action: 'settings',
+          actionLabel: '去设置'
+        };
       }
     }
 
     if (!syncConfig.autoDetect) {
-      return { connected: false, reason: '未开启自动检测，请先配置服务地址' };
+      return {
+        connected: false,
+        reason: '未开启自动检测，请先配置服务地址',
+        action: 'settings',
+        actionLabel: '去设置'
+      };
     }
 
     const detected = await this.detectServerUrl();
@@ -172,7 +189,20 @@ class PopupController {
       return { connected: true, url: detected };
     }
 
-    return { connected: false, reason: '自动检测未找到本地服务' };
+    return {
+      connected: false,
+      reason: '自动检测未找到本地服务，请启动服务',
+      action: 'start',
+      actionLabel: '启动服务'
+    };
+  }
+
+  async startLocalServer() {
+    try {
+      await chrome.tabs.create({ url: 'vscode://command/design-learn.toggleServer' });
+    } catch {
+      // noop: 可能未安装 VSCode
+    }
   }
 
   async detectServerUrl() {
