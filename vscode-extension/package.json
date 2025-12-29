@@ -94,6 +94,12 @@
         "title": "打开快照文件夹",
         "category": "Design-Learn",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "design-learn.toggleServer",
+        "title": "启动/停止 Design-Learn 服务",
+        "category": "Design-Learn",
+        "icon": "$(debug-start)"
       }
     ],
     "configuration": {
@@ -139,6 +145,16 @@
           "default": "zh",
           "enum": ["zh", "en", "es", "fr", "ja"],
           "description": "分析报告语言"
+        },
+        "designLearn.server": {
+          "type": "object",
+          "default": {
+            "entry": "${workspaceFolder}/design-learn-server/src/server.js",
+            "cwd": "${workspaceFolder}/design-learn-server",
+            "port": 3000,
+            "autoStart": true
+          },
+          "description": "本地 Design-Learn 服务配置"
         }
       }
     }
@@ -163,4 +179,3 @@
     "puppeteer": "^21.0.0"
   }
 }
-

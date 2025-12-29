@@ -9,6 +9,7 @@
 - ⚙️ **灵活配置** - 内置设置面板，支持多模型管理和提示词模板
 - 📁 **本地存储** - 所有提取的快照和报告存放在 `.designlearn/` 目录
 - 🔄 **快照管理** - 侧边栏快照浏览，快速打开和管理提取的内容
+- 🧩 **本地服务管理** - 一键启动/停止 Design-Learn 服务，配合浏览器插件同步
 - 🌍 **多语言支持** - 生成报告支持中英日韩等多种语言
 
 ## 📦 安装
@@ -33,6 +34,7 @@ vsce package
    - `Design-Learn: 打开设置面板` - 配置 AI 模型和提取选项
    - `Design-Learn: 提取网页设计风格` - 提取网页快照（无 AI 分析）
    - `Design-Learn: 提取并分析网页设计风格（AI）` - 提取并用 AI 分析
+   - `Design-Learn: 启动/停止 Design-Learn 服务` - 管理本地服务（供浏览器插件同步）
 
 ### 设置面板
 
@@ -100,7 +102,14 @@ vsce package
     "accessibility": true
   },
 
-  "designLearn.reportLanguage": "zh"
+  "designLearn.reportLanguage": "zh",
+
+  "designLearn.server": {
+    "entry": "${workspaceFolder}/design-learn-server/src/server.js",
+    "cwd": "${workspaceFolder}/design-learn-server",
+    "port": 3000,
+    "autoStart": true
+  }
 }
 ```
 
@@ -147,7 +156,12 @@ npm run package
 4. 输入网页 URL
 5. 等待 AI 分析完成，自动生成 Markdown 报告
 
-### 场景 3：使用自定义模板
+### 场景 3：Chrome 插件同步
+1. 在 VSCode 中执行 `Design-Learn: 启动/停止 Design-Learn 服务`
+2. 打开 Chrome 扩展设置页，在“同步设置”中填写服务地址（默认 `http://localhost:3000`）
+3. 在 Chrome 插件中完成采集任务，插件会自动上报到本地服务
+
+### 场景 4：使用自定义模板
 1. 将您的提示词模板创建在设置面板
 2. 标记为"活跃"状态
 3. AI 分析会使用该模板生成报告
@@ -180,4 +194,3 @@ MIT License
 ---
 
 **提示**：如需在不同项目间共享快照数据，可将 `.designlearn` 目录复制到其他项目工作区中。
-

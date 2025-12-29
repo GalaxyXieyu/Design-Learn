@@ -244,6 +244,16 @@ class OptionsApp {
 
     const language = document.getElementById('language');
     if (language) language.value = generateConfig.language;
+
+    const syncConfigResult = await this.storage.getConfig(['syncConfig']);
+    const syncConfig = syncConfigResult.syncConfig || {
+      serverUrl: 'http://localhost:3000',
+      reportOnly: true
+    };
+    const serverUrl = document.getElementById('serverUrl');
+    if (serverUrl) serverUrl.value = syncConfig.serverUrl || '';
+    const reportOnly = document.getElementById('reportOnly');
+    if (reportOnly) reportOnly.checked = syncConfig.reportOnly !== false;
   }
 
   /**
@@ -260,8 +270,14 @@ class OptionsApp {
       language: document.getElementById('language')?.value || 'zh-CN'
     };
 
-    await this.storage.setConfig({ generateConfig });
-    Notification.success('生成配置已保存');
+    const rawServerUrl = document.getElementById('serverUrl')?.value;
+    const syncConfig = {
+      serverUrl: typeof rawServerUrl === 'string' ? rawServerUrl.trim() : '',
+      reportOnly: document.getElementById('reportOnly')?.checked !== false
+    };
+
+    await this.storage.setConfig({ generateConfig, syncConfig });
+    Notification.success('生成配置与同步设置已保存');
   }
 
   /**

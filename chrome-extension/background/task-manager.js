@@ -292,57 +292,113 @@ class TaskManager {
         console.log('[TaskManager] 快照保存完成');
         checkAborted();
 
+        const syncConfig = await this.getSyncConfig();
+        const shouldReport = !!syncConfig.serverUrl;
+        const reportOnly = syncConfig.reportOnly;
+        let reportResult = null;
+
         // 如果是批次任务，只标记为已提取，不立即分析
         if (task.options?.batchId) {
-          task.status = 'extracted';
-          task.stage = '已提取，等待批次分析';
-          task.progress = 90;
+          if (shouldReport) {
+            task.progress = 88;
+            task.stage = '正在上报到服务...';
+            await this.saveTasks();
+            this.notifyUpdate();
+            try {
+              reportResult = await this.reportSnapshotToServer(response.snapshot, null, taskId, syncConfig);
+            } catch (reportError) {
+              task.reportError = reportError.message;
+            }
+          }
+
+          task.status = reportOnly ? 'completed' : 'extracted';
+          task.stage = reportOnly ? '已完成' : '已提取，等待批次分析';
+          task.progress = reportOnly ? 100 : 90;
           task.result = {
             snapshotId: response.snapshot.id,
-            size: response.snapshot.html.length + response.snapshot.css.length
+            size: response.snapshot.html.length + response.snapshot.css.length,
+            report: reportResult
           };
         } else {
-          // 单个任务立即分析
-          task.progress = 85;
-          task.status = 'analyzing';
-          task.stage = '正在进行 AI 风格分析...';
-          await this.saveTasks();
-          this.notifyUpdate();
-
-          try {
-            console.log('[TaskManager] 开始 AI 分析...');
-            const analysis = await this.analyzeSnapshot(response.snapshot);
-            console.log('[TaskManager] AI 分析完成:', analysis ? '有结果' : '无结果');
-
-            task.progress = 95;
-            task.stage = '分析完成，正在生成文件...';
+          if (shouldReport && reportOnly) {
+            task.progress = 88;
+            task.stage = '正在上报到服务...';
             await this.saveTasks();
             this.notifyUpdate();
 
-            if (analysis && analysis.markdown) {
-              await this.downloadMarkdown(analysis.markdown, response.snapshot.title, false);
+            try {
+              reportResult = await this.reportSnapshotToServer(response.snapshot, null, taskId, syncConfig);
+            } catch (reportError) {
+              task.reportError = reportError.message;
             }
+          }
 
+          if (!reportOnly) {
+            // 单个任务立即分析
+            task.progress = 85;
+            task.status = 'analyzing';
+            task.stage = '正在进行 AI 风格分析...';
+            await this.saveTasks();
+            this.notifyUpdate();
+
+            try {
+              console.log('[TaskManager] 开始 AI 分析...');
+              const analysis = await this.analyzeSnapshot(response.snapshot);
+              console.log('[TaskManager] AI 分析完成:', analysis ? '有结果' : '无结果');
+
+              if (shouldReport) {
+                task.progress = 92;
+                task.stage = '正在上报到服务...';
+                await this.saveTasks();
+                this.notifyUpdate();
+                try {
+                  reportResult = await this.reportSnapshotToServer(response.snapshot, analysis, taskId, syncConfig);
+                } catch (reportError) {
+                  task.reportError = reportError.message;
+                }
+              }
+
+              task.progress = 95;
+              task.stage = '分析完成，正在生成文件...';
+              await this.saveTasks();
+              this.notifyUpdate();
+
+              if (analysis && analysis.markdown) {
+                await this.downloadMarkdown(analysis.markdown, response.snapshot.title, false);
+              }
+
+              task.status = 'completed';
+              task.stage = '已完成';
+              task.progress = 100;
+              task.result = {
+                snapshotId: response.snapshot.id,
+                size: response.snapshot.html.length + response.snapshot.css.length,
+                hasAnalysis: !!analysis,
+                analysisFormat: analysis && analysis.format ? analysis.format : (analysis && analysis.raw ? 'raw' : 'json'),
+                report: reportResult
+              };
+            } catch (analysisError) {
+              console.error('=== AI 分析失败 ===');
+              console.error('错误信息:', analysisError.message);
+              console.error('错误堆栈:', analysisError.stack);
+              task.status = 'completed';
+              task.progress = 100;
+              task.stage = `分析失败: ${analysisError.message}`;
+              task.result = {
+                snapshotId: response.snapshot.id,
+                size: response.snapshot.html.length + response.snapshot.css.length,
+                analysisError: analysisError.message,
+                report: reportResult
+              };
+            }
+          } else {
             task.status = 'completed';
             task.stage = '已完成';
             task.progress = 100;
             task.result = {
               snapshotId: response.snapshot.id,
               size: response.snapshot.html.length + response.snapshot.css.length,
-              hasAnalysis: !!analysis,
-              analysisFormat: analysis && analysis.format ? analysis.format : (analysis && analysis.raw ? 'raw' : 'json')
-            };
-          } catch (analysisError) {
-            console.error('=== AI 分析失败 ===');
-            console.error('错误信息:', analysisError.message);
-            console.error('错误堆栈:', analysisError.stack);
-            task.status = 'completed';
-            task.progress = 100;
-            task.stage = `分析失败: ${analysisError.message}`;
-            task.result = {
-              snapshotId: response.snapshot.id,
-              size: response.snapshot.html.length + response.snapshot.css.length,
-              analysisError: analysisError.message
+              report: reportResult
             };
           }
         }
@@ -385,6 +441,21 @@ class TaskManager {
     const allExtracted = tasks.every(t => t.status === 'extracted' || t.status === 'completed' || t.status === 'failed');
 
     if (!allExtracted) return;
+
+    const syncConfig = await this.getSyncConfig();
+    if (syncConfig.reportOnly) {
+      for (const task of tasks) {
+        if (task.status === 'extracted') {
+          task.status = 'completed';
+          task.stage = '已完成';
+          task.progress = 100;
+        }
+      }
+      await this.saveTasks();
+      this.notifyUpdate();
+      this.batchGroups.delete(batchId);
+      return;
+    }
 
     console.log(`[TaskManager] 批次 ${batchId} 全部提取完成，开始统一分析`);
 
@@ -479,6 +550,60 @@ class TaskManager {
   async analyzeBatchSnapshots(snapshots) {
     const analyzer = new AIAnalyzer();
     return await analyzer.analyzeBatch(snapshots);
+  }
+
+  async getSyncConfig() {
+    const stored = await chrome.storage.local.get(['sg_syncConfig']);
+    const syncConfig = stored.sg_syncConfig || {};
+    return {
+      serverUrl: typeof syncConfig.serverUrl === 'string' ? syncConfig.serverUrl.trim() : 'http://localhost:3000',
+      reportOnly: syncConfig.reportOnly !== false,
+      deviceId: syncConfig.deviceId || 'browser-extension'
+    };
+  }
+
+  async reportSnapshotToServer(snapshot, analysis, taskId, syncConfig) {
+    if (!syncConfig.serverUrl) {
+      return null;
+    }
+
+    const serverUrl = syncConfig.serverUrl.replace(/\/+$/, '');
+    const payload = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      source: 'browser-extension',
+      website: {
+        url: snapshot.url || '',
+        title: snapshot.title || '',
+        favicon: snapshot.favicon || ''
+      },
+      snapshot,
+      analysis: analysis
+        ? {
+            styleguide: analysis.markdown || '',
+            components: analysis.components || [],
+            rules: analysis.rules || {}
+          }
+        : undefined,
+      sync: {
+        deviceId: syncConfig.deviceId || 'browser-extension',
+        sessionId: taskId,
+        needsUpload: false
+      }
+    };
+
+    const response = await fetch(`${serverUrl}/api/import/browser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`server_response_${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { jobId: data.job ? data.job.id : null };
   }
 
   /**

@@ -4,10 +4,12 @@ import { FileManager } from './fileManager';
 import { AIAnalyzer } from './aiAnalyzer';
 import { SidebarPanel } from './webview/SidebarPanel';
 import { SettingsPanel } from './webview/SettingsPanel';
+import { ServerManager } from './serverManager';
 import * as path from 'path';
 import * as fs from 'fs';
 
 let sidebarProvider: SidebarPanel;
+let serverManager: ServerManager;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('=== Design-Learn 插件已激活 ===');
@@ -63,6 +65,16 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(folderPath));
     });
 
+    serverManager = new ServerManager(context);
+    const toggleServerCommand = vscode.commands.registerCommand('design-learn.toggleServer', () => {
+        serverManager.toggle();
+    });
+
+    const serverConfig = vscode.workspace.getConfiguration('designLearn').get<any>('server');
+    if (serverConfig?.autoStart) {
+        void serverManager.start();
+    }
+
     context.subscriptions.push(
         settingsCommand,
         extractCommand,
@@ -70,7 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
         configureCommand,
         refreshSnapshotsCommand,
         openSnapshotsFolderCommand,
-        openSnapshotFolderCommand
+        openSnapshotFolderCommand,
+        toggleServerCommand,
+        serverManager
     );
 }
 
@@ -172,5 +186,7 @@ async function extractPage(useAI: boolean) {
 
 export function deactivate() {
     SettingsPanel.kill();
+    if (serverManager) {
+        serverManager.dispose();
+    }
 }
-
