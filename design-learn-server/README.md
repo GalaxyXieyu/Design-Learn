@@ -8,6 +8,17 @@ A minimal single-process server entry that registers REST, WebSocket, and MCP (S
 node src/server.js
 ```
 
+## Quick start (npx)
+
+```bash
+npx design-learn-server --port 3000 --data-dir ./data
+```
+
+Optional flags:
+- `--auth-token <token>` for MCP auth
+- `--server-name <name>` / `--server-version <ver>`
+- `--no-health-check` to disable startup health check
+
 Optional port override:
 
 ```bash
