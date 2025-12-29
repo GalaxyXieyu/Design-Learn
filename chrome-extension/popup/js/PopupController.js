@@ -159,7 +159,8 @@ class PopupController {
   }
 
   async resolveSyncStatus(syncConfig) {
-    if (syncConfig.serverUrl) {
+    const hasManualUrl = !!syncConfig.serverUrl;
+    if (hasManualUrl) {
       const ok = await this.pingServer(syncConfig.serverUrl);
       if (ok) {
         return { connected: true, url: syncConfig.serverUrl };
@@ -185,7 +186,9 @@ class PopupController {
 
     const detected = await this.detectServerUrl();
     if (detected) {
-      await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      if (!hasManualUrl) {
+        await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      }
       return { connected: true, url: detected };
     }
 

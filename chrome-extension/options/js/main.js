@@ -318,7 +318,8 @@ class OptionsApp {
   }
 
   async resolveSyncStatus(syncConfig) {
-    if (syncConfig.serverUrl) {
+    const hasManualUrl = !!syncConfig.serverUrl;
+    if (hasManualUrl) {
       const ok = await this.pingServer(syncConfig.serverUrl);
       if (ok) {
         return { connected: true, url: syncConfig.serverUrl };
@@ -342,7 +343,9 @@ class OptionsApp {
 
     const detected = await this.detectServerUrl();
     if (detected) {
-      await this.storage.setConfig({ syncConfig: { ...syncConfig, serverUrl: detected } });
+      if (!hasManualUrl) {
+        await this.storage.setConfig({ syncConfig: { ...syncConfig, serverUrl: detected } });
+      }
       return { connected: true, url: detected };
     }
 

@@ -568,7 +568,8 @@ class TaskManager {
   }
 
   async resolveServerUrl(syncConfig) {
-    if (syncConfig.serverUrl) {
+    const hasManualUrl = !!syncConfig.serverUrl;
+    if (hasManualUrl) {
       const ok = await this.pingServer(syncConfig.serverUrl);
       if (ok) {
         return syncConfig.serverUrl;
@@ -584,7 +585,9 @@ class TaskManager {
 
     const detected = await this.detectServerUrl();
     if (detected) {
-      await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      if (!hasManualUrl) {
+        await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      }
       return detected;
     }
 
