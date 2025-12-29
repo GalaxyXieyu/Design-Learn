@@ -158,7 +158,7 @@ npm run package
 
 ### 场景 3：Chrome 插件同步
 1. 在 VSCode 中执行 `Design-Learn: 启动/停止 Design-Learn 服务`
-2. 打开 Chrome 扩展设置页，在“同步设置”中填写服务地址（默认 `http://localhost:3000`）
+2. 打开 Chrome 扩展设置页，在“同步设置”中保持“自动检测本地服务”开启；未检测到时再手动填写服务地址
 3. 在 Chrome 插件中完成采集任务，插件会自动上报到本地服务
 
 ### 场景 4：使用自定义模板

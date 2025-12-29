@@ -293,7 +293,7 @@ class TaskManager {
         checkAborted();
 
         const syncConfig = await this.getSyncConfig();
-        const shouldReport = !!syncConfig.serverUrl;
+        const shouldReport = syncConfig.reportOnly || !!syncConfig.serverUrl || syncConfig.autoDetect;
         const reportOnly = syncConfig.reportOnly;
         let reportResult = null;
 
@@ -556,18 +556,82 @@ class TaskManager {
     const stored = await chrome.storage.local.get(['sg_syncConfig']);
     const syncConfig = stored.sg_syncConfig || {};
     return {
-      serverUrl: typeof syncConfig.serverUrl === 'string' ? syncConfig.serverUrl.trim() : 'http://localhost:3000',
+      serverUrl: typeof syncConfig.serverUrl === 'string' ? syncConfig.serverUrl.trim() : '',
       reportOnly: syncConfig.reportOnly !== false,
+      autoDetect: syncConfig.autoDetect !== false,
       deviceId: syncConfig.deviceId || 'browser-extension'
     };
   }
 
-  async reportSnapshotToServer(snapshot, analysis, taskId, syncConfig) {
-    if (!syncConfig.serverUrl) {
+  async saveSyncConfig(syncConfig) {
+    await chrome.storage.local.set({ sg_syncConfig: syncConfig });
+  }
+
+  async resolveServerUrl(syncConfig) {
+    if (syncConfig.serverUrl) {
+      const ok = await this.pingServer(syncConfig.serverUrl);
+      if (ok) {
+        return syncConfig.serverUrl;
+      }
+      if (!syncConfig.autoDetect) {
+        return null;
+      }
+    }
+
+    if (!syncConfig.autoDetect) {
       return null;
     }
 
-    const serverUrl = syncConfig.serverUrl.replace(/\/+$/, '');
+    const detected = await this.detectServerUrl();
+    if (detected) {
+      await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      return detected;
+    }
+
+    return null;
+  }
+
+  async detectServerUrl() {
+    const candidates = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3100',
+      'http://127.0.0.1:3100'
+    ];
+
+    for (const candidate of candidates) {
+      const ok = await this.pingServer(candidate);
+      if (ok) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  async pingServer(serverUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    try {
+      const response = await fetch(`${serverUrl.replace(/\/+$/, '')}/api/health`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async reportSnapshotToServer(snapshot, analysis, taskId, syncConfig) {
+    const resolvedUrl = await this.resolveServerUrl(syncConfig);
+    if (!resolvedUrl) {
+      throw new Error('server_not_found');
+    }
+
+    const serverUrl = resolvedUrl.replace(/\/+$/, '');
     const payload = {
       version: '1.0',
       exportedAt: new Date().toISOString(),

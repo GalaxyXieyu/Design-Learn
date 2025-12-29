@@ -247,13 +247,16 @@ class OptionsApp {
 
     const syncConfigResult = await this.storage.getConfig(['syncConfig']);
     const syncConfig = syncConfigResult.syncConfig || {
-      serverUrl: 'http://localhost:3000',
-      reportOnly: true
+      serverUrl: '',
+      reportOnly: true,
+      autoDetect: true
     };
     const serverUrl = document.getElementById('serverUrl');
     if (serverUrl) serverUrl.value = syncConfig.serverUrl || '';
     const reportOnly = document.getElementById('reportOnly');
     if (reportOnly) reportOnly.checked = syncConfig.reportOnly !== false;
+    const autoDetectServer = document.getElementById('autoDetectServer');
+    if (autoDetectServer) autoDetectServer.checked = syncConfig.autoDetect !== false;
   }
 
   /**
@@ -273,7 +276,8 @@ class OptionsApp {
     const rawServerUrl = document.getElementById('serverUrl')?.value;
     const syncConfig = {
       serverUrl: typeof rawServerUrl === 'string' ? rawServerUrl.trim() : '',
-      reportOnly: document.getElementById('reportOnly')?.checked !== false
+      reportOnly: document.getElementById('reportOnly')?.checked !== false,
+      autoDetect: document.getElementById('autoDetectServer')?.checked !== false
     };
 
     await this.storage.setConfig({ generateConfig, syncConfig });
