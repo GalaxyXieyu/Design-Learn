@@ -145,7 +145,8 @@ function createMcpServer({ name, version, storage }) {
 }
 
 function createMcpHandler(options = {}) {
-  const storage = createStorage({ dataDir: options.dataDir });
+  const storage = options.storage || createStorage({ dataDir: options.dataDir });
+  const ownsStorage = !options.storage;
   const serverName = options.serverName || 'design-learn';
   const serverVersion = options.serverVersion || '0.1.0';
   const authToken = options.authToken || null;
@@ -237,7 +238,9 @@ function createMcpHandler(options = {}) {
       await transport.close();
     }
     transports.clear();
-    storage.close();
+    if (ownsStorage) {
+      storage.close();
+    }
   }
 
   return {

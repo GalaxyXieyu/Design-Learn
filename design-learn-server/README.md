@@ -17,8 +17,39 @@ PORT=3000 node src/server.js
 ## Endpoints
 
 - `GET /api/health` -> health check JSON
+- `POST /api/import/browser` -> enqueue browser plugin import (alias: `/api/designs/import`)
+- `POST /api/import/url` -> enqueue Playwright URL extraction
+- `GET /api/import/jobs` -> list import jobs
+- `GET /api/import/jobs/:id` -> fetch job status
+- `GET /api/import/stream` -> SSE progress stream (optional `jobId=...`)
 - `GET /mcp` / `POST /mcp` / `DELETE /mcp` -> MCP Streamable HTTP (SSE streaming)
 - `WS /ws` -> WebSocket upgrade endpoint (handshake only)
+
+## Extraction pipeline
+
+### Browser plugin import
+
+```bash
+curl -X POST http://localhost:3000/api/import/browser \\
+  -H 'Content-Type: application/json' \\
+  -d '{\"source\":\"browser-extension\",\"website\":{\"url\":\"https://example.com\",\"title\":\"Example\"},\"snapshot\":{\"html\":\"<html></html>\",\"css\":\"body{}\"}}'
+```
+
+### URL extraction (Playwright)
+
+```bash
+curl -X POST http://localhost:3000/api/import/url \\
+  -H 'Content-Type: application/json' \\
+  -d '{\"url\":\"https://example.com\"}'
+```
+
+If `playwright` or `scripts/lib/extractor.js` is missing, the job will fail with `playwright_not_installed` or `extractor_script_missing`.
+
+### Progress stream
+
+```bash
+curl -N http://localhost:3000/api/import/stream
+```
 
 ## Data storage
 

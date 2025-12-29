@@ -6,8 +6,13 @@ const DEFAULT_PORT = Number(process.env.PORT || 3000);
 const WS_CLOSE_DELAY_MS = 500;
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const { createMcpHandler } = require('./mcp');
+const { createStorage } = require('./storage');
+const { createExtractionPipeline } = require('./pipeline');
 
+const storage = createStorage({ dataDir: process.env.DESIGN_LEARN_DATA_DIR });
+const extractionPipeline = createExtractionPipeline({ storage });
 const mcpHandler = createMcpHandler({
+  storage,
   dataDir: process.env.DESIGN_LEARN_DATA_DIR,
   serverName: process.env.MCP_SERVER_NAME,
   serverVersion: process.env.MCP_SERVER_VERSION,
@@ -42,6 +47,10 @@ function handleRoot(req, res) {
     status: 'ready',
     endpoints: {
       health: '/api/health',
+      importBrowser: '/api/import/browser',
+      importUrl: '/api/import/url',
+      importJobs: '/api/import/jobs',
+      importStream: '/api/import/stream',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -72,6 +81,73 @@ function findRoute(method, pathname) {
   return routes.find((route) => route.method === method && route.path === pathname);
 }
 
+function sendMethodNotAllowed(res) {
+  sendJson(res, 405, { error: 'method_not_allowed' });
+}
+
+function handleImportStream(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const jobIdFilter = url.searchParams.get('jobId');
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.write(`event: connected\\ndata: ${JSON.stringify({ status: 'ok' })}\\n\\n`);
+
+  const unsubscribe = extractionPipeline.onProgress((event) => {
+    if (jobIdFilter && event.job.id !== jobIdFilter) {
+      return;
+    }
+    res.write(`event: ${event.event}\\ndata: ${JSON.stringify(event)}\\n\\n`);
+  });
+
+  req.on('close', () => {
+    unsubscribe();
+  });
+}
+
+function handleImportJobs(res) {
+  sendJson(res, 200, { jobs: extractionPipeline.listJobs() });
+}
+
+function handleImportJob(res, jobId) {
+  const job = extractionPipeline.getJob(jobId);
+  if (!job) {
+    return sendJson(res, 404, { error: 'job_not_found' });
+  }
+  return sendJson(res, 200, { job });
+}
+
+async function handleImportBrowser(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  try {
+    const job = extractionPipeline.enqueueImportFromBrowser(body);
+    sendJson(res, 202, { job });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message });
+  }
+}
+
+async function handleImportUrl(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  try {
+    const job = extractionPipeline.enqueueImportFromUrl(body);
+    sendJson(res, 202, { job });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message });
+  }
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -94,6 +170,51 @@ async function handleRequest(req, res) {
 
   if (isWsPath(pathname)) {
     return handleWsHttpFallback(req, res);
+  }
+
+  if (pathname === '/api/designs/import') {
+    if (req.method === 'POST') {
+      return handleImportBrowser(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/import')) {
+    if (pathname === '/api/import/stream') {
+      if (req.method === 'GET') {
+        return handleImportStream(req, res);
+      }
+      return sendMethodNotAllowed(res);
+    }
+
+    if (pathname === '/api/import/jobs') {
+      if (req.method === 'GET') {
+        return handleImportJobs(res);
+      }
+      return sendMethodNotAllowed(res);
+    }
+
+    if (pathname.startsWith('/api/import/jobs/')) {
+      if (req.method === 'GET') {
+        const jobId = pathname.split('/').pop();
+        return handleImportJob(res, jobId);
+      }
+      return sendMethodNotAllowed(res);
+    }
+
+    if (pathname === '/api/import/browser') {
+      if (req.method === 'POST') {
+        return handleImportBrowser(req, res);
+      }
+      return sendMethodNotAllowed(res);
+    }
+
+    if (pathname === '/api/import/url') {
+      if (req.method === 'POST') {
+        return handleImportUrl(req, res);
+      }
+      return sendMethodNotAllowed(res);
+    }
   }
 
   const route = findRoute(req.method, pathname);
@@ -191,6 +312,8 @@ server.listen(DEFAULT_PORT, () => {
 function shutdown(signal) {
   console.log(`[design-learn-server] received ${signal}, shutting down`);
   mcpHandler.close().catch((error) => console.error('[mcp] close error', error));
+  extractionPipeline.close();
+  storage.close();
   server.close(() => process.exit(0));
 }
 
