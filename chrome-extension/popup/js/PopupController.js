@@ -32,6 +32,9 @@ class PopupController {
       
       // 加载配置和模型选项
       await this.loadConfig();
+
+      // 显示同步状态
+      await this.initSyncStatus();
       
       // 加载任务列表
       await this.taskManager.loadTasks();
@@ -75,6 +78,135 @@ class PopupController {
     const defaultModel = aiModels.find(m => m.isDefault) || aiModels[0] || null;
     
     this.displayModelSelector(defaultModel, aiModels);
+  }
+
+  async initSyncStatus() {
+    const refreshBtn = document.getElementById('syncStatusRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.refreshSyncStatus();
+      });
+    }
+
+    const actionBtn = document.getElementById('syncStatusAction');
+    if (actionBtn) {
+      actionBtn.addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+      });
+    }
+
+    await this.refreshSyncStatus();
+  }
+
+  async refreshSyncStatus() {
+    const container = document.getElementById('syncStatus');
+    const textEl = document.getElementById('syncStatusText');
+    const actionBtn = document.getElementById('syncStatusAction');
+
+    if (!container || !textEl) {
+      return;
+    }
+
+    container.classList.remove('is-connected', 'is-disconnected');
+    textEl.textContent = '服务状态：检测中...';
+    if (actionBtn) {
+      actionBtn.style.display = 'none';
+    }
+
+    const syncConfig = await this.getSyncConfig();
+    const result = await this.resolveSyncStatus(syncConfig);
+
+    if (result.connected) {
+      container.classList.add('is-connected');
+      textEl.textContent = `服务状态：已连接 ${this.formatServerLabel(result.url)}`;
+    } else {
+      container.classList.add('is-disconnected');
+      textEl.textContent = `服务状态：未连接（${result.reason}）`;
+      if (actionBtn) {
+        actionBtn.style.display = 'inline-flex';
+      }
+    }
+  }
+
+  formatServerLabel(serverUrl) {
+    if (!serverUrl) return '';
+    try {
+      const url = new URL(serverUrl);
+      return `${url.hostname}:${url.port || (url.protocol === 'https:' ? '443' : '80')}`;
+    } catch {
+      return serverUrl;
+    }
+  }
+
+  async getSyncConfig() {
+    const stored = await chrome.storage.local.get(['sg_syncConfig', 'syncConfig']);
+    const syncConfig = stored.sg_syncConfig || stored.syncConfig || {};
+    return {
+      serverUrl: typeof syncConfig.serverUrl === 'string' ? syncConfig.serverUrl.trim() : '',
+      autoDetect: syncConfig.autoDetect !== false
+    };
+  }
+
+  async saveSyncConfig(syncConfig) {
+    await chrome.storage.local.set({ sg_syncConfig: syncConfig });
+  }
+
+  async resolveSyncStatus(syncConfig) {
+    if (syncConfig.serverUrl) {
+      const ok = await this.pingServer(syncConfig.serverUrl);
+      if (ok) {
+        return { connected: true, url: syncConfig.serverUrl };
+      }
+      if (!syncConfig.autoDetect) {
+        return { connected: false, reason: '手动地址不可用，请检查服务是否启动' };
+      }
+    }
+
+    if (!syncConfig.autoDetect) {
+      return { connected: false, reason: '未开启自动检测，请先配置服务地址' };
+    }
+
+    const detected = await this.detectServerUrl();
+    if (detected) {
+      await this.saveSyncConfig({ ...syncConfig, serverUrl: detected });
+      return { connected: true, url: detected };
+    }
+
+    return { connected: false, reason: '自动检测未找到本地服务' };
+  }
+
+  async detectServerUrl() {
+    const candidates = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3100',
+      'http://127.0.0.1:3100'
+    ];
+
+    for (const candidate of candidates) {
+      const ok = await this.pingServer(candidate);
+      if (ok) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  async pingServer(serverUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    try {
+      const response = await fetch(`${serverUrl.replace(/\/+$/, '')}/api/health`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   
   /**
