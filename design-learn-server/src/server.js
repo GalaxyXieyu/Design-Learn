@@ -2,7 +2,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { URL } = require('url');
 
-const DEFAULT_PORT = Number(process.env.PORT || 3000);
+const DEFAULT_PORT = Number(process.env.PORT || process.env.DESIGN_LEARN_PORT || 3000);
 const WS_CLOSE_DELAY_MS = 500;
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const { createMcpHandler } = require('./mcp');
@@ -307,6 +307,7 @@ server.on('clientError', (err, socket) => {
 
 server.listen(DEFAULT_PORT, () => {
   console.log(`[design-learn-server] listening on http://localhost:${DEFAULT_PORT}`);
+  console.log(`[design-learn-server] data dir: ${storage.dataDir}`);
 });
 
 function shutdown(signal) {
