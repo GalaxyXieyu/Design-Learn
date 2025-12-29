@@ -3,9 +3,16 @@ const crypto = require('crypto');
 const { URL } = require('url');
 
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
-const KEEP_ALIVE_INTERVAL_MS = 15000;
 const WS_CLOSE_DELAY_MS = 500;
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+const { createMcpHandler } = require('./mcp');
+
+const mcpHandler = createMcpHandler({
+  dataDir: process.env.DESIGN_LEARN_DATA_DIR,
+  serverName: process.env.MCP_SERVER_NAME,
+  serverVersion: process.env.MCP_SERVER_VERSION,
+  authToken: process.env.MCP_AUTH_TOKEN,
+});
 
 const routes = [
   {
@@ -57,36 +64,6 @@ function isWsPath(pathname) {
   return pathname === '/ws' || pathname.startsWith('/ws/');
 }
 
-function handleMcpSse(req, res) {
-  if (req.method !== 'GET') {
-    return sendJson(res, 405, { error: 'method_not_allowed' });
-  }
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-  });
-
-  const readyPayload = JSON.stringify({
-    status: 'ready',
-    transport: 'sse',
-    timestamp: new Date().toISOString(),
-  });
-
-  res.write(': ok\n\n');
-  res.write(`event: ready\ndata: ${readyPayload}\n\n`);
-
-  const interval = setInterval(() => {
-    res.write(`event: ping\ndata: ${Date.now()}\n\n`);
-  }, KEEP_ALIVE_INTERVAL_MS);
-
-  req.on('close', () => {
-    clearInterval(interval);
-    res.end();
-  });
-}
-
 function handleWsHttpFallback(req, res) {
   sendJson(res, 426, { error: 'upgrade_required' });
 }
@@ -95,14 +72,24 @@ function findRoute(method, pathname) {
   return routes.find((route) => route.method === method && route.path === pathname);
 }
 
-function handleRequest(req, res) {
+async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
   console.log(`[http] ${req.method} ${pathname}`);
 
   if (isMcpPath(pathname)) {
-    return handleMcpSse(req, res);
+    if (req.method === 'POST') {
+      const body = await readJsonBody(req, res);
+      if (!body) {
+        return;
+      }
+      await mcpHandler.handleRequest(req, res, body);
+      return;
+    }
+
+    await mcpHandler.handleRequest(req, res);
+    return;
   }
 
   if (isWsPath(pathname)) {
@@ -115,6 +102,30 @@ function handleRequest(req, res) {
   }
 
   return sendJson(res, 404, { error: 'not_found', path: pathname });
+}
+
+function readJsonBody(req, res) {
+  return new Promise((resolve) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      if (!data) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'empty_body' }));
+        resolve(null);
+        return;
+      }
+      try {
+        resolve(JSON.parse(data));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'invalid_json' }));
+        resolve(null);
+      }
+    });
+  });
 }
 
 function handleWebSocketUpgrade(req, socket) {
@@ -151,12 +162,12 @@ function handleWebSocketUpgrade(req, socket) {
 }
 
 const server = http.createServer((req, res) => {
-  try {
-    handleRequest(req, res);
-  } catch (error) {
+  handleRequest(req, res).catch((error) => {
     console.error('[http] handler error', error);
-    sendJson(res, 500, { error: 'internal_error' });
-  }
+    if (!res.headersSent) {
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+  });
 });
 
 server.on('upgrade', (req, socket) => {
@@ -179,6 +190,7 @@ server.listen(DEFAULT_PORT, () => {
 
 function shutdown(signal) {
   console.log(`[design-learn-server] received ${signal}, shutting down`);
+  mcpHandler.close().catch((error) => console.error('[mcp] close error', error));
   server.close(() => process.exit(0));
 }
 
