@@ -4,9 +4,22 @@
 
 - Chrome Extension：采集与上报路径
 - VSCode Extension：管理 UI 与本地服务启动
+- Design-Learn Server：单进程服务与 MCP/REST 入口
 - scripts：Playwright 批处理与提取脚本
 
 ## 模块复用/淘汰清单
+
+### Design-Learn Server
+
+**复用**
+- `design-learn-server/src/server.js`：统一入口与路由
+- `design-learn-server/src/storage/*`：SQLite + 文件存储
+- `design-learn-server/src/mcp/*`：MCP tools/resources/prompts 注册
+- `design-learn-server/src/cli.js`：npx 启动入口（保留配置参数）
+
+**替代/兼容**
+- 旧的 `node design-learn-server/src/server.js` 启动方式保留为兼容路径
+- 手动 URL 配置继续保留（自动检测失败时兜底）
 
 ### Chrome Extension
 
@@ -48,6 +61,7 @@
 1. 关键发布前对 `main` 打标签（例如 `pre-mvp-YYYYMMDD`）。
 2. 数据回滚：备份 `design-learn-server/data/` 与 `data/` 目录。
 3. 客户端回滚：保留旧版扩展构建产物与 manifest 版本号。
+4. 启动回滚：如 npx 入口异常，回退到 `node design-learn-server/src/server.js`；如自动检测异常，关闭自动检测并手动填写 URL。
 
 ## 兼容性与风险标注
 
