@@ -78,3 +78,15 @@ curl -N http://localhost:3000/api/import/stream
 - Auth: set `MCP_AUTH_TOKEN` to require `Authorization: Bearer <token>` on MCP requests.
 - Version: `MCP_SERVER_VERSION` controls the MCP server version advertised to clients (default `0.1.0`).
 - Compatibility: prefer additive changes (new tools/resources/prompts) and keep existing contracts stable.
+
+## MCP quick check
+
+```bash
+node scripts/verify-mcp.js --url http://localhost:3000/mcp
+```
+
+With auth:
+
+```bash
+node scripts/verify-mcp.js --url http://localhost:3000/mcp --auth-token YOUR_TOKEN
+```
