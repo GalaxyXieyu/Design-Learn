@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-3000}"
 DATA_DIR="${DESIGN_LEARN_DATA_DIR:-$ROOT_DIR/data}"
+VERIFY_URL="${VERIFY_URL:-}"
 
 node "$ROOT_DIR/design-learn-server/src/server.js" &
 SERVER_PID=$!
@@ -43,5 +44,24 @@ with open('/tmp/design-learn-jobs.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 print('[verify] jobs:', len(data.get('jobs', [])))
 PY
+
+if [ -n "$VERIFY_URL" ]; then
+  curl -sS -X POST "http://localhost:${PORT}/api/import/url" \
+    -H 'Content-Type: application/json' \
+    -d "{\"url\":\"${VERIFY_URL}\"}" \
+    > /tmp/design-learn-import-url.json
+
+  python3 - <<'PY'
+import json
+with open('/tmp/design-learn-import-url.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+job = data.get('job') or {}
+error = data.get('error')
+if job.get('id'):
+    print('[verify] import-url job:', job.get('id'))
+else:
+    print('[verify] import-url error:', error)
+PY
+fi
 
 echo "[verify] done"
