@@ -3,11 +3,14 @@
 ## 运行方式
 
 ```bash
+# npx 启动（推荐）
+npx design-learn-server --port 3000 --data-dir ./data
+
 # 本地启动
 node design-learn-server/src/server.js
 
-# 指定端口
-PORT=3000 node design-learn-server/src/server.js
+# 指定端口（兼容 PORT 与 DESIGN_LEARN_PORT）
+DESIGN_LEARN_PORT=3000 node design-learn-server/src/server.js
 ```
 
 ## 配置示例
@@ -23,7 +26,19 @@ MCP_AUTH_TOKEN=your-token
 MCP_SERVER_VERSION=0.1.0
 
 # 服务端口
-PORT=3000
+DESIGN_LEARN_PORT=3000
+```
+
+## MCP 连接示例
+
+```bash
+node design-learn-server/scripts/verify-mcp.js --url http://localhost:3000/mcp
+```
+
+如需鉴权：
+
+```bash
+node design-learn-server/scripts/verify-mcp.js --url http://localhost:3000/mcp --auth-token YOUR_TOKEN
 ```
 
 ## 数据路径说明

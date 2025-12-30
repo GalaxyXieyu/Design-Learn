@@ -48,7 +48,7 @@ VSCode Extension (管理/启动) ──┘
 
 - **MVP：一键启动 + 自动发现**
   - 依赖：Node.js 18+；端口可用；已安装 Chrome/VSCode 插件
-  - 验收：`npx @design-learn/server` 可启动服务并 `GET /api/health` 返回 healthy；插件自动检测本地服务，未检测到时提示启动并保留手动 URL 兜底
+  - 验收：`npx design-learn-server` 可启动服务并 `GET /api/health` 返回 healthy；插件自动检测本地服务，未检测到时提示启动并保留手动 URL 兜底
 - **迭代 1：联调可观测与稳定性**
   - 依赖：服务启动参数（端口/数据目录/鉴权）可配置；日志可定位
   - 验收：连接状态在插件 UI 可见；导入链路可通过脚本验证；失败场景有明确提示
