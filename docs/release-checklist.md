@@ -12,6 +12,7 @@
 - [ ] 单元/接口/E2E 测试执行完成。
 - [ ] npx 启动链路可通过 `scripts/verify-backend.sh` 验证。
 - [ ] MCP 连接可通过 `design-learn-server/scripts/verify-mcp.js` 验证。
+- [ ] MCP JSON 自动启动配置已验证可用。
 - [ ] 插件自动检测与手动 URL 兜底流程复核通过。
 - [ ] 性能基线已记录并归档。
 - [ ] 关键路径回归通过（采集→上报→同步）。

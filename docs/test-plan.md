@@ -31,6 +31,12 @@ PORT=3100 VERIFY_URL=https://example.com ./scripts/verify-backend.sh
 node design-learn-server/scripts/verify-mcp.js --url http://localhost:3100/mcp
 ```
 
+## MCP 自动启动配置验证
+
+1. 准备 MCP 配置文件（示例：`docs/mcp-config.md`）。
+2. 在 MCP 客户端启用该配置，确保能自动拉起本地服务。
+3. 观察 `/api/health` 或 MCP 调用返回正常。
+
 ## E2E 测试（手工流程）
 
 1. 启动服务：`npx design-learn-server --port 3100 --data-dir ./data`（或 `node design-learn-server/src/server.js`）
