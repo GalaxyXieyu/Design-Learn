@@ -1,0 +1,9 @@
+[
+  {
+    "id": "snapshot_test",
+    "url": "https://example.com",
+    "title": "Example",
+    "html": "<html></html>",
+    "css": "body{}"
+  }
+]

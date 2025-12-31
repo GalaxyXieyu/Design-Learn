@@ -1,0 +1,21 @@
+{
+  "id": "5b0bbd93-efe6-4382-9018-f368aa8f192a",
+  "name": "Example",
+  "url": "https://example.com",
+  "source": "browser",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 3,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "browser-extension",
+    "extractorVersion": "",
+    "tags": []
+  },
+  "createdAt": "2025-12-29T09:05:35.896Z",
+  "updatedAt": "2025-12-29T09:09:11.011Z"
+}
