@@ -130,6 +130,7 @@ VSCode Extension (管理/启动) ──┘
 3. 保持“自动检测本地服务”开启；未检测到时再手动填写服务地址
 4. 触发一次采集任务，服务端 `/api/import/jobs` 可看到记录
 5. MCP 自动启动配置（可选）：参考 `docs/mcp-config.md`
+6. 克隆后的联调流程（可选）：参考 `docs/quickstart-mcp.md`
 
 ## 🧩 本地安装详细指南
 
