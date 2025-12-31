@@ -22,7 +22,7 @@ TARBALL_PATH="${SERVER_DIR}/${TARBALL_NAME}"
 
 echo "[verify-npx] tarball=${TARBALL_NAME}"
 
-npx --yes "$TARBALL_PATH" --port "$PORT" --data-dir "$DATA_DIR" &
+npx --yes -p "$TARBALL_PATH" design-learn-server --port "$PORT" --data-dir "$DATA_DIR" &
 SERVER_PID=$!
 
 cleanup() {
