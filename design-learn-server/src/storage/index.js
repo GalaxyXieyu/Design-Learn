@@ -40,6 +40,8 @@ function createStorage(options = {}) {
     getSnapshot: (snapshotId) => getSnapshot(db, dataDir, snapshotId),
     deleteSnapshot: (snapshotId) => deleteSnapshot(db, dataDir, snapshotId),
     createComponent: (input) => createComponent(db, dataDir, input),
+    updateComponentPreview: (componentId, preview) =>
+      updateComponentPreview(db, dataDir, componentId, preview),
     listComponents: (filters) => listComponents(db, dataDir, filters),
     getComponent: (componentId) => getComponent(db, dataDir, componentId),
     deleteComponent: (componentId) => deleteComponent(db, dataDir, componentId),
@@ -604,6 +606,36 @@ async function getComponent(db, dataDir, componentId) {
     css: payload.css,
     structure: payload.structure,
     preview: payload.preview,
+    createdAt: row.created_at,
+  };
+}
+
+async function updateComponentPreview(db, dataDir, componentId, preview = {}) {
+  const row = db.prepare('SELECT * FROM components WHERE id = ?').get(componentId);
+  if (!row) {
+    return null;
+  }
+
+  const payload = await readJson(row.code_path);
+  const updated = {
+    ...payload,
+    preview,
+  };
+  await writeJson(row.code_path, updated);
+
+  const previewPath = preview.imageUrl || preview.url || '';
+  db.prepare('UPDATE components SET preview_path = ? WHERE id = ?').run(previewPath, componentId);
+
+  return {
+    id: row.id,
+    designId: row.design_id,
+    versionId: row.version_id,
+    name: row.name,
+    type: row.type,
+    html: updated.html,
+    css: updated.css,
+    structure: updated.structure,
+    preview: updated.preview,
     createdAt: row.created_at,
   };
 }

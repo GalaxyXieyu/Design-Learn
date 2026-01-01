@@ -8,11 +8,13 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const { createMcpHandler } = require('./mcp');
 const { createStorage } = require('./storage');
 const { createExtractionPipeline } = require('./pipeline');
+const { createPreviewPipeline } = require('./preview');
 const { getConfigPath } = require('./storage/paths');
 const { readJson, writeJson } = require('./storage/fileStore');
 
 const storage = createStorage({ dataDir: process.env.DESIGN_LEARN_DATA_DIR });
 const extractionPipeline = createExtractionPipeline({ storage });
+const previewPipeline = createPreviewPipeline({ storage });
 const mcpHandler = createMcpHandler({
   storage,
   dataDir: process.env.DESIGN_LEARN_DATA_DIR,
@@ -61,6 +63,7 @@ function handleRoot(req, res) {
       designs: '/api/designs',
       snapshots: '/api/snapshots',
       config: '/api/config',
+      previews: '/api/previews',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -318,6 +321,31 @@ async function handleSnapshotDelete(res, snapshotId) {
   return sendNoContent(res);
 }
 
+function handlePreviewJobs(res) {
+  sendJson(res, 200, { jobs: previewPipeline.listJobs() });
+}
+
+function handlePreviewJob(res, jobId) {
+  const job = previewPipeline.getJob(jobId);
+  if (!job) {
+    return sendJson(res, 404, { error: 'preview_job_not_found' });
+  }
+  return sendJson(res, 200, { job });
+}
+
+async function handlePreviewEnqueue(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  try {
+    const job = previewPipeline.enqueuePreview(body);
+    return sendJson(res, 202, { job });
+  } catch (error) {
+    return sendJson(res, 400, { error: error.message });
+  }
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -452,6 +480,31 @@ async function handleRequest(req, res) {
     return sendMethodNotAllowed(res);
   }
 
+  if (pathname === '/api/previews') {
+    if (req.method === 'POST') {
+      return handlePreviewEnqueue(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/previews/jobs') {
+    if (req.method === 'GET') {
+      return handlePreviewJobs(res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/previews/jobs/')) {
+    const jobId = pathname.split('/').pop();
+    if (!jobId) {
+      return sendJson(res, 400, { error: 'preview_job_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handlePreviewJob(res, jobId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
   const route = findRoute(req.method, pathname);
   if (route) {
     return route.handler(req, res);
@@ -549,6 +602,7 @@ function shutdown(signal) {
   console.log(`[design-learn-server] received ${signal}, shutting down`);
   mcpHandler.close().catch((error) => console.error('[mcp] close error', error));
   extractionPipeline.close();
+  previewPipeline.close();
   storage.close();
   server.close(() => process.exit(0));
 }
