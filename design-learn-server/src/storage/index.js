@@ -33,6 +33,9 @@ function createStorage(options = {}) {
     listVersions: (designId) => listVersions(db, designId),
     getVersion: (versionId) => getVersion(db, dataDir, versionId),
     deleteVersion: (versionId) => deleteVersion(db, dataDir, versionId),
+    listSnapshots: (filters) => listSnapshots(db, dataDir, filters),
+    getSnapshot: (snapshotId) => getSnapshot(db, dataDir, snapshotId),
+    deleteSnapshot: (snapshotId) => deleteSnapshot(db, dataDir, snapshotId),
     createComponent: (input) => createComponent(db, dataDir, input),
     listComponents: (filters) => listComponents(db, filters),
     getComponent: (componentId) => getComponent(db, dataDir, componentId),
@@ -290,6 +293,132 @@ async function deleteVersion(db, dataDir, versionId) {
     designMeta.stats.versions = Math.max(0, (designMeta.stats.versions || 1) - 1);
     await updateDesign(db, dataDir, row.design_id, designMeta);
   }
+}
+
+function normalizeSnapshot(snapshot, versionRow, index) {
+  const snapshotId =
+    snapshot && snapshot.id != null ? String(snapshot.id) : `${versionRow.id}:${index}`;
+  return {
+    id: snapshotId,
+    designId: versionRow.design_id,
+    versionId: versionRow.id,
+    versionNumber: versionRow.version_number,
+    url: snapshot?.url || '',
+    title: snapshot?.title || '',
+    html: snapshot?.html || '',
+    css: snapshot?.css || '',
+    metadata: snapshot?.metadata || {},
+    createdAt: snapshot?.createdAt || versionRow.created_at,
+  };
+}
+
+function parseSnapshotId(snapshotId) {
+  if (!snapshotId || typeof snapshotId !== 'string') {
+    return null;
+  }
+  const parts = snapshotId.split(':');
+  if (parts.length !== 2) {
+    return null;
+  }
+  const index = Number(parts[1]);
+  if (!Number.isInteger(index) || index < 0) {
+    return null;
+  }
+  return { versionId: parts[0], index };
+}
+
+async function readSnapshotsFile(versionRow) {
+  try {
+    const snapshots = await readJson(versionRow.snapshots_path);
+    return Array.isArray(snapshots) ? snapshots : [];
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function listSnapshots(db, dataDir, filters = {}) {
+  const clauses = [];
+  const args = [];
+
+  if (filters.designId) {
+    clauses.push('design_id = ?');
+    args.push(filters.designId);
+  }
+
+  if (filters.versionId) {
+    clauses.push('id = ?');
+    args.push(filters.versionId);
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = db
+    .prepare(`SELECT * FROM versions ${whereClause} ORDER BY created_at DESC`)
+    .all(...args);
+
+  const items = [];
+  for (const row of rows) {
+    const snapshots = await readSnapshotsFile(row);
+    snapshots.forEach((snapshot, index) => {
+      items.push(normalizeSnapshot(snapshot, row, index));
+    });
+  }
+
+  return items;
+}
+
+async function getSnapshot(db, dataDir, snapshotId) {
+  const parsed = parseSnapshotId(snapshotId);
+  if (parsed) {
+    const row = db.prepare('SELECT * FROM versions WHERE id = ?').get(parsed.versionId);
+    if (!row) {
+      return null;
+    }
+    const snapshots = await readSnapshotsFile(row);
+    const snapshot = snapshots[parsed.index];
+    if (!snapshot) {
+      return null;
+    }
+    return normalizeSnapshot(snapshot, row, parsed.index);
+  }
+
+  const snapshots = await listSnapshots(db, dataDir);
+  return snapshots.find((snapshot) => snapshot.id === snapshotId) || null;
+}
+
+async function deleteSnapshot(db, dataDir, snapshotId) {
+  const parsed = parseSnapshotId(snapshotId);
+  if (parsed) {
+    const row = db.prepare('SELECT * FROM versions WHERE id = ?').get(parsed.versionId);
+    if (!row) {
+      return null;
+    }
+    const snapshots = await readSnapshotsFile(row);
+    if (!snapshots[parsed.index]) {
+      return null;
+    }
+    const [removed] = snapshots.splice(parsed.index, 1);
+    await writeJson(row.snapshots_path, snapshots);
+    return normalizeSnapshot(removed, row, parsed.index);
+  }
+
+  const rows = db.prepare('SELECT * FROM versions ORDER BY created_at DESC').all();
+  for (const row of rows) {
+    const snapshots = await readSnapshotsFile(row);
+    const index = snapshots.findIndex(
+      (snapshot) => snapshot && String(snapshot.id || '') === snapshotId
+    );
+    if (index === -1) {
+      continue;
+    }
+    const [removed] = snapshots.splice(index, 1);
+    await writeJson(row.snapshots_path, snapshots);
+    return normalizeSnapshot(removed, row, index);
+  }
+
+  return null;
 }
 
 async function createComponent(db, dataDir, input) {

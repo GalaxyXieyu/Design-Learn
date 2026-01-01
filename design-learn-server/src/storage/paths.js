@@ -79,6 +79,10 @@ function getDatabasePath(dataDir) {
   return path.join(dataDir, 'database.sqlite');
 }
 
+function getConfigPath(dataDir) {
+  return path.join(dataDir, 'config.json');
+}
+
 module.exports = {
   expandHome,
   resolveDataDir,
@@ -95,4 +99,5 @@ module.exports = {
   getRulesDir,
   getRulePath,
   getDatabasePath,
+  getConfigPath,
 };

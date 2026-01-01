@@ -8,6 +8,8 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const { createMcpHandler } = require('./mcp');
 const { createStorage } = require('./storage');
 const { createExtractionPipeline } = require('./pipeline');
+const { getConfigPath } = require('./storage/paths');
+const { readJson, writeJson } = require('./storage/fileStore');
 
 const storage = createStorage({ dataDir: process.env.DESIGN_LEARN_DATA_DIR });
 const extractionPipeline = createExtractionPipeline({ storage });
@@ -41,6 +43,11 @@ function sendJson(res, status, body) {
   res.end(payload);
 }
 
+function sendNoContent(res) {
+  res.writeHead(204);
+  res.end();
+}
+
 function handleRoot(req, res) {
   sendJson(res, 200, {
     name: 'design-learn-server',
@@ -51,6 +58,9 @@ function handleRoot(req, res) {
       importUrl: '/api/import/url',
       importJobs: '/api/import/jobs',
       importStream: '/api/import/stream',
+      designs: '/api/designs',
+      snapshots: '/api/snapshots',
+      config: '/api/config',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -63,6 +73,89 @@ function handleHealth(req, res) {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
+}
+
+const DEFAULT_CONFIG = {
+  model: {
+    name: '',
+    version: '',
+    provider: '',
+  },
+  templates: {
+    styleguide: '',
+    components: '',
+  },
+  extractOptions: {
+    includeRules: true,
+    includeComponents: true,
+  },
+  updatedAt: null,
+};
+
+function parseLimitOffset(url) {
+  const limitRaw = Number(url.searchParams.get('limit'));
+  const offsetRaw = Number(url.searchParams.get('offset'));
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 20;
+  const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
+  return { limit, offset };
+}
+
+function paginate(items, limit, offset) {
+  const total = items.length;
+  const paged = items.slice(offset, offset + limit);
+  return { items: paged, total };
+}
+
+async function loadConfig() {
+  const configPath = getConfigPath(storage.dataDir);
+  try {
+    return await readJson(configPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { ...DEFAULT_CONFIG };
+    }
+    throw error;
+  }
+}
+
+function normalizeConfig(input) {
+  const now = new Date().toISOString();
+  const model = input?.model || {};
+  const templates = input?.templates || {};
+  const extractOptions = input?.extractOptions || {};
+  return {
+    model: {
+      ...DEFAULT_CONFIG.model,
+      ...model,
+    },
+    templates: {
+      ...DEFAULT_CONFIG.templates,
+      ...templates,
+    },
+    extractOptions: {
+      ...DEFAULT_CONFIG.extractOptions,
+      ...extractOptions,
+    },
+    updatedAt: now,
+  };
+}
+
+async function handleConfigGet(res) {
+  const config = await loadConfig();
+  sendJson(res, 200, config);
+}
+
+async function handleConfigPut(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return sendJson(res, 400, { error: 'invalid_config' });
+  }
+  const config = normalizeConfig(body);
+  await writeJson(getConfigPath(storage.dataDir), config);
+  return sendJson(res, 200, config);
 }
 
 function isMcpPath(pathname) {
@@ -148,6 +241,83 @@ async function handleImportUrl(req, res) {
   }
 }
 
+function handleDesignList(res, url) {
+  const { limit, offset } = parseLimitOffset(url);
+  const designs = storage.listDesigns();
+  const { items, total } = paginate(designs, limit, offset);
+  sendJson(res, 200, { items, limit, offset, total });
+}
+
+async function handleDesignCreate(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  const design = await storage.createDesign(body);
+  sendJson(res, 201, design);
+}
+
+async function handleDesignGet(res, designId) {
+  const design = await storage.getDesign(designId);
+  if (!design) {
+    return sendJson(res, 404, { error: 'design_not_found' });
+  }
+  return sendJson(res, 200, design);
+}
+
+async function handleDesignPatch(req, res, designId) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  const design = await storage.updateDesign(designId, body);
+  if (!design) {
+    return sendJson(res, 404, { error: 'design_not_found' });
+  }
+  return sendJson(res, 200, design);
+}
+
+async function handleDesignDelete(res, designId) {
+  const design = await storage.getDesign(designId);
+  if (!design) {
+    return sendJson(res, 404, { error: 'design_not_found' });
+  }
+  await storage.deleteDesign(designId);
+  return sendNoContent(res);
+}
+
+async function handleSnapshotsList(res, url) {
+  const { limit, offset } = parseLimitOffset(url);
+  const filters = {};
+  const designId = url.searchParams.get('designId');
+  const versionId = url.searchParams.get('versionId');
+  if (designId) {
+    filters.designId = designId;
+  }
+  if (versionId) {
+    filters.versionId = versionId;
+  }
+  const snapshots = await storage.listSnapshots(filters);
+  const { items, total } = paginate(snapshots, limit, offset);
+  return sendJson(res, 200, { items, limit, offset, total });
+}
+
+async function handleSnapshotGet(res, snapshotId) {
+  const snapshot = await storage.getSnapshot(snapshotId);
+  if (!snapshot) {
+    return sendJson(res, 404, { error: 'snapshot_not_found' });
+  }
+  return sendJson(res, 200, snapshot);
+}
+
+async function handleSnapshotDelete(res, snapshotId) {
+  const snapshot = await storage.deleteSnapshot(snapshotId);
+  if (!snapshot) {
+    return sendJson(res, 404, { error: 'snapshot_not_found' });
+  }
+  return sendNoContent(res);
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -215,6 +385,71 @@ async function handleRequest(req, res) {
       }
       return sendMethodNotAllowed(res);
     }
+  }
+
+  if (pathname === '/api/config') {
+    if (req.method === 'GET') {
+      return handleConfigGet(res);
+    }
+    if (req.method === 'PUT') {
+      return handleConfigPut(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/designs') {
+    if (req.method === 'GET') {
+      return handleDesignList(res, url);
+    }
+    if (req.method === 'POST') {
+      return handleDesignCreate(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/designs/')) {
+    const designId = pathname.split('/').pop();
+    if (!designId) {
+      return sendJson(res, 400, { error: 'design_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handleDesignGet(res, designId);
+    }
+    if (req.method === 'PATCH') {
+      return handleDesignPatch(req, res, designId);
+    }
+    if (req.method === 'DELETE') {
+      return handleDesignDelete(res, designId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/snapshots/import') {
+    if (req.method === 'POST') {
+      return handleImportBrowser(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/snapshots') {
+    if (req.method === 'GET') {
+      return handleSnapshotsList(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/snapshots/')) {
+    const snapshotId = pathname.split('/').pop();
+    if (!snapshotId) {
+      return sendJson(res, 400, { error: 'snapshot_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handleSnapshotGet(res, snapshotId);
+    }
+    if (req.method === 'DELETE') {
+      return handleSnapshotDelete(res, snapshotId);
+    }
+    return sendMethodNotAllowed(res);
   }
 
   const route = findRoute(req.method, pathname);
