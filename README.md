@@ -177,7 +177,7 @@ claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn
 claude mcp list
 ```
 
-更多配置方式参考：`docs/mcp-config.md`
+更多配置方式参考：本 README 的「本地安装详细指南」
 
 ## 🧩 本地安装详细指南
 
