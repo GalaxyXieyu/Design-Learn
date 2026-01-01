@@ -19,11 +19,58 @@ const tools = {
       limit: z.number().min(1).max(100).optional(),
     },
   },
+  search_designs: {
+    title: 'Search Designs',
+    description: 'Search designs by keyword, tags, or URL.',
+    inputSchema: {
+      query: z.string(),
+      limit: z.number().min(1).max(100).optional(),
+    },
+  },
   get_design: {
     title: 'Get Design',
     description: 'Fetch design metadata by ID.',
     inputSchema: {
       designId: z.string(),
+    },
+  },
+  get_rules: {
+    title: 'Get Rules',
+    description: 'Fetch rules for a version (colors/typography/spacing/components).',
+    inputSchema: {
+      versionId: z.string(),
+    },
+  },
+  list_versions: {
+    title: 'List Versions',
+    description: 'List versions for a design.',
+    inputSchema: {
+      designId: z.string(),
+      limit: z.number().min(1).max(100).optional(),
+    },
+  },
+  get_version: {
+    title: 'Get Version',
+    description: 'Fetch a version by ID.',
+    inputSchema: {
+      versionId: z.string(),
+    },
+  },
+  list_components: {
+    title: 'List Components',
+    description: 'List components with optional filters.',
+    inputSchema: {
+      designId: z.string().optional(),
+      versionId: z.string().optional(),
+      type: z.string().optional(),
+      limit: z.number().min(1).max(100).optional(),
+    },
+  },
+  get_component: {
+    title: 'Get Component',
+    description: 'Fetch component detail by ID.',
+    inputSchema: {
+      componentId: z.string(),
     },
   },
 };
@@ -52,6 +99,23 @@ function createToolHandlers(storage) {
         structuredContent: data,
       };
     },
+    search_designs: async ({ query, limit }) => {
+      const needle = query.toLowerCase();
+      const designs = storage.listDesigns();
+      const matches = designs.filter((design) => {
+        const tags = Array.isArray(design.metadata?.tags) ? design.metadata.tags.join(' ') : '';
+        const haystack = [design.name, design.url, design.description, design.category, tags]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(needle);
+      });
+      const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
     get_design: async ({ designId }) => {
       const design = await storage.getDesign(designId);
       if (!design) {
@@ -62,6 +126,59 @@ function createToolHandlers(storage) {
       return {
         content: [{ type: 'text', text: JSON.stringify(design, null, 2) }],
         structuredContent: design,
+      };
+    },
+    get_rules: async ({ versionId }) => {
+      const version = await storage.getVersion(versionId);
+      if (!version) {
+        return {
+          content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+        };
+      }
+      const rules = version.rules || {};
+      return {
+        content: [{ type: 'text', text: JSON.stringify(rules, null, 2) }],
+        structuredContent: rules,
+      };
+    },
+    list_versions: async ({ designId, limit }) => {
+      const versions = storage.listVersions(designId);
+      const data = typeof limit === 'number' ? versions.slice(0, limit) : versions;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    get_version: async ({ versionId }) => {
+      const version = await storage.getVersion(versionId);
+      if (!version) {
+        return {
+          content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(version, null, 2) }],
+        structuredContent: version,
+      };
+    },
+    list_components: async ({ designId, versionId, type, limit }) => {
+      const components = storage.listComponents({ designId, versionId, type });
+      const data = typeof limit === 'number' ? components.slice(0, limit) : components;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    get_component: async ({ componentId }) => {
+      const component = await storage.getComponent(componentId);
+      if (!component) {
+        return {
+          content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(component, null, 2) }],
+        structuredContent: component,
       };
     },
   };
