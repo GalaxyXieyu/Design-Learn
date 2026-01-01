@@ -107,7 +107,7 @@ vsce package
   "designLearn.server": {
     "entry": "${workspaceFolder}/design-learn-server/src/server.js",
     "cwd": "${workspaceFolder}/design-learn-server",
-    "port": 3000,
+    "port": 3100,
     "autoStart": true
   }
 }

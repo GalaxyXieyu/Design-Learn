@@ -2,7 +2,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { URL } = require('url');
 
-const DEFAULT_PORT = Number(process.env.PORT || process.env.DESIGN_LEARN_PORT || 3000);
+const DEFAULT_PORT = Number(process.env.PORT || process.env.DESIGN_LEARN_PORT || 3100);
 const WS_CLOSE_DELAY_MS = 500;
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const { createMcpHandler } = require('./mcp');

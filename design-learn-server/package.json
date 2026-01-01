@@ -6,7 +6,8 @@
   "main": "src/server.js",
   "bin": {
     "design-learn-server": "src/cli.js",
-    "design-learn-mcp": "src/cli.js"
+    "design-learn-mcp": "src/cli.js",
+    "design-learn-stdio": "src/stdio.js"
   },
   "scripts": {
     "start": "node src/server.js",

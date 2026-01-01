@@ -22,25 +22,56 @@
 ## 🧭 当前架构（已实现）
 
 ```
-Chrome Extension (采集/上报) ──┐
-                               ├─> Design-Learn Server (REST/MCP/队列)
-VSCode Extension (管理/启动) ──┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      Design-Learn 架构                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Chrome Extension ──────┐                                       │
+│  (采集/上报)            │     HTTP API (端口 3100)              │
+│                         ├───> /api/health                       │
+│  VSCode Extension ──────┤     /api/import/*                     │
+│  (管理/启动)            │     /mcp (SSE)                        │
+│                         │                                       │
+│  Claude Code ───────────┘     MCP stdio (自动启动 HTTP)         │
+│  (MCP 工具调用)               ↓                                 │
+│                         Design-Learn Server                     │
+│                         (SQLite + 文件存储)                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Chrome 插件**：采集页面快照，可选上报到本地服务
-- **Design-Learn Server**：单进程服务，提供 /api、/mcp、/ws 与队列/进度推送
-- **VSCode 插件**：提供管理 UI，并可启动/停止本地服务
+### 组件说明
 
-## ✅ PRD 功能落地清单（当前实现）
+| 组件 | 职责 | 通信方式 |
+|------|------|----------|
+| **Chrome 插件** | 采集页面快照，上报到本地服务 | HTTP API (端口 3100) |
+| **VSCode 插件** | 管理 UI，启动/停止本地服务 | HTTP API (端口 3100) |
+| **Claude Code** | MCP 工具调用（list_designs, get_design, ping） | stdio 传输 |
+| **Design-Learn Server** | 统一服务入口，提供 REST/MCP/WS | HTTP + stdio |
 
-- ✅ 单进程服务入口与 REST/WS/MCP 路由（/api/health、/mcp、/ws）
-- ✅ SQLite + 文件存储的统一数据层（Design/Version/Component/Rule CRUD）
-- ✅ MCP tools/resources/prompts 注册与 SSE 交互
-- ✅ 提取队列与进度推送（/api/import/* + /api/import/stream）
-- ✅ Chrome 插件“仅采集并上报”同步设置
-- ✅ VSCode 插件本地服务启动/停止
-- ✅ 测试计划/性能基线文档 + 后端验证脚本
-- ✅ issues CSV 快照脚本
+### 端口配置
+
+- **默认端口**: `3100`
+- **环境变量**: 可通过 `PORT` 或 `DESIGN_LEARN_PORT` 自定义
+
+## ✅ PRD 关键能力对照（现状 vs `首版 PRD.md`）
+
+已落地（代码中可找到的能力）：
+- ✅ 单进程服务入口：`/api/health`、`/mcp`、`/api/import/*`、`/api/import/stream`（`design-learn-server/src/server.js`）
+- ✅ SQLite + 文件存储的数据层（目前通过“导入链路”落库并可被 MCP 查询；尚未暴露完整 REST CRUD）（`design-learn-server/src/storage/`）
+- ✅ MCP（Streamable HTTP/SSE）+ tools/resources/prompts：`ping`、`list_designs`、`get_design`（`design-learn-server/src/mcp/`）
+- ✅ 导入队列 + SSE 进度流（`design-learn-server/src/pipeline/`）
+- ✅ VSCode 扩展可启动/停止本地服务（`vscode-extension/src/serverManager.ts`）
+- ✅ Server 侧 URL 导入（可选 Playwright；未安装会报 `playwright_not_installed`）（`design-learn-server/src/pipeline/index.js`）
+
+PRD 中规划但当前未完成/未对齐（建议保留为 Roadmap）：
+- ⏳ REST CRUD：`/api/designs`、`/api/snapshots`、`/api/config` 等（目前服务端未提供这些路由）
+- ⏳ WebSocket 实时同步：当前仅完成握手，未实现消息推送/订阅模型（`/ws`）
+- ⏳ MCP 配置自动写入：`~/.cursor/mcp.json`、`~/.claude/mcp.json`（当前仅文档说明，代码未自动生成）
+- ⏳ 浏览器插件“连接码配对/鉴权”与外部脚本 `API Key` 鉴权（当前导入接口无配对流程）
+- ⏳ 更多 MCP 工具：`search_components`、`get_rules` 等（目前仅 `list_designs/get_design`）
+
+> `首版 PRD.md` 更像是 v2.0 架构蓝图；当前 README 同时包含了“插件端 AI 分析”等能力，和 PRD 的“插件精简为采集器、AI 统一走 Server”方向存在不一致。建议后续确定一个主方向后再合并文档口径。
 
 ## 🗺️ 里程碑与成功指标（v2.x 一键启动 & 自动连接）
 
@@ -124,13 +155,29 @@ VSCode Extension (管理/启动) ──┘
 ### 本地服务与同步（可选）
 
 1. 启动本地服务：
-   - 方式 A：`node design-learn-server/src/server.js`
+   - 方式 A：`node design-learn-server/src/server.js`（端口 3100）
    - 方式 B：VSCode 扩展命令 `Design-Learn: 启动/停止 Design-Learn 服务`
-2. 点击插件 Popup 右上角齿轮打开设置页 → “生成配置” → “同步设置”
-3. 保持“自动检测本地服务”开启；未检测到时再手动填写服务地址
+   - 方式 C：Claude Code MCP 自动启动（推荐，见下方配置）
+2. 点击插件 Popup 右上角齿轮打开设置页 → "生成配置" → "同步设置"
+3. 保持"自动检测本地服务"开启；未检测到时再手动填写服务地址
 4. 触发一次采集任务，服务端 `/api/import/jobs` 可看到记录
-5. MCP 自动启动配置（可选）：参考 `docs/mcp-config.md`
-6. 克隆后的联调流程（可选）：参考 `docs/quickstart-mcp.md`
+
+### Claude Code MCP 配置（推荐）
+
+配置后 Claude Code 启动时会自动运行服务，同时支持 MCP 工具调用和 HTTP API：
+
+```bash
+# 安装依赖
+cd design-learn-server && npm install
+
+# 添加 MCP 服务器
+claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
+
+# 验证配置
+claude mcp list
+```
+
+更多配置方式参考：`docs/mcp-config.md`
 
 ## 🧩 本地安装详细指南
 
@@ -323,20 +370,20 @@ npm rebuild better-sqlite3
 PORT=3100 ./scripts/verify-backend.sh
 ```
 
-- 同步配置说明：默认自动检测 `localhost:3000/3100`，仅在检测失败时手动填写 URL
+- 同步配置说明：默认连接 `localhost:3100`，仅在检测失败时手动填写 URL
 
 ### 手工接口验证示例
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3100/api/health
 
-cat <<'JSON' | curl -X POST http://localhost:3000/api/import/browser \\
+cat <<'JSON' | curl -X POST http://localhost:3100/api/import/browser \\
   -H 'Content-Type: application/json' \\
   -d @-
 {"source":"browser-extension","website":{"url":"https://example.com","title":"Example"},"snapshot":{"id":"snapshot_test","url":"https://example.com","title":"Example","html":"<html></html>","css":"body{}"}}
 JSON
 
-curl http://localhost:3000/api/import/jobs
+curl http://localhost:3100/api/import/jobs
 ```
 
 ### 未来计划（Next.js 后台）

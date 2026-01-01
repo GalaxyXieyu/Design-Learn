@@ -13,7 +13,7 @@ cd design-learn-server && npm install
 ### 方式 A：本地路径启动（推荐联调）
 
 ```bash
-node design-learn-server/src/cli.js --port 3000 --data-dir ./data
+node design-learn-server/src/cli.js --port 3100 --data-dir ./data
 ```
 
 ### 方式 B：npx 本地模拟（打包后启动）
@@ -21,7 +21,7 @@ node design-learn-server/src/cli.js --port 3000 --data-dir ./data
 ```bash
 cd design-learn-server && npm pack
 cd ..
-npx ./design-learn-server/design-learn-server-0.1.0.tgz --port 3000 --data-dir ./data
+npx ./design-learn-server/design-learn-server-0.1.0.tgz --port 3100 --data-dir ./data
 ```
 
 ## 3. 配置 MCP 自动启动
@@ -39,9 +39,9 @@ npx ./design-learn-server/design-learn-server-0.1.0.tgz --port 3000 --data-dir .
 ## 5. 连接验证（至少执行一条）
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3100/api/health
 ```
 
 ```bash
-node design-learn-server/scripts/verify-mcp.js --url http://localhost:3000/mcp
+node design-learn-server/scripts/verify-mcp.js --url http://localhost:3100/mcp
 ```

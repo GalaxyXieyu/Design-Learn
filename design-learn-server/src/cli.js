@@ -9,7 +9,7 @@ Usage:
   design-learn-server [options]
 
 Options:
-  --port <number>           服务端口（默认 3000）
+  --port <number>           服务端口（默认 3100）
   --data-dir <path>         数据目录（默认 ./data）
   --auth-token <token>      MCP 鉴权令牌（可选）
   --server-name <name>      MCP Server Name（可选）
@@ -130,7 +130,7 @@ async function main() {
 
   applyEnv(args);
 
-  const port = Number(process.env.PORT || 3000);
+  const port = Number(process.env.PORT || 3100);
   require('./server');
 
   console.log(`[design-learn-mcp] ready: http://localhost:${port}`);
