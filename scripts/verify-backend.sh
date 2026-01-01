@@ -47,13 +47,7 @@ fi
 echo "[verify] job: ${JOB_ID}"
 
 for _ in {1..20}; do
-  STATUS=$(curl -fsS "http://localhost:${PORT}/api/import/jobs/${JOB_ID}" | python3 - <<'PY'
-import json, sys
-data = json.load(sys.stdin)
-job = data.get('job') or {}
-print(job.get('status') or '')
-PY
-  )
+  STATUS=$(curl -fsS "http://localhost:${PORT}/api/import/jobs/${JOB_ID}" | python3 -c "import json, sys; data=json.load(sys.stdin); job=data.get('job') or {}; print(job.get('status') or '')")
   if [ -n "$STATUS" ]; then
     echo "[verify] import status: ${STATUS}"
   fi
@@ -166,13 +160,7 @@ PY
 
   if [ -n "$PREVIEW_JOB_ID" ]; then
     for _ in {1..20}; do
-      STATUS=$(curl -fsS "http://localhost:${PORT}/api/previews/jobs/${PREVIEW_JOB_ID}" | python3 - <<'PY'
-import json, sys
-data = json.load(sys.stdin)
-job = data.get('job') or {}
-print(job.get('status') or '')
-PY
-      )
+      STATUS=$(curl -fsS "http://localhost:${PORT}/api/previews/jobs/${PREVIEW_JOB_ID}" | python3 -c "import json, sys; data=json.load(sys.stdin); job=data.get('job') or {}; print(job.get('status') or '')")
       if [ -n "$STATUS" ]; then
         echo "[verify] preview status: ${STATUS}"
       fi
