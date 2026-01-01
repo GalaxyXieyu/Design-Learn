@@ -67,12 +67,20 @@ function getComponentCodePath(dataDir, designId, versionNumber, componentId) {
   return path.join(getComponentDir(dataDir, designId, versionNumber, componentId), 'code.json');
 }
 
+function getComponentsIndexPath(dataDir) {
+  return path.join(dataDir, 'components', '_index.json');
+}
+
 function getRulesDir(dataDir, designId, versionNumber) {
   return path.join(getVersionDir(dataDir, designId, versionNumber), 'rules');
 }
 
 function getRulePath(dataDir, designId, versionNumber, ruleId) {
   return path.join(getRulesDir(dataDir, designId, versionNumber), `${ruleId}.json`);
+}
+
+function getRulesIndexPath(dataDir) {
+  return path.join(dataDir, 'rules', '_index.json');
 }
 
 function getDatabasePath(dataDir) {
@@ -96,8 +104,10 @@ module.exports = {
   getComponentsDir,
   getComponentDir,
   getComponentCodePath,
+  getComponentsIndexPath,
   getRulesDir,
   getRulePath,
+  getRulesIndexPath,
   getDatabasePath,
   getConfigPath,
 };

@@ -162,7 +162,7 @@ function createToolHandlers(storage) {
       };
     },
     list_components: async ({ designId, versionId, type, limit }) => {
-      const components = storage.listComponents({ designId, versionId, type });
+      const components = await storage.listComponents({ designId, versionId, type });
       const data = typeof limit === 'number' ? components.slice(0, limit) : components;
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],

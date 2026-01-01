@@ -68,6 +68,11 @@ curl -N http://localhost:3000/api/import/stream
 - File storage: `<dataDir>/designs`
 - `dataDir` defaults to `./data`, override with `DESIGN_LEARN_DATA_DIR` or `DATA_DIR` (supports `~` expansion)
 
+## Search indexes
+
+- Optional: set `DESIGN_LEARN_USE_INDEX=1` to read component/rule indexes.
+- Rebuild indexes: `node scripts/rebuild-index.js`
+
 ## Migrations
 
 - Schema version is tracked via SQLite `PRAGMA user_version` (current: 1).

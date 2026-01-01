@@ -12,7 +12,9 @@ const {
   getRulesPath,
   getSnapshotsPath,
   getComponentCodePath,
+  getComponentsIndexPath,
   getRulePath,
+  getRulesIndexPath,
 } = require('./paths');
 const { ensureDir, writeJson, readJson, writeText, readText, removePath } = require('./fileStore');
 const { openDatabase } = require('./sqliteStore');
@@ -24,6 +26,7 @@ function createStorage(options = {}) {
   return {
     dataDir,
     close: () => db.close(),
+    rebuildIndexes: () => rebuildIndexes(db, dataDir),
     createDesign: (input) => createDesign(db, dataDir, input),
     listDesigns: () => listDesigns(db),
     getDesign: (designId) => getDesign(db, dataDir, designId),
@@ -37,11 +40,11 @@ function createStorage(options = {}) {
     getSnapshot: (snapshotId) => getSnapshot(db, dataDir, snapshotId),
     deleteSnapshot: (snapshotId) => deleteSnapshot(db, dataDir, snapshotId),
     createComponent: (input) => createComponent(db, dataDir, input),
-    listComponents: (filters) => listComponents(db, filters),
+    listComponents: (filters) => listComponents(db, dataDir, filters),
     getComponent: (componentId) => getComponent(db, dataDir, componentId),
     deleteComponent: (componentId) => deleteComponent(db, dataDir, componentId),
     createRule: (input) => createRule(db, dataDir, input),
-    listRules: (versionId) => listRules(db, versionId),
+    listRules: (versionId) => listRules(db, dataDir, versionId),
     getRule: (ruleId) => getRule(db, dataDir, ruleId),
     deleteRule: (ruleId) => deleteRule(db, dataDir, ruleId),
   };
@@ -95,6 +98,55 @@ async function writeDesignIndex(db, dataDir) {
     .prepare('SELECT id, name, url, category, updated_at FROM designs ORDER BY updated_at DESC')
     .all();
   await writeJson(getDesignIndexPath(dataDir), rows);
+}
+
+function shouldUseIndex() {
+  const flag = (process.env.DESIGN_LEARN_USE_INDEX || '').toLowerCase();
+  return flag === '1' || flag === 'true' || flag === 'yes';
+}
+
+async function readIndexFile(indexPath) {
+  try {
+    const data = await readJson(indexPath);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeComponentIndex(db, dataDir) {
+  const rows = db.prepare('SELECT * FROM components ORDER BY created_at DESC').all();
+  const items = rows.map((row) => ({
+    id: row.id,
+    designId: row.design_id,
+    versionId: row.version_id,
+    name: row.name,
+    type: row.type,
+    createdAt: row.created_at,
+  }));
+  await writeJson(getComponentsIndexPath(dataDir), items);
+}
+
+async function writeRuleIndex(db, dataDir) {
+  const rows = db.prepare('SELECT * FROM rules ORDER BY created_at DESC').all();
+  const items = rows.map((row) => ({
+    id: row.id,
+    versionId: row.version_id,
+    type: row.type,
+    name: row.name,
+    value: row.value,
+    createdAt: row.created_at,
+  }));
+  await writeJson(getRulesIndexPath(dataDir), items);
+}
+
+async function rebuildIndexes(db, dataDir) {
+  await writeDesignIndex(db, dataDir);
+  await writeComponentIndex(db, dataDir);
+  await writeRuleIndex(db, dataDir);
 }
 
 async function createDesign(db, dataDir, input) {
@@ -467,6 +519,8 @@ async function createComponent(db, dataDir, input) {
     await updateDesign(db, dataDir, versionRow.design_id, designMeta);
   }
 
+  await writeComponentIndex(db, dataDir);
+
   return {
     id: componentId,
     designId: versionRow.design_id,
@@ -481,7 +535,28 @@ async function createComponent(db, dataDir, input) {
   };
 }
 
-function listComponents(db, filters = {}) {
+async function listComponents(db, dataDir, filters = {}) {
+  const applyFilters = (items) =>
+    items.filter((item) => {
+      if (filters.designId && item.designId !== filters.designId) {
+        return false;
+      }
+      if (filters.versionId && item.versionId !== filters.versionId) {
+        return false;
+      }
+      if (filters.type && item.type !== filters.type) {
+        return false;
+      }
+      return true;
+    });
+
+  if (shouldUseIndex()) {
+    const indexData = await readIndexFile(getComponentsIndexPath(dataDir));
+    if (indexData) {
+      return applyFilters(indexData);
+    }
+  }
+
   const clauses = [];
   const args = [];
 
@@ -547,6 +622,8 @@ async function deleteComponent(db, dataDir, componentId) {
     designMeta.stats.components = Math.max(0, (designMeta.stats.components || 1) - 1);
     await updateDesign(db, dataDir, row.design_id, designMeta);
   }
+
+  await writeComponentIndex(db, dataDir);
 }
 
 async function createRule(db, dataDir, input) {
@@ -580,6 +657,8 @@ async function createRule(db, dataDir, input) {
     now
   );
 
+  await writeRuleIndex(db, dataDir);
+
   return {
     id: ruleId,
     versionId: versionRow.id,
@@ -591,8 +670,17 @@ async function createRule(db, dataDir, input) {
   };
 }
 
-function listRules(db, versionId) {
-  const rows = db.prepare('SELECT * FROM rules WHERE version_id = ? ORDER BY created_at DESC').all(versionId);
+async function listRules(db, dataDir, versionId) {
+  if (shouldUseIndex()) {
+    const indexData = await readIndexFile(getRulesIndexPath(dataDir));
+    if (indexData) {
+      return indexData.filter((item) => item.versionId === versionId);
+    }
+  }
+
+  const rows = db
+    .prepare('SELECT * FROM rules WHERE version_id = ? ORDER BY created_at DESC')
+    .all(versionId);
   return rows.map((row) => ({
     id: row.id,
     versionId: row.version_id,
@@ -629,6 +717,8 @@ async function deleteRule(db, dataDir, ruleId) {
 
   db.prepare('DELETE FROM rules WHERE id = ?').run(ruleId);
   await removePath(row.raw_path);
+
+  await writeRuleIndex(db, dataDir);
 }
 
 module.exports = {
