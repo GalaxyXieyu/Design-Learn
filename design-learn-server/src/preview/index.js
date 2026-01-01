@@ -50,6 +50,9 @@ function createPreviewPipeline({ storage }) {
       event,
       detail: detail || null,
     });
+    if (event === 'completed' || event === 'failed' || event === 'retrying') {
+      console.log(`[preview] ${job.id} ${event}`);
+    }
   }
 
   function enqueuePreview(payload) {

@@ -121,6 +121,21 @@
   - Body: `Config`
   - Response: `200` + `Config`
 
+### Previews
+
+- `POST /api/previews`
+  - Body: `{ "componentId": "string" }`
+  - Response: `202` + `{ "job": { ... } }`
+
+- `GET /api/previews/:componentId`
+  - Response: `200` + `{ "componentId": "...", "preview": { ... } | null }`
+
+- `GET /api/previews/jobs`
+  - Response: `200` + `{ "jobs": [ ... ] }`
+
+- `GET /api/previews/jobs/:id`
+  - Response: `200` + `{ "job": { ... } }`
+
 ## 示例
 
 ### Create Design

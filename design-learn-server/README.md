@@ -33,6 +33,20 @@ PORT=3000 node src/server.js
 - `GET /api/import/jobs` -> list import jobs
 - `GET /api/import/jobs/:id` -> fetch job status
 - `GET /api/import/stream` -> SSE progress stream (optional `jobId=...`)
+- `GET /api/designs` -> list designs
+- `POST /api/designs` -> create design
+- `GET /api/designs/:id` -> fetch design
+- `PATCH /api/designs/:id` -> update design
+- `DELETE /api/designs/:id` -> delete design
+- `GET /api/snapshots` -> list snapshots
+- `GET /api/snapshots/:id` -> fetch snapshot
+- `POST /api/snapshots/import` -> enqueue snapshot import
+- `GET /api/config` -> fetch config
+- `PUT /api/config` -> update config
+- `POST /api/previews` -> enqueue component preview
+- `GET /api/previews/:componentId` -> fetch component preview
+- `GET /api/previews/jobs` -> list preview jobs
+- `GET /api/previews/jobs/:id` -> fetch preview job status
 - `GET /mcp` / `POST /mcp` / `DELETE /mcp` -> MCP Streamable HTTP (SSE streaming)
 - `WS /ws` -> WebSocket upgrade endpoint (handshake only)
 
@@ -83,6 +97,12 @@ curl -N http://localhost:3000/api/import/stream
 - Auth: set `MCP_AUTH_TOKEN` to require `Authorization: Bearer <token>` on MCP requests.
 - Version: `MCP_SERVER_VERSION` controls the MCP server version advertised to clients (default `0.1.0`).
 - Compatibility: prefer additive changes (new tools/resources/prompts) and keep existing contracts stable.
+
+## Backend quick check
+
+```bash
+./scripts/verify-backend.sh
+```
 
 ## MCP quick check
 
