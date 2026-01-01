@@ -346,6 +346,17 @@ async function handlePreviewEnqueue(req, res) {
   }
 }
 
+async function handlePreviewGet(res, componentId) {
+  const component = await storage.getComponent(componentId);
+  if (!component) {
+    return sendJson(res, 404, { error: 'component_not_found' });
+  }
+  return sendJson(res, 200, {
+    componentId: component.id,
+    preview: component.preview || null,
+  });
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -501,6 +512,17 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'GET') {
       return handlePreviewJob(res, jobId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/previews/')) {
+    const componentId = pathname.split('/').pop();
+    if (!componentId) {
+      return sendJson(res, 400, { error: 'component_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handlePreviewGet(res, componentId);
     }
     return sendMethodNotAllowed(res);
   }

@@ -73,6 +73,13 @@ const tools = {
       componentId: z.string(),
     },
   },
+  get_component_preview: {
+    title: 'Get Component Preview',
+    description: 'Fetch preview data for a component.',
+    inputSchema: {
+      componentId: z.string(),
+    },
+  },
 };
 
 const prompts = {
@@ -179,6 +186,19 @@ function createToolHandlers(storage) {
       return {
         content: [{ type: 'text', text: JSON.stringify(component, null, 2) }],
         structuredContent: component,
+      };
+    },
+    get_component_preview: async ({ componentId }) => {
+      const component = await storage.getComponent(componentId);
+      if (!component) {
+        return {
+          content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+        };
+      }
+      const payload = { componentId: component.id, preview: component.preview || null };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+        structuredContent: payload,
       };
     },
   };
