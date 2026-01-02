@@ -46,6 +46,12 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
         case 'loadData':
           this._loadData();
           break;
+        case 'checkServer':
+          this._checkServerStatus();
+          break;
+        case 'updateServerUrl':
+          this._updateServerUrl(message.url);
+          break;
         case 'openSnapshot':
           if (message.path && fs.existsSync(message.path)) {
             vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(message.path));
@@ -97,7 +103,61 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     setImmediate(() => {
       this._loadModels();
       this._loadSnapshots();
+      this._checkServerStatus();
     });
+  }
+
+  private async _checkServerStatus() {
+    const config = vscode.workspace.getConfiguration('designLearn');
+    const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
+
+    try {
+      const http = require('http');
+      const url = new URL(serverUrl + '/api/health');
+
+      const req = http.get({
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        timeout: 2000
+      }, (res: any) => {
+        const connected = res.statusCode === 200;
+        this._view?.webview.postMessage({
+          type: 'serverStatus',
+          connected,
+          url: serverUrl
+        });
+      });
+
+      req.on('error', () => {
+        this._view?.webview.postMessage({
+          type: 'serverStatus',
+          connected: false,
+          url: serverUrl
+        });
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        this._view?.webview.postMessage({
+          type: 'serverStatus',
+          connected: false,
+          url: serverUrl
+        });
+      });
+    } catch {
+      this._view?.webview.postMessage({
+        type: 'serverStatus',
+        connected: false,
+        url: serverUrl
+      });
+    }
+  }
+
+  private async _updateServerUrl(url: string) {
+    const config = vscode.workspace.getConfiguration('designLearn');
+    await config.update('serverUrl', url, vscode.ConfigurationTarget.Global);
+    this._checkServerStatus();
   }
 
   private _loadModels() {
@@ -187,18 +247,49 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     }
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview): string {
+  private _getHtmlForWebview(_webview: vscode.Webview): string {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root { --accent: #4a9eff; --accent-hover: #3d8ce6; --success: #4caf50; --warning: #ff9800; }
+    :root { --accent: #4a9eff; --accent-hover: #3d8ce6; --success: #4caf50; --warning: #ff9800; --error: #f44336; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); }
     .container { padding: 12px; }
-    
+
+    /* 服务器状态 */
+    .server-status { background: var(--vscode-editor-background); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
+    .server-status:hover { background: var(--vscode-list-hoverBackground); }
+    .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-descriptionForeground); }
+    .status-indicator.connected { background: var(--success); animation: pulse 2s infinite; }
+    .status-indicator.disconnected { background: var(--error); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .status-info { flex: 1; min-width: 0; }
+    .status-title { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+    .status-url { font-size: 10px; color: var(--vscode-descriptionForeground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-actions { display: flex; gap: 4px; }
+    .status-btn { width: 24px; height: 24px; border: none; background: var(--vscode-button-secondaryBackground); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--vscode-foreground); }
+    .status-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+    .status-btn svg { width: 12px; height: 12px; }
+
+    /* 服务器配置弹窗 */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: var(--vscode-editor-background); border-radius: 8px; padding: 16px; width: 90%; max-width: 400px; }
+    .modal-header { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .modal-body { margin-bottom: 12px; }
+    .modal-label { font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 6px; }
+    .modal-input { width: 100%; padding: 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px; color: var(--vscode-input-foreground); font-size: 12px; }
+    .modal-input:focus { outline: none; border-color: var(--accent); }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .modal-btn-primary { background: var(--accent); color: white; }
+    .modal-btn-primary:hover { background: var(--accent-hover); }
+    .modal-btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+    .modal-btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+
     /* 头部 */
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
     .logo { display: flex; align-items: center; gap: 10px; }
@@ -277,6 +368,23 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div class="container">
+    <!-- 服务器状态 -->
+    <div class="server-status" id="serverStatus" onclick="document.getElementById('serverModal').classList.add('show')">
+      <div class="status-indicator" id="statusIndicator"></div>
+      <div class="status-info">
+        <div class="status-title" id="statusTitle">检查中...</div>
+        <div class="status-url" id="statusUrl">http://localhost:3100</div>
+      </div>
+      <div class="status-actions">
+        <button class="status-btn" onclick="event.stopPropagation();vscode.postMessage({type:'checkServer'})" title="刷新">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="status-btn" onclick="event.stopPropagation();document.getElementById('serverModal').classList.add('show')" title="配置">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+      </div>
+    </div>
+
     <header class="header">
       <div class="logo">
         <div class="logo-icon">
@@ -339,9 +447,25 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     </div>
   </div>
 
+  <!-- 服务器配置弹窗 -->
+  <div class="modal" id="serverModal">
+    <div class="modal-content">
+      <div class="modal-header">服务器配置</div>
+      <div class="modal-body">
+        <div class="modal-label">服务器地址</div>
+        <input type="text" id="serverUrlInput" class="modal-input" placeholder="http://localhost:3100">
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" onclick="document.getElementById('serverModal').classList.remove('show')">取消</button>
+        <button class="modal-btn modal-btn-primary" onclick="saveServerUrl()">保存</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const vscode = acquireVsCodeApi();
     let isExtracting = false;
+    let currentServerUrl = 'http://localhost:3100';
     
     document.getElementById('settingsBtn').onclick = () => vscode.postMessage({type:'openSettings'});
     
@@ -369,11 +493,32 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       if (e.key === 'Enter') document.getElementById('extractBtn').click();
     };
     
+    function saveServerUrl() {
+      const url = document.getElementById('serverUrlInput').value.trim();
+      if (url) {
+        vscode.postMessage({type:'updateServerUrl', url});
+        document.getElementById('serverModal').classList.remove('show');
+      }
+    }
+
+    function updateServerStatus(connected, url) {
+      currentServerUrl = url;
+      const indicator = document.getElementById('statusIndicator');
+      const title = document.getElementById('statusTitle');
+      const urlEl = document.getElementById('statusUrl');
+
+      indicator.className = 'status-indicator ' + (connected ? 'connected' : 'disconnected');
+      title.textContent = connected ? '服务器已连接' : '服务器未连接';
+      urlEl.textContent = url;
+      document.getElementById('serverUrlInput').value = url;
+    }
+
     window.addEventListener('message', e => {
       const msg = e.data;
       if (msg.type === 'updateModels') renderModels(msg.models, msg.selectedModelId);
       if (msg.type === 'updateSnapshots') renderSnapshots(msg.snapshots);
       if (msg.type === 'extracting') setExtracting(msg.status);
+      if (msg.type === 'serverStatus') updateServerStatus(msg.connected, msg.url);
     });
 
     function setExtracting(status) {
