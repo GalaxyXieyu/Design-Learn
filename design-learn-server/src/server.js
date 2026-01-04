@@ -64,6 +64,7 @@ function handleRoot(req, res) {
       snapshots: '/api/snapshots',
       config: '/api/config',
       previews: '/api/previews',
+      tasks: '/api/tasks',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -357,6 +358,209 @@ async function handlePreviewGet(res, componentId) {
   });
 }
 
+// ==================== 任务管理 API ====================
+
+async function handleTasksList(res, url) {
+  const filters = {};
+  const status = url.searchParams.get('status');
+  const domain = url.searchParams.get('domain');
+  const excludeCompleted = url.searchParams.get('excludeCompleted') === 'true';
+
+  if (status) {
+    filters.status = status.split(',');
+  }
+  if (domain) {
+    filters.domain = domain;
+  }
+  if (excludeCompleted) {
+    filters.excludeCompleted = true;
+  }
+
+  const tasks = storage.listTasks(filters);
+
+  // 按域名分组
+  const groups = {};
+  tasks.forEach(task => {
+    if (!groups[task.domain]) {
+      groups[task.domain] = [];
+    }
+    groups[task.domain].push(task);
+  });
+
+  // 统计信息
+  const stats = {
+    total: tasks.length,
+    pending: tasks.filter(t => t.status === 'pending').length,
+    running: tasks.filter(t => t.status === 'running').length,
+    completed: tasks.filter(t => t.status === 'completed').length,
+    failed: tasks.filter(t => t.status === 'failed').length,
+  };
+
+  sendJson(res, 200, { tasks, groups, stats });
+}
+
+async function handleTaskCreate(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  if (!body.url) {
+    return sendJson(res, 400, { error: 'url_required' });
+  }
+
+  try {
+    const task = await storage.createTask({
+      url: body.url,
+      options: body.options || {},
+    });
+    sendJson(res, 201, { task });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message });
+  }
+}
+
+async function handleTaskGet(res, taskId) {
+  const task = await storage.getTask(taskId);
+  if (!task) {
+    return sendJson(res, 404, { error: 'task_not_found' });
+  }
+  return sendJson(res, 200, { task });
+}
+
+async function handleTaskUpdate(req, res, taskId) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  const task = await storage.updateTask(taskId, body);
+  if (!task) {
+    return sendJson(res, 404, { error: 'task_not_found' });
+  }
+  return sendJson(res, 200, { task });
+}
+
+async function handleTaskDelete(res, taskId) {
+  const success = await storage.deleteTask(taskId);
+  if (!success) {
+    return sendJson(res, 404, { error: 'task_not_found' });
+  }
+  return sendNoContent(res);
+}
+
+async function handleTasksClearCompleted(res) {
+  const count = await storage.clearCompletedTasks();
+  return sendJson(res, 200, { deleted: count });
+}
+
+async function handleTaskRetry(req, res, taskId) {
+  const task = await storage.getTask(taskId);
+  if (!task) {
+    return sendJson(res, 404, { error: 'task_not_found' });
+  }
+
+  // 重置任务状态
+  const resetTask = await storage.updateTask(taskId, {
+    status: 'pending',
+    progress: 0,
+    stage: null,
+    error: null,
+    completedAt: null,
+  });
+
+  return sendJson(res, 200, { task: resetTask });
+}
+
+// ==================== 路由扫描 API ====================
+
+async function handleScanRoutes(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  const url = body.url;
+  if (!url) {
+    return sendJson(res, 400, { error: 'url_required' });
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    return sendJson(res, 400, { error: 'invalid_url' });
+  }
+
+  try {
+    const routes = await scanWebsiteRoutes(url, body.limit || 10);
+    sendJson(res, 200, {
+      routes,
+      total: routes.length,
+      baseUrl: url,
+    });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message });
+  }
+}
+
+async function scanWebsiteRoutes(baseUrl, maxRoutes = 10) {
+  let playwright;
+  try {
+    playwright = await import('playwright');
+  } catch (error) {
+    throw new Error('playwright_not_installed');
+  }
+
+  const { chromium } = playwright;
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // 收集所有链接
+    const routes = new Set();
+    routes.add(new URL(baseUrl).pathname);
+
+    // 获取所有链接
+    const links = await page.$$eval('a[href]', (anchors) => {
+      return anchors.map((a) => a.href);
+    });
+
+    const baseUrlObj = new URL(baseUrl);
+    links.forEach((href) => {
+      try {
+        const linkUrl = new URL(href, baseUrl);
+        if (linkUrl.origin === baseUrlObj.origin) {
+          const pathname = linkUrl.pathname;
+          if (pathname && !routes.has(pathname)) {
+            routes.add(pathname);
+          }
+        }
+      } catch {
+        // 忽略无效链接
+      }
+    });
+
+    // 排序并限制数量
+    const sortedRoutes = Array.from(routes)
+      .sort((a, b) => {
+        const depthA = a.split('/').filter(Boolean).length;
+        const depthB = b.split('/').filter(Boolean).length;
+        if (depthA !== depthB) return depthA - depthB;
+        return a.localeCompare(b);
+      })
+      .slice(0, maxRoutes);
+
+    return sortedRoutes;
+  } finally {
+    await page.close().catch(() => undefined);
+    await context.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
+  }
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -523,6 +727,62 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'GET') {
       return handlePreviewGet(res, componentId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  // 任务管理路由
+  if (pathname === '/api/tasks') {
+    if (req.method === 'GET') {
+      return handleTasksList(res, url);
+    }
+    if (req.method === 'POST') {
+      return handleTaskCreate(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/tasks/clear-completed') {
+    if (req.method === 'DELETE') {
+      return handleTasksClearCompleted(res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/tasks/')) {
+    const taskId = pathname.split('/').pop();
+    if (!taskId) {
+      return sendJson(res, 400, { error: 'task_id_required' });
+    }
+
+    if (taskId === 'clear-completed') {
+      return sendMethodNotAllowed(res);
+    }
+
+    if (taskId === 'retry' && req.method === 'POST') {
+      const actualTaskId = pathname.split('/').slice(-2, -1)[0];
+      if (!actualTaskId) {
+        return sendJson(res, 400, { error: 'task_id_required' });
+      }
+      return handleTaskRetry(req, res, actualTaskId);
+    }
+
+    if (req.method === 'GET') {
+      return handleTaskGet(res, taskId);
+    }
+    if (req.method === 'PATCH') {
+      return handleTaskUpdate(req, res, taskId);
+    }
+    if (req.method === 'DELETE') {
+      return handleTaskDelete(res, taskId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  // 路由扫描路由
+  if (pathname === '/api/scan-routes') {
+    if (req.method === 'POST') {
+      return handleScanRoutes(req, res);
     }
     return sendMethodNotAllowed(res);
   }

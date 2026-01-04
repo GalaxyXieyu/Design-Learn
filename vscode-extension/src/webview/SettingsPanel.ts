@@ -98,6 +98,7 @@ export class SettingsPanel {
 
       case 'loadData':
         this._loadAndSendData();
+        this._loadHistoryStats();
         break;
 
       case 'saveModel':
@@ -248,6 +249,78 @@ export class SettingsPanel {
     const config = vscode.workspace.getConfiguration('designLearn');
     await config.update('promptTemplates', templates, vscode.ConfigurationTarget.Global);
     this._loadAndSendData();
+  }
+
+  private async _loadHistoryStats() {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      this._panel.webview.postMessage({
+        type: 'updateHistoryStats',
+        totalExtracts: 0,
+        totalAnalysis: 0,
+        storageSize: '0 KB'
+      });
+      return;
+    }
+
+    try {
+      const snapshotsDir = path.join(workspaceFolder.uri.fsPath, '.designlearn', 'snapshots');
+      if (!fs.existsSync(snapshotsDir)) {
+        this._panel.webview.postMessage({
+          type: 'updateHistoryStats',
+          totalExtracts: 0,
+          totalAnalysis: 0,
+          storageSize: '0 KB'
+        });
+        return;
+      }
+
+      const entries = fs.readdirSync(snapshotsDir, { withFileTypes: true });
+      const dirs = entries.filter(e => e.isDirectory());
+      
+      let totalExtracts = dirs.length;
+      let totalAnalysis = 0;
+      let totalSize = 0;
+
+      for (const dir of dirs) {
+        const dirPath = path.join(snapshotsDir, dir.name);
+        const analysisPath = path.join(dirPath, 'analysis.md');
+        if (fs.existsSync(analysisPath)) {
+          totalAnalysis++;
+        }
+        // 计算目录大小
+        totalSize += this._getDirSize(dirPath);
+      }
+
+      const sizeStr = totalSize > 1024 * 1024 
+        ? `${(totalSize / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(totalSize / 1024)} KB`;
+
+      this._panel.webview.postMessage({
+        type: 'updateHistoryStats',
+        totalExtracts,
+        totalAnalysis,
+        storageSize: sizeStr
+      });
+    } catch (err) {
+      console.error('Failed to load history stats:', err);
+    }
+  }
+
+  private _getDirSize(dirPath: string): number {
+    let size = 0;
+    try {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isFile()) {
+          size += fs.statSync(fullPath).size;
+        } else if (entry.isDirectory()) {
+          size += this._getDirSize(fullPath);
+        }
+      }
+    } catch {}
+    return size;
   }
 
   private async _testConnection(model: any) {

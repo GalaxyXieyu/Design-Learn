@@ -49,6 +49,13 @@ function createStorage(options = {}) {
     listRules: (versionId) => listRules(db, dataDir, versionId),
     getRule: (ruleId) => getRule(db, dataDir, ruleId),
     deleteRule: (ruleId) => deleteRule(db, dataDir, ruleId),
+    // 任务管理方法
+    createTask: (input) => createTask(db, input),
+    listTasks: (filters) => listTasks(db, filters),
+    getTask: (taskId) => getTask(db, taskId),
+    updateTask: (taskId, patch) => updateTask(db, taskId, patch),
+    deleteTask: (taskId) => deleteTask(db, taskId),
+    clearCompletedTasks: () => clearCompletedTasks(db),
   };
 }
 
@@ -751,6 +758,178 @@ async function deleteRule(db, dataDir, ruleId) {
   await removePath(row.raw_path);
 
   await writeRuleIndex(db, dataDir);
+}
+
+// ==================== 任务管理 ====================
+
+function extractDomain(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return 'unknown';
+  }
+}
+
+function normalizeTask(input) {
+  const now = new Date().toISOString();
+  return {
+    id: input.id || crypto.randomUUID(),
+    url: input.url || '',
+    domain: input.domain || extractDomain(input.url || ''),
+    status: input.status || 'pending',
+    progress: input.progress ?? 0,
+    stage: input.stage || null,
+    error: input.error || null,
+    options: input.options || {},
+    createdAt: input.createdAt || now,
+    updatedAt: input.updatedAt || now,
+    completedAt: input.completedAt || null,
+  };
+}
+
+function mapTaskRow(row) {
+  return {
+    id: row.id,
+    url: row.url,
+    domain: row.domain,
+    status: row.status,
+    progress: row.progress,
+    stage: row.stage,
+    error: row.error ? JSON.parse(row.error) : null,
+    options: row.options_json ? JSON.parse(row.options_json) : {},
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at,
+  };
+}
+
+async function createTask(db, input) {
+  const task = normalizeTask(input);
+
+  db.prepare(
+    `INSERT INTO tasks (
+      id, url, domain, status, progress, stage, error, options_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    task.id,
+    task.url,
+    task.domain,
+    task.status,
+    task.progress,
+    task.stage,
+    task.error ? JSON.stringify(task.error) : null,
+    JSON.stringify(task.options),
+    task.createdAt,
+    task.updatedAt,
+    task.completedAt
+  );
+
+  return task;
+}
+
+function listTasks(db, filters = {}) {
+  const clauses = [];
+  const args = [];
+
+  if (filters.status) {
+    if (Array.isArray(filters.status)) {
+      clauses.push(`status IN (${filters.status.map(() => '?').join(',')})`);
+      args.push(...filters.status);
+    } else {
+      clauses.push('status = ?');
+      args.push(filters.status);
+    }
+  }
+
+  if (filters.domain) {
+    clauses.push('domain = ?');
+    args.push(filters.domain);
+  }
+
+  if (filters.excludeCompleted) {
+    clauses.push('status != ?');
+    args.push('completed');
+    clauses.push('status != ?');
+    args.push('failed');
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const orderBy = filters.orderBy || 'created_at';
+  const orderDir = filters.orderDir || 'DESC';
+  const limit = filters.limit ? `LIMIT ${parseInt(filters.limit)}` : '';
+
+  const rows = db
+    .prepare(`SELECT * FROM tasks ${whereClause} ORDER BY ${orderBy} ${orderDir} ${limit}`)
+    .all(...args);
+
+  return rows.map(mapTaskRow);
+}
+
+function getTask(db, taskId) {
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+  return row ? mapTaskRow(row) : null;
+}
+
+async function updateTask(db, taskId, patch) {
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+  if (!row) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const updates = [];
+  const args = [];
+
+  if (patch.status !== undefined) {
+    updates.push('status = ?');
+    args.push(patch.status);
+    if (patch.status === 'completed' || patch.status === 'failed') {
+      updates.push('completed_at = ?');
+      args.push(now);
+    }
+  }
+
+  if (patch.progress !== undefined) {
+    updates.push('progress = ?');
+    args.push(patch.progress);
+  }
+
+  if (patch.stage !== undefined) {
+    updates.push('stage = ?');
+    args.push(patch.stage);
+  }
+
+  if (patch.error !== undefined) {
+    updates.push('error = ?');
+    args.push(patch.error ? JSON.stringify(patch.error) : null);
+  }
+
+  updates.push('updated_at = ?');
+  args.push(now);
+
+  if (updates.length === 1) {
+    return mapTaskRow(row);
+  }
+
+  args.push(taskId);
+  db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...args);
+
+  return getTask(db, taskId);
+}
+
+async function deleteTask(db, taskId) {
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+  if (!row) {
+    return false;
+  }
+
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(taskId);
+  return true;
+}
+
+async function clearCompletedTasks(db) {
+  const result = db.prepare("DELETE FROM tasks WHERE status = 'completed' OR status = 'failed'").run();
+  return result.changes;
 }
 
 module.exports = {

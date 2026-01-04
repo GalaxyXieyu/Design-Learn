@@ -394,6 +394,15 @@ function handleExtensionMessage(event) {
       }
       break;
 
+    case 'updateHistoryStats':
+      const totalExtractsEl = document.getElementById('totalExtracts');
+      const totalAnalysisEl = document.getElementById('totalAnalysis');
+      const storageSizeEl = document.getElementById('storageSize');
+      if (totalExtractsEl) totalExtractsEl.textContent = message.totalExtracts || 0;
+      if (totalAnalysisEl) totalAnalysisEl.textContent = message.totalAnalysis || 0;
+      if (storageSizeEl) storageSizeEl.textContent = message.storageSize || '0 KB';
+      break;
+
     case 'error':
       console.error('Extension error:', message.error);
       alert('错误: ' + message.error);

@@ -24,15 +24,25 @@ export class AIAnalyzer {
      */
     private loadConfig() {
         const config = vscode.workspace.getConfiguration('designLearn');
-        const aiModel = config.get<any>('aiModel', {});
+        const models = config.get<any[]>('aiModels', []);
+        const selectedModelId = config.get<string>('selectedModel', '');
 
-        if (!aiModel.apiKey || !aiModel.baseUrl || !aiModel.modelId) {
+        let aiModel = models.find(m => m.id === selectedModelId);
+        if (!aiModel && models.length > 0) {
+            aiModel = models[0];
+        }
+
+        if (!aiModel || !aiModel.apiKey || !aiModel.modelId) {
             throw new Error('请先在设置中配置 AI 模型（运行命令：Design-Learn: 配置 AI 模型）');
         }
 
+        const baseUrl = aiModel.baseUrl || (aiModel.provider === 'anthropic'
+            ? 'https://api.anthropic.com/v1'
+            : 'https://api.openai.com/v1');
+
         this.config = {
             apiKey: aiModel.apiKey,
-            baseUrl: aiModel.baseUrl,
+            baseUrl: baseUrl,
             modelId: aiModel.modelId,
             temperature: aiModel.temperature || 0.3,
             maxTokens: aiModel.maxTokens || 8000

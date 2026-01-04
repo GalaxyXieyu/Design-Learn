@@ -40,6 +40,16 @@ export function activate(context: vscode.ExtensionContext) {
         SettingsPanel.createOrShow(context.extensionUri);
     });
 
+    // 注册命令：批量分析快照
+    const batchAnalyzeCommand = vscode.commands.registerCommand('design-learn.batchAnalyze', async () => {
+        await batchAnalyzeSnapshots();
+    });
+
+    // 注册命令：分析单个快照
+    const analyzeSnapshotCommand = vscode.commands.registerCommand('design-learn.analyzeSnapshot', async (snapshotPath?: string) => {
+        await analyzeSingleSnapshot(snapshotPath);
+    });
+
     // 注册命令：刷新快照列表
     const refreshSnapshotsCommand = vscode.commands.registerCommand('design-learn.refreshSnapshots', () => {
         sidebarProvider.refresh();
@@ -80,6 +90,8 @@ export function activate(context: vscode.ExtensionContext) {
         extractCommand,
         extractWithAICommand,
         configureCommand,
+        batchAnalyzeCommand,
+        analyzeSnapshotCommand,
         refreshSnapshotsCommand,
         openSnapshotsFolderCommand,
         openSnapshotFolderCommand,
@@ -181,6 +193,148 @@ async function extractPage(useAI: boolean) {
 
     } catch (error: any) {
         vscode.window.showErrorMessage(`提取失败: ${error.message}`);
+    }
+}
+
+async function analyzeSingleSnapshot(snapshotPath?: string) {
+    try {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('请先打开一个工作区');
+            return;
+        }
+
+        const fileManager = new FileManager(workspaceFolder.uri.fsPath);
+        const snapshotsDir = fileManager.getDirectories().snapshots;
+
+        if (!snapshotPath) {
+            if (!fs.existsSync(snapshotsDir)) {
+                vscode.window.showWarningMessage('未找到快照目录');
+                return;
+            }
+
+            const snapshots = fs.readdirSync(snapshotsDir, { withFileTypes: true })
+                .filter(e => e.isDirectory())
+                .map(e => ({
+                    label: e.name,
+                    path: path.join(snapshotsDir, e.name)
+                }));
+
+            if (snapshots.length === 0) {
+                vscode.window.showWarningMessage('没有可分析的快照');
+                return;
+            }
+
+            const selected = await vscode.window.showQuickPick(snapshots, {
+                placeHolder: '选择要分析的快照'
+            });
+
+            if (!selected) return;
+            snapshotPath = selected.path;
+        }
+
+        const metadataPath = path.join(snapshotPath, 'metadata.json');
+        if (!fs.existsSync(metadataPath)) {
+            vscode.window.showErrorMessage('快照元数据不存在');
+            return;
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: '正在分析快照...',
+            cancellable: false
+        }, async (progress) => {
+            const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+            const analyzer = new AIAnalyzer();
+            const analysis = await analyzer.analyze(metadata);
+
+            if (analysis && analysis.markdown) {
+                const markdownPath = await fileManager.saveMarkdown(metadata, analysis.markdown);
+                vscode.window.showInformationMessage('分析完成！', '打开报告').then(selection => {
+                    if (selection === '打开报告') {
+                        vscode.window.showTextDocument(vscode.Uri.file(markdownPath));
+                    }
+                });
+            }
+        });
+
+        sidebarProvider?.refresh();
+    } catch (error: any) {
+        vscode.window.showErrorMessage(`分析失败: ${error.message}`);
+    }
+}
+
+async function batchAnalyzeSnapshots() {
+    try {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('请先打开一个工作区');
+            return;
+        }
+
+        const fileManager = new FileManager(workspaceFolder.uri.fsPath);
+        const snapshotsDir = fileManager.getDirectories().snapshots;
+
+        if (!fs.existsSync(snapshotsDir)) {
+            vscode.window.showWarningMessage('未找到快照目录');
+            return;
+        }
+
+        const snapshots = fs.readdirSync(snapshotsDir, { withFileTypes: true })
+            .filter(e => e.isDirectory())
+            .map(e => path.join(snapshotsDir, e.name))
+            .filter(p => !fs.existsSync(path.join(p, 'analysis.md')));
+
+        if (snapshots.length === 0) {
+            vscode.window.showInformationMessage('所有快照都已分析');
+            return;
+        }
+
+        const confirm = await vscode.window.showInformationMessage(
+            `发现 ${snapshots.length} 个未分析的快照，是否批量分析？`,
+            '开始分析',
+            '取消'
+        );
+
+        if (confirm !== '开始分析') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: '批量分析中...',
+            cancellable: false
+        }, async (progress) => {
+            const analyzer = new AIAnalyzer();
+            let completed = 0;
+
+            for (const snapshotPath of snapshots) {
+                const metadataPath = path.join(snapshotPath, 'metadata.json');
+                if (!fs.existsSync(metadataPath)) continue;
+
+                try {
+                    progress.report({
+                        increment: (100 / snapshots.length),
+                        message: `${completed + 1}/${snapshots.length}`
+                    });
+
+                    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+                    const analysis = await analyzer.analyze(metadata);
+
+                    if (analysis && analysis.markdown) {
+                        await fileManager.saveMarkdown(metadata, analysis.markdown);
+                    }
+
+                    completed++;
+                } catch (error: any) {
+                    console.error(`分析失败 ${snapshotPath}:`, error);
+                }
+            }
+
+            vscode.window.showInformationMessage(`批量分析完成！成功分析 ${completed}/${snapshots.length} 个快照`);
+        });
+
+        sidebarProvider?.refresh();
+    } catch (error: any) {
+        vscode.window.showErrorMessage(`批量分析失败: ${error.message}`);
     }
 }
 

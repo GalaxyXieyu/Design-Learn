@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -84,6 +84,25 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_components_version_id ON components(version_id);
     CREATE INDEX IF NOT EXISTS idx_rules_version_id ON rules(version_id);
     CREATE INDEX IF NOT EXISTS idx_designs_updated_at ON designs(updated_at);
+
+    -- 任务队列表
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      url TEXT NOT NULL,
+      domain TEXT,
+      status TEXT DEFAULT 'pending',
+      progress INTEGER DEFAULT 0,
+      stage TEXT,
+      error TEXT,
+      options_json TEXT,
+      created_at TEXT,
+      updated_at TEXT,
+      completed_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_domain ON tasks(domain);
+    CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
   `);
 
   db.pragma(`user_version = ${SCHEMA_VERSION}`);
