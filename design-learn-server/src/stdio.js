@@ -68,6 +68,135 @@ server.tool(
   }
 );
 
+server.tool(
+  'search_designs',
+  'Search designs by keyword, tags, or URL.',
+  {
+    query: z.string(),
+    limit: z.number().min(1).max(100).optional(),
+  },
+  async ({ query, limit }) => {
+    const needle = query.toLowerCase();
+    const designs = storage.listDesigns();
+    const matches = designs.filter((design) => {
+      const tags = Array.isArray(design.metadata?.tags) ? design.metadata.tags.join(' ') : '';
+      const haystack = [design.name, design.url, design.description, design.category, tags]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+    const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'get_rules',
+  'Fetch rules for a version (colors/typography/spacing/components).',
+  { versionId: z.string() },
+  async ({ versionId }) => {
+    const version = await storage.getVersion(versionId);
+    if (!version) {
+      return {
+        content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+      };
+    }
+    const rules = version.rules || {};
+    return {
+      content: [{ type: 'text', text: JSON.stringify(rules, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'list_versions',
+  'List versions for a design.',
+  {
+    designId: z.string(),
+    limit: z.number().min(1).max(100).optional(),
+  },
+  async ({ designId, limit }) => {
+    const versions = storage.listVersions(designId);
+    const data = typeof limit === 'number' ? versions.slice(0, limit) : versions;
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'get_version',
+  'Fetch a version by ID.',
+  { versionId: z.string() },
+  async ({ versionId }) => {
+    const version = await storage.getVersion(versionId);
+    if (!version) {
+      return {
+        content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(version, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'list_components',
+  'List components with optional filters.',
+  {
+    designId: z.string().optional(),
+    versionId: z.string().optional(),
+    type: z.string().optional(),
+    limit: z.number().min(1).max(100).optional(),
+  },
+  async ({ designId, versionId, type, limit }) => {
+    const components = await storage.listComponents({ designId, versionId, type });
+    const data = typeof limit === 'number' ? components.slice(0, limit) : components;
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'get_component',
+  'Fetch component detail by ID.',
+  { componentId: z.string() },
+  async ({ componentId }) => {
+    const component = await storage.getComponent(componentId);
+    if (!component) {
+      return {
+        content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(component, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'get_component_preview',
+  'Fetch preview data for a component.',
+  { componentId: z.string() },
+  async ({ componentId }) => {
+    const component = await storage.getComponent(componentId);
+    if (!component) {
+      return {
+        content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+      };
+    }
+    const payload = { componentId: component.id, preview: component.preview || null };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    };
+  }
+);
+
 // Resources
 server.resource(
   'server-info',

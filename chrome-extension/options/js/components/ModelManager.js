@@ -260,6 +260,13 @@ export class ModelManager {
       return;
     }
 
+    // 检查名称重复
+    const isDuplicate = this.models.some(m => m.name === name && m.id !== this.currentEditingId);
+    if (isDuplicate) {
+      Notification.error('模型名称不能重复');
+      return;
+    }
+
     const modelData = {
       id: this.currentEditingId || Date.now().toString(),
       name,
@@ -272,26 +279,7 @@ export class ModelManager {
       isDefault: this.models.length === 0 // 第一个模型自动设为默认
     };
 
-    // 显示保存中状态
-    const saveBtn = document.getElementById('saveModelBtn');
-    const saveBtnText = document.getElementById('saveModelBtnText');
-    const originalText = saveBtnText.textContent;
-    saveBtn.disabled = true;
-    saveBtnText.textContent = '正在测试连接...';
-
-    // 自动测试连接
-    const testResult = await this.testModelConnection(modelData);
-    
-    if (!testResult.success) {
-      saveBtn.disabled = false;
-      saveBtnText.textContent = originalText;
-      Notification.error('连接测试失败：' + testResult.error);
-      return;
-    }
-
-    // 测试成功，保存模型
-    saveBtnText.textContent = '正在保存...';
-
+    // 保存模型
     if (this.currentEditingId) {
       // 编辑
       const index = this.models.findIndex(m => m.id === this.currentEditingId);
@@ -305,10 +293,7 @@ export class ModelManager {
     this.render();
     this.closeModal();
     
-    saveBtn.disabled = false;
-    saveBtnText.textContent = originalText;
-    
-    Notification.success('模型配置已保存并测试成功');
+    Notification.success('模型配置已保存');
   }
 
   /**

@@ -22,7 +22,7 @@ function migrate(db) {
     return;
   }
 
-  if (version !== 0) {
+  if (version !== 0 && version !== 1) {
     throw new Error(`Unsupported schema version ${version}`);
   }
 
