@@ -540,9 +540,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
     .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #67b8ff); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
     .logo-icon svg { width: 20px; height: 20px; color: white; }
-    .logo-text { flex: 1; }
-    .logo-text h1 { font-size: 14px; font-weight: 600; }
-    .logo-text p { font-size: 10px; color: var(--vscode-descriptionForeground); }
+	    .logo-text { flex: 1; min-width: 0; }
+	    .logo-text h1 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	    .logo-text p { font-size: 10px; color: var(--vscode-descriptionForeground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .server-dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; cursor: pointer; transition: background 0.2s; }
     .server-dot.connected { background: #22c55e; }
     .server-dot.disconnected { background: #ef4444; }
@@ -565,22 +565,22 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .history-header { display: flex; align-items: center; margin-bottom: 8px; }
     .history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-    .history-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
-    .history-search { flex: 1; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; color: var(--vscode-input-foreground); font-size: 11px; }
-    .history-select { height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
+	    .history-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+	    .history-search { flex: 1 1 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; color: var(--vscode-input-foreground); font-size: 11px; }
+	    .history-select { flex: 1 1 calc(50% - 3px); min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
     .history-list { flex: 1; overflow-y: auto; }
     .history-item { padding: 10px; border-radius: 6px; margin-bottom: 6px; background: var(--vscode-list-hoverBackground); cursor: pointer; }
     .history-item:hover { background: var(--vscode-list-activeSelectionBackground); }
     .history-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .history-item-url { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	    .history-item-meta { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 10px; color: var(--vscode-descriptionForeground); }
-	    .history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; }
+		    .history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
 	    .history-item-status.processing { background: #3b82f620; color: #3b82f6; }
     .history-item-status.running { background: #f59e0b20; color: #f59e0b; }
     .history-item-status.completed { background: #22c55e20; color: #22c55e; }
     .history-item-status.failed { background: #ef444420; color: #ef4444; }
-	    .history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; }
-	    .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: none; border-radius: 3px; cursor: pointer; color: var(--vscode-button-secondaryForeground); }
+		    .history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; flex-wrap: wrap; }
+		    .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: none; border-radius: 3px; cursor: pointer; color: var(--vscode-button-secondaryForeground); white-space: nowrap; }
 
 	    .library-group { margin-bottom: 10px; }
 	    .library-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); border-radius: 10px; cursor: pointer; user-select: none; }
@@ -593,10 +593,10 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
 	    /* 顶部快捷操作面板 */
 	    .quick-panel { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
-	    .url-row { display: flex; gap: 8px; align-items: center; }
-	    .url-input { flex: 1; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
-	    .url-input:focus { outline: none; border-color: var(--accent); }
-	    .action-btns { display: flex; gap: 6px; flex-shrink: 0; }
+		    .url-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+		    .url-input { flex: 1 1 220px; min-width: 0; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
+		    .url-input:focus { outline: none; border-color: var(--accent); }
+		    .action-btns { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
 	    .action-btn { height: 34px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 	    .action-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
 	    .action-btn.primary { border: none; background: linear-gradient(135deg, var(--accent), #67b8ff); color: white; }
@@ -605,12 +605,13 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .action-btn svg { width: 16px; height: 16px; }
 
     /* 窄宽度：仅保留图标，隐藏文字，避免溢出 */
-    @media (max-width: 340px) {
-      .action-btn span { display: none; }
-      .action-btn { width: 34px; padding: 0; justify-content: center; }
-      .action-btns { gap: 4px; }
-      .url-row { gap: 6px; }
-    }
+	    @media (max-width: 340px) {
+	      .action-btn span { display: none; }
+	      .action-btn { width: 34px; padding: 0; justify-content: center; }
+	      .action-btns { gap: 4px; }
+	      .url-row { gap: 6px; }
+	      .action-btns { width: 100%; justify-content: flex-end; }
+	    }
 
 	    /* 模式切换（更轻量） */
 	    .mode-switch { display: flex; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; padding: 2px; margin-top: 8px; }
