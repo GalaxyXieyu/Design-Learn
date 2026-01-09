@@ -47,31 +47,6 @@ function initializeEventListeners() {
   document.getElementById('saveConfigBtn')?.addEventListener('click', saveConfig);
   document.getElementById('addTemplateBtn')?.addEventListener('click', openAddTemplateForm);
 
-  // Model list delegation
-  document.getElementById('modelsContainer')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
-    if (!action || !id) return;
-
-    if (action === 'delete') deleteModel(id);
-    else if (action === 'set-default') setDefaultModel(id);
-    else if (action === 'test') testModel(id);
-  });
-
-  // Template list delegation
-  document.getElementById('templatesContainer')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
-    if (!action || !id) return;
-
-    if (action === 'delete') deleteTemplate(id);
-    else if (action === 'set-active') setActiveTemplate(id);
-  });
-
   // Config page checkboxes
   document.getElementById('inlineCSS')?.addEventListener('change', (e) => {
     config.inlineCSS = e.target.checked;
@@ -188,13 +163,6 @@ function saveModel() {
     return;
   }
 
-  // Check for duplicate name
-  const isDuplicate = models.some(m => m.name === model.name);
-  if (isDuplicate) {
-    alert('模型名称不能重复');
-    return;
-  }
-
   vscode.postMessage({
     type: 'saveModel',
     model: model
@@ -217,7 +185,7 @@ function renderModels() {
       <div class="model-card-header">
         ${model.isDefault ? '<span class="model-card-badge">默认</span>' : '<span></span>'}
         <div class="model-card-actions">
-          <button title="删除" data-action="delete" data-id="${model.id}">
+          <button title="删除" onclick="deleteModel('${model.id}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
           </button>
         </div>
@@ -228,8 +196,8 @@ function renderModels() {
         <div class="model-card-info-item"><span class="label">模型</span><span class="value">${model.modelId}</span></div>
       </div>
       <div class="model-card-footer">
-        <button data-action="set-default" data-id="${model.id}">设为默认</button>
-        <button class="primary" data-action="test" data-id="${model.id}">测试连接</button>
+        <button onclick="setDefaultModel('${model.id}')">设为默认</button>
+        <button class="primary" onclick="testModel('${model.id}')">测试连接</button>
       </div>
     </div>`).join('');
 }
@@ -261,7 +229,7 @@ function testModel(modelId) {
   }
   
   // 显示测试中状态
-  const btn = document.querySelector(`button[data-action="test"][data-id="${modelId}"]`);
+  const btn = document.querySelector(`button[onclick="testModel('${modelId}')"]`);
   if (btn) {
     btn.disabled = true;
     btn.textContent = '测试中...';
@@ -353,8 +321,8 @@ function renderTemplates() {
         ${template.active ? '<span class="template-badge">使用中</span>' : ''}
       </div>
       <div class="template-actions">
-        <button class="btn-secondary btn-sm" data-action="set-active" data-id="${template.id}">${template.active ? '已启用' : '启用'}</button>
-        <button class="btn-secondary btn-sm" data-action="delete" data-id="${template.id}">删除</button>
+        <button class="btn-secondary btn-sm" onclick="setActiveTemplate('${template.id}')">${template.active ? '已启用' : '启用'}</button>
+        <button class="btn-secondary btn-sm" onclick="deleteTemplate('${template.id}')">删除</button>
       </div>
     </div>`).join('');
 }
