@@ -1,0 +1,229 @@
+{
+  "images": [
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/hero-blur-bg-06a749e2054a.webp",
+      "alt": "",
+      "width": 1029,
+      "height": 681
+    },
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/mona-head-3887875b2d69.webp",
+      "alt": "",
+      "width": 1398,
+      "height": 1397
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/4IfncsgGkGPFESlWXlAWfU/6f671f0ff761cb276c2effced9dca773/eyebrow-banner-duck.png",
+      "alt": "Duck mascot",
+      "width": 250,
+      "height": 250
+    },
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/particles-de1dd20f3008.png",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/g1XhuDG7foMyNWIEIpGJj/b40a790b854d0803704deb7905b1bd82/logo-duolingo-14477f9e54a6.svg",
+      "alt": "Duolingo",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/6Qr8Snm4JceoMFRJhapgFa/802ded1d2c486a9d0a4c073d9f8f38f4/logo-gartner-aa8c2e452b64.svg",
+      "alt": "Gartner",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/1Dt1ncaR6ZM4dQvknFzfBI/e5c2092be5bd53881622eced4fd37564/accordion-1-ce487d44c0bf.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/1uXZYDy7dMcH9QwxuAU06F/1cb167cc60d725b8cf7089faf9a4ed06/accordion-2-730955545f07.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/3xzVZaJhqo3B62R8NeHjX2/e37c81e4f26e9dac2aff1f23a0243087/accordion-3-52ca331d22ea.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/3cgNgdKFqflI27vyDh4Gpa/c459dc8690133e7663b8db2626cf2045/accordion-4-a26744b70ff7.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/5mzhSO4avmXBwkFsMzgXkW/91991e6258f14f54d23840b6c13c3013/hero-64ecd484397f.webp",
+      "alt": "Copilot Autofix identifies vulnerable code and provides an explanation, together with a secure code suggestion to remediate the vulnerability.",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/6WnLu9nlnemjCltZkd8lCi/b18034be25552e118a36f6617e1f84df/pillar-1-dd667a921f55.webp",
+      "alt": "A security campaign screen displays the campaign’s progress bar with 97% completed of 701 alerts. A total of 23 alerts are left with 13 in progress, and the campaign started 20 days ago. The status below shows that there are 7 days left in the campaign with a due date of November 15, 2024.",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/1o2Eid4RQteCr6iZ7wVauW/3c04a760442c81036d98e70c0c986a8b/pillar-2-ff69e872920a.webp",
+      "alt": "List of dependencies defined in a requirements .txt file.",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/3WaMDk5JuZzhaKfpRgibKz/c179c5841373ec1fd37c839bdb24a7b4/pillar-3-0a063e2daae2.webp",
+      "alt": "GitHub push protection confirms and displays an active secret, and blocks the push.",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/3ip0mnsbUMonRTsbnnIkOh/a940b7a975a801c8829c113d9799873d/hero-961322485af6.webp",
+      "alt": "A project management dashboard showing tasks for the ‘OctoArcade Invaders’ project, with tasks grouped under project phase categories like ‘Prototype,’ ‘Beta,’ and ‘Launch’ in a table layout. One of the columns displays sub-issue progress bars with percentages for each issue.",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/5suLHnkyPm3laA8qENQmMZ/6b267a9e449ae94968dd85c8f96fb64e/accordion-1-38ad6b6d1b20.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/20DkYnWbPsbb8mdDnIs32f/a43850b7e0e8e45ec87761d1ba91e19b/accordion-2-c0a62cfc31a1.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/39mo3IRGhK995HzuwZANhY/cabfd393551e0d2aae92bc105121ca9c/accordion-3-5d5d222f1830.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/7GOAeyecyEQqY12hHwvwXg/69877012458c9d42916b2a18e0e36a37/accordion-4-7abff9233556.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/5m9WKL1QJeiDrnxuL9pBux/f7336610c32283d86c71235c0d54ee16/figma.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/2xNJHobFMxrvAwj534sNMo/753fcd3beb5fd223d1d2ed918b868a5f/figma.svg",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/2so1SgbMPgAN2M091ep1YR/3c268f706e7a53fb79276b863e0c9436/mercedes-benz.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/55wg5e2VhUvAbJBG0coTRy/9ced78d7b1f86bc72f214401ad57e69e/mercedes-benz.svg",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/6qeISSuZ9JWsaytftY1gqk/bd5f4532732d5cf163c8e1a2557f42ba/mercado-libre.webp",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://images.ctfassets.net/8aevphvgewt8/1kTDnd4nwOET5gPSpPk5z9/dc7d84e7c31e4ece4a9db441728c8e97/mercado-libre.svg",
+      "alt": "",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/cta-universe-ducky-e1504390abff.webp",
+      "alt": "",
+      "width": 493,
+      "height": 493
+    },
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/cta-universe-mona-c50f77efd58b.webp",
+      "alt": "",
+      "width": 856,
+      "height": 856
+    },
+    {
+      "type": "img",
+      "src": "https://github.githubassets.com/assets/cta-universe-copilot-7e0793a4b686.webp",
+      "alt": "",
+      "width": 827,
+      "height": 827
+    },
+    {
+      "type": "background",
+      "src": "https://github.githubassets.com/assets/pearl_1-88d82cae94c5.webp",
+      "element": "div"
+    },
+    {
+      "type": "background",
+      "src": "https://github.githubassets.com/assets/pearl_2-8f5d00296839.webp",
+      "element": "div"
+    },
+    {
+      "type": "background",
+      "src": "https://github.githubassets.com/assets/pearl_3-854c788900ac.webp",
+      "element": "div"
+    }
+  ],
+  "fonts": [
+    {
+      "family": "Mona Sans",
+      "url": "/assets/mona-sans-14595085164a.woff2"
+    },
+    {
+      "family": "Hubot Sans",
+      "url": "/assets/hubot-sans-597e45ee1797.woff2"
+    },
+    {
+      "family": "Monaspace Neon",
+      "url": "/assets/monaspace-neon-a19005b2e428.woff2"
+    }
+  ]
+}
