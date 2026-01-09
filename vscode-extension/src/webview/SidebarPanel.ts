@@ -523,8 +523,8 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   <style>
     :root { --accent: #4a9eff; --accent-hover: #3d8ce6; --success: #4caf50; --error: #f44336; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); }
-    .container { padding: 12px; }
+	    body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); }
+	    .container { padding: 12px; }
 
     /* 服务器状态 */
     .server-status { background: var(--vscode-editor-background); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -556,25 +556,66 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .dropdown-label { padding: 4px 12px; font-size: 10px; color: var(--vscode-descriptionForeground); text-transform: uppercase; }
     .dropdown-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font-size: 12px; cursor: pointer; }
     .dropdown-item:hover { background: var(--vscode-list-hoverBackground); }
-    .dropdown-item svg { width: 14px; height: 14px; margin-right: 8px; }
+    .dropdown-item svg { width: 16px; height: 16px; margin-right: 8px; }
     .dropdown-link { display: flex; align-items: center; padding: 8px 12px; font-size: 12px; cursor: pointer; color: var(--vscode-foreground); }
     .dropdown-link:hover { background: var(--vscode-list-hoverBackground); }
-    .dropdown-link svg { width: 14px; height: 14px; margin-right: 8px; opacity: 0.7; }
+    .dropdown-link svg { width: 16px; height: 16px; margin-right: 8px; opacity: 0.7; }
 
-    /* URL 输入 */
-    .url-section { margin-bottom: 12px; }
-    .url-input { width: 100%; padding: 10px 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 8px; color: var(--vscode-input-foreground); font-size: 12px; }
-    .url-input:focus { outline: none; border-color: var(--accent); }
+	    /* 模版库区域 */
+    .history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .history-header { display: flex; align-items: center; margin-bottom: 8px; }
+    .history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+    .history-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+    .history-search { flex: 1; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; color: var(--vscode-input-foreground); font-size: 11px; }
+    .history-select { height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
+    .history-list { flex: 1; overflow-y: auto; }
+    .history-item { padding: 10px; border-radius: 6px; margin-bottom: 6px; background: var(--vscode-list-hoverBackground); cursor: pointer; }
+    .history-item:hover { background: var(--vscode-list-activeSelectionBackground); }
+    .history-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-item-url { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	    .history-item-meta { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 10px; color: var(--vscode-descriptionForeground); }
+	    .history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; }
+	    .history-item-status.processing { background: #3b82f620; color: #3b82f6; }
+    .history-item-status.running { background: #f59e0b20; color: #f59e0b; }
+    .history-item-status.completed { background: #22c55e20; color: #22c55e; }
+    .history-item-status.failed { background: #ef444420; color: #ef4444; }
+	    .history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; }
+	    .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: none; border-radius: 3px; cursor: pointer; color: var(--vscode-button-secondaryForeground); }
 
-    /* 按钮 */
-    .btn-group { display: flex; gap: 8px; margin-bottom: 16px; }
-    .btn { flex: 1; padding: 10px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn-primary { background: linear-gradient(135deg, var(--accent), #67b8ff); color: white; }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-    .btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
-    .btn svg { width: 14px; height: 14px; }
+	    .library-group { margin-bottom: 10px; }
+	    .library-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); border-radius: 10px; cursor: pointer; user-select: none; }
+	    .library-group-header:hover { background: var(--vscode-list-hoverBackground); }
+	    .library-group-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; color: var(--vscode-descriptionForeground); }
+	    .library-group-body { padding-top: 8px; }
+	    .library-group-body.collapsed { display: none; }
+	    .library-group-arrow { transition: transform 0.2s; }
+	    .library-group-arrow.collapsed { transform: rotate(-90deg); }
+
+	    /* 顶部快捷操作面板 */
+	    .quick-panel { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+	    .url-row { display: flex; gap: 8px; align-items: center; }
+	    .url-input { flex: 1; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
+	    .url-input:focus { outline: none; border-color: var(--accent); }
+	    .action-btns { display: flex; gap: 6px; flex-shrink: 0; }
+	    .action-btn { height: 34px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+	    .action-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+	    .action-btn.primary { border: none; background: linear-gradient(135deg, var(--accent), #67b8ff); color: white; }
+	    .action-btn.primary:hover { opacity: 0.92; }
+    .action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .action-btn svg { width: 16px; height: 16px; }
+
+    /* 窄宽度：仅保留图标，隐藏文字，避免溢出 */
+    @media (max-width: 340px) {
+      .action-btn span { display: none; }
+      .action-btn { width: 34px; padding: 0; justify-content: center; }
+      .action-btns { gap: 4px; }
+      .url-row { gap: 6px; }
+    }
+
+	    /* 模式切换（更轻量） */
+	    .mode-switch { display: flex; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; padding: 2px; margin-top: 8px; }
+	    .mode-btn { flex: 1; padding: 6px 8px; border: none; background: transparent; color: var(--vscode-descriptionForeground); font-size: 11px; border-radius: 8px; cursor: pointer; }
+	    .mode-btn.active { background: var(--accent); color: white; }
     .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -629,10 +670,10 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .snapshot-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(76, 175, 80, 0.2); color: var(--success); }
     .snapshot-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: none; gap: 4px; }
     .snapshot-item:hover .snapshot-actions { display: flex; }
-    .snapshot-action { width: 22px; height: 22px; border: none; background: var(--vscode-button-secondaryBackground); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--vscode-foreground); }
+    .snapshot-action { width: 26px; height: 26px; border: none; background: var(--vscode-button-secondaryBackground); border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--vscode-foreground); }
     .snapshot-action:hover { background: var(--vscode-button-secondaryHoverBackground); }
     .snapshot-action.delete:hover { background: #ef4444; color: white; }
-    .snapshot-action svg { width: 12px; height: 12px; }
+    .snapshot-action svg { width: 14px; height: 14px; }
 
     /* 设置选项 */
     .setting-group-label { font-size: 10px; font-weight: 600; color: var(--vscode-descriptionForeground); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -650,10 +691,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .empty-state svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
     .empty-state p { font-size: 11px; }
 
-    /* 模式切换 */
-    .mode-switch { display: flex; background: var(--vscode-input-background); border-radius: 6px; padding: 2px; margin-bottom: 8px; }
-    .mode-btn { flex: 1; padding: 6px 8px; border: none; background: transparent; color: var(--vscode-descriptionForeground); font-size: 11px; border-radius: 4px; cursor: pointer; }
-    .mode-btn.active { background: var(--accent); color: white; }
+	    /* 模式切换（旧样式已合并到上方 quick-panel） */
 
     /* 任务列表 */
     .task-item { padding: 8px 10px; background: var(--vscode-input-background); border-radius: 6px; margin-bottom: 6px; }
@@ -669,10 +707,10 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .task-url { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .task-progress { font-size: 10px; color: var(--vscode-descriptionForeground); }
     .task-actions { display: flex; gap: 4px; }
-    .task-actions button { width: 18px; height: 18px; border: none; background: transparent; border-radius: 3px; cursor: pointer; color: var(--vscode-descriptionForeground); display: flex; align-items: center; justify-content: center; }
+    .task-actions button { width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; cursor: pointer; color: var(--vscode-descriptionForeground); display: flex; align-items: center; justify-content: center; }
     .task-actions button:hover { background: var(--vscode-button-secondaryBackground); }
     .task-actions button.delete:hover { background: #ef4444; color: white; }
-    .task-actions button svg { width: 10px; height: 10px; }
+    .task-actions button svg { width: 12px; height: 12px; }
     .domain-group { margin-bottom: 10px; }
     .domain-header { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; font-weight: 600; }
     .batch-actions { display: flex; gap: 6px; margin-top: 8px; }
@@ -704,7 +742,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       </div>
       <div class="header-actions" style="position:relative;">
         <div class="server-dot" id="serverDot" title="服务器状态" onclick="document.getElementById('serverModal').classList.add('show')"></div>
-        <div class="settings-btn" id="settingsBtn" onclick="toggleSettingsMenu()">
+	        <div class="settings-btn" id="settingsBtn" onclick="toggleSettingsMenu()">
           <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg>
         </div>
         <!-- 设置下拉菜单 -->
@@ -736,64 +774,50 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       </div>
     </div>
 
-    <!-- URL 输入 + 操作 -->
-    <div class="url-section">
-      <input type="url" id="urlInput" class="url-input" placeholder="输入网页 URL，回车提取">
-    </div>
+	    <div class="quick-panel">
+	      <div class="url-row">
+	        <input type="url" id="urlInput" class="url-input" placeholder="输入网页 URL，回车提取">
+	        <div class="action-btns">
+	          <button id="extractBtn" class="action-btn primary" title="提取（不做 AI 分析）">
+	            <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+	            <span>提取</span>
+	          </button>
+	          <button id="extractAIBtn" class="action-btn" title="提取 + AI 分析">
+	            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
+	            <span>AI</span>
+	          </button>
+	        </div>
+	      </div>
+	      <div class="mode-switch">
+	        <button class="mode-btn active" id="modeCurrent" onclick="setMode('current')">当前页面</button>
+	        <button class="mode-btn" id="modeAll" onclick="setMode('all')">全部路由 ≤10</button>
+	      </div>
+	    </div>
 
-    <!-- 模式切换 -->
-    <div class="mode-switch">
-      <button class="mode-btn active" id="modeCurrent" onclick="setMode('current')">当前页面</button>
-      <button class="mode-btn" id="modeAll" onclick="setMode('all')">全部路由 (≤10)</button>
-    </div>
-
-    <div class="btn-group">
-      <button id="extractBtn" class="btn btn-primary" title="仅提取页面设计资源">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>提取</span>
-      </button>
-      <button id="extractAIBtn" class="btn btn-primary" title="提取并使用 AI 分析设计风格">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
-        <span>AI 分析</span>
-      </button>
-    </div>
-
-    <!-- 任务队列面板 -->
-    <div class="panel" id="taskPanel" style="display:none;">
-      <div class="panel-header" onclick="togglePanel('taskPanel')">
-        <span class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          任务队列
-          <span class="panel-badge" id="taskCount">0</span>
-        </span>
-        <svg class="panel-arrow" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </div>
-      <div class="panel-content">
-        <div id="taskList"></div>
-        <div class="batch-actions">
-          <button class="batch-btn" onclick="vscode.postMessage({type:'clearCompletedTasks'})">清除已完成</button>
-          <button class="batch-btn" onclick="retryAllFailed()">重试失败</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 历史记录面板 -->
-    <div class="panel" id="snapshotPanel">
-      <div class="panel-header" onclick="togglePanel('snapshotPanel')">
-        <span class="panel-title">
+		    <!-- 模版库区域 -->
+    <div class="history-section">
+      <div class="history-header">
+        <span class="history-title">
           <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          历史记录
+	          模版库
           <span class="panel-badge" id="snapshotCount">0</span>
         </span>
-        <svg class="panel-arrow" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
-      <div class="panel-content">
-        <div id="snapshotList" class="snapshot-list"></div>
-        <button class="add-btn" style="margin-top:8px;" id="batchAnalyzeBtn" onclick="vscode.postMessage({type:'batchAnalyze'})">
-          <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
-          批量 AI 分析
-        </button>
+	    <div class="history-toolbar">
+	        <input type="text" id="historySearch" class="history-search" placeholder="搜索..." oninput="filterHistory()">
+	        <select id="historyFilter" class="history-select" onchange="filterHistory()">
+	          <option value="all">全部</option>
+	          <option value="processing">处理中</option>
+	          <option value="completed">已完成</option>
+	          <option value="failed">失败</option>
+	        </select>
+        <select id="historySort" class="history-select" onchange="filterHistory()">
+          <option value="newest">最新</option>
+          <option value="oldest">最早</option>
+          <option value="grouped">按网站</option>
+        </select>
       </div>
+      <div id="historyList" class="history-list"></div>
     </div>
   </div>
 
@@ -838,89 +862,208 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     let isExtracting = false;
     let models = [];
     let selectedModelId = '';
-    let snapshotPaths = {};
-    let editingModelId = null;
-    let currentMode = 'current';
-    let tasks = [];
+	    let editingModelId = null;
+	    let currentMode = 'current';
+	    let tasks = [];
+	    let allSnapshots = [];
+	    let libraryItemsByKey = {};
+	    const libraryGroupCollapsed = { processing: false, failed: false, completed: false };
+	
+	    function findButtonFromEventTarget(target, stopAtEl) {
+	      let el = target;
+	      while (el && el !== stopAtEl) {
+	        if (el.tagName === 'BUTTON') return el;
+	        el = el.parentNode;
+	      }
+	      return null;
+	    }
+	
+	    (function initActionDelegates() {
+	      // 模型配置模态框列表：编辑/删除
+	      const modalList = document.getElementById('modelModalList');
+	      if (modalList) {
+	        modalList.addEventListener('click', function(e) {
+	          const btn = findButtonFromEventTarget(e && e.target, modalList);
+	          if (!btn) return;
+	          const action = btn.getAttribute('data-action');
+	          const id = btn.getAttribute('data-id');
+	          if (!action || !id) return;
+	          if (action === 'edit-modal-model') editModelInModal(id);
+	          if (action === 'delete-modal-model') deleteModelFromModal(id);
+	        });
+	      }
+	
+	      // 侧边栏模型列表：编辑/删除（阻止触发选择模型）
+	      const modelList = document.getElementById('modelList');
+	      if (modelList) {
+	        modelList.addEventListener('click', function(e) {
+	          const btn = findButtonFromEventTarget(e && e.target, modelList);
+	          if (!btn) return;
+	          const action = btn.getAttribute('data-action');
+	          const id = btn.getAttribute('data-id');
+	          if (!action || !id) return;
+	          if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+	          if (action === 'edit-model') editModel(id);
+	          if (action === 'delete-model') deleteModel(id);
+	        });
+	      }
+	    })();
 
     // 设置下拉菜单
-    function toggleSettingsMenu() {
-      const dropdown = document.getElementById('settingsDropdown');
-      dropdown.classList.toggle('show');
-    }
+	    function toggleSettingsMenu() {
+	      try {
+	        const ev = (typeof window !== 'undefined' && window.event) ? window.event : null;
+	        if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+	        if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+	      } catch {}
+	      const dropdown = document.getElementById('settingsDropdown');
+	      if (!dropdown) return;
+	      dropdown.classList.toggle('show');
+	    }
     function closeSettingsMenu() {
       document.getElementById('settingsDropdown').classList.remove('show');
     }
     function openModelConfig() {
       closeSettingsMenu();
-      vscode.postMessage({type:'openSettings'});
+      renderModelListInModal();
+      document.getElementById('modelModal').classList.add('show');
+    }
+    function closeModelModal() {
+      document.getElementById('modelModal').classList.remove('show');
+      document.getElementById('modelModalForm').style.display = 'none';
+      document.getElementById('modelModalList').style.display = 'block';
+      document.getElementById('modelModalSaveBtn').style.display = 'none';
+      document.getElementById('modelModalAddBtn').style.display = 'inline-block';
+    }
+	    function renderModelListInModal() {
+	      const container = document.getElementById('modelModalList');
+	      if (!models.length) {
+	        container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--vscode-descriptionForeground);">暂无模型</div>';
+	        return;
+	      }
+	      container.innerHTML = models.map(m =>
+	        '<div style="display:flex;align-items:center;padding:8px;border-bottom:1px solid var(--vscode-panel-border);">' +
+	        '<div style="flex:1;"><div style="font-weight:600;font-size:12px;">' + m.name + '</div>' +
+	        '<div style="font-size:10px;color:var(--vscode-descriptionForeground);">' + m.modelId + '</div></div>' +
+	        '<button style="background:none;border:none;cursor:pointer;padding:4px;" data-action="edit-modal-model" data-id="' + m.id + '">✏️</button>' +
+	        '<button style="background:none;border:none;cursor:pointer;padding:4px;" data-action="delete-modal-model" data-id="' + m.id + '">🗑️</button>' +
+	        '</div>'
+	      ).join('');
+	    }
+    let editingModalModelId = null;
+    function showModelForm() {
+      editingModalModelId = null;
+      document.getElementById('modelModalForm').style.display = 'block';
+      document.getElementById('modelModalList').style.display = 'none';
+      document.getElementById('modelModalSaveBtn').style.display = 'inline-block';
+      document.getElementById('modelModalAddBtn').style.display = 'none';
+      document.getElementById('modalModelName').value = '';
+      document.getElementById('modalModelApiKey').value = '';
+      document.getElementById('modalModelBaseUrl').value = '';
+      document.getElementById('modalModelId').value = '';
+    }
+    function editModelInModal(id) {
+      const m = models.find(x => x.id === id);
+      if (!m) return;
+      editingModalModelId = id;
+      document.getElementById('modelModalForm').style.display = 'block';
+      document.getElementById('modelModalList').style.display = 'none';
+      document.getElementById('modelModalSaveBtn').style.display = 'inline-block';
+      document.getElementById('modelModalAddBtn').style.display = 'none';
+      document.getElementById('modalModelName').value = m.name || '';
+      document.getElementById('modalModelProvider').value = m.provider || 'openai';
+      document.getElementById('modalModelApiKey').value = m.apiKey || '';
+      document.getElementById('modalModelBaseUrl').value = m.baseUrl || '';
+      document.getElementById('modalModelId').value = m.modelId || '';
+    }
+    function saveModelFromModal() {
+      const model = {
+        id: editingModalModelId || Date.now().toString(),
+        name: document.getElementById('modalModelName').value.trim(),
+        provider: document.getElementById('modalModelProvider').value,
+        apiKey: document.getElementById('modalModelApiKey').value.trim(),
+        baseUrl: document.getElementById('modalModelBaseUrl').value.trim() || null,
+        modelId: document.getElementById('modalModelId').value.trim()
+      };
+      if (!model.name || !model.apiKey || !model.modelId) {
+        alert('请填写名称、API Key 和 Model ID');
+        return;
+      }
+      vscode.postMessage({type:'saveModel', model});
+      closeModelModal();
+    }
+    function deleteModelFromModal(id) {
+      if (confirm('确定删除这个模型？')) {
+        vscode.postMessage({type:'deleteModel', modelId: id});
+        renderModelListInModal();
+      }
     }
     // 点击外部关闭下拉菜单
-    document.addEventListener('click', function(e) {
-      const dropdown = document.getElementById('settingsDropdown');
-      const btn = document.getElementById('settingsBtn');
-      if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
-        dropdown.classList.remove('show');
-      }
-    });
+	    // 阻止点击下拉内容时触发外部关闭
+	    (function() {
+	      const dropdown = document.getElementById('settingsDropdown');
+	      if (dropdown) {
+	        dropdown.addEventListener('click', function(e) {
+	          if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+	        });
+	      }
+	    })();
+	
+	    document.addEventListener('click', function(e) {
+	      const dropdown = document.getElementById('settingsDropdown');
+	      const btn = document.getElementById('settingsBtn');
+	      try {
+	        if (!dropdown || !btn) return;
+	        const target = e && e.target ? e.target : null;
+	        if (!target) {
+	          dropdown.classList.remove('show');
+	          return;
+	        }
+	        if (!dropdown.contains(target) && !btn.contains(target)) {
+	          dropdown.classList.remove('show');
+	        }
+	      } catch {
+	        dropdown?.classList?.remove?.('show');
+	      }
+	    });
 
     // 折叠面板
     function togglePanel(id) {
       document.getElementById(id).classList.toggle('collapsed');
     }
 
-    // 模式切换
-    function setMode(mode) {
-      currentMode = mode;
-      document.getElementById('modeCurrent').classList.toggle('active', mode === 'current');
-      document.getElementById('modeAll').classList.toggle('active', mode === 'all');
-      document.getElementById('taskPanel').style.display = mode === 'all' ? 'block' : 'none';
-      if (mode === 'all') {
-        vscode.postMessage({type:'loadTasks'});
-        vscode.postMessage({type:'startTaskPolling'});
-      } else {
-        vscode.postMessage({type:'stopTaskPolling'});
-      }
-    }
+	    // 模式切换（仅影响“提取”行为，不再单独展示任务队列）
+	    function setMode(mode) {
+	      currentMode = mode;
+	      document.getElementById('modeCurrent').classList.toggle('active', mode === 'current');
+	      document.getElementById('modeAll').classList.toggle('active', mode === 'all');
+	      // 切换到全部路由时主动拉取一次任务列表，用于展示处理进度
+	      if (mode === 'all') {
+	        vscode.postMessage({type:'loadTasks'});
+	      }
+	    }
 
-    // 任务管理
-    function renderTasks(taskList) {
-      tasks = taskList || [];
-      document.getElementById('taskCount').textContent = tasks.length;
-      const c = document.getElementById('taskList');
-      if (!tasks.length) {
-        c.innerHTML = '<div class="empty-state"><p>暂无任务</p></div>';
-        return;
-      }
-      // 按域名分组
-      const groups = {};
-      tasks.forEach(t => {
-        const domain = t.domain || 'unknown';
-        if (!groups[domain]) groups[domain] = [];
-        groups[domain].push(t);
-      });
-      c.innerHTML = Object.entries(groups).map(([domain, items]) =>
-        '<div class="domain-group"><div class="domain-header">' + domain + ' (' + items.length + ')</div>' +
-        items.map(t =>
-          '<div class="task-item" data-id="' + t.id + '">' +
-          '<div class="task-header">' +
-          '<div class="task-status ' + t.status + '"></div>' +
-          '<div class="task-url" title="' + t.url + '">' + t.url.replace(/^https?:\\/\\/[^/]+/, '') + '</div>' +
-          '<div class="task-actions">' +
-          (t.status === 'failed' ? '<button onclick="retryTask(\\'' + t.id + '\\')"><svg viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2"/></svg></button>' : '') +
-          '<button class="delete" onclick="deleteTask(\\'' + t.id + '\\')"><svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg></button>' +
-          '</div></div>' +
-          '<div class="task-progress">' + (t.stage || t.status) + (t.progress ? ' ' + t.progress + '%' : '') + (t.error ? ' - ' + t.error : '') + '</div>' +
-          '</div>'
-        ).join('') + '</div>'
-      ).join('');
-    }
+		    // 任务管理：数据进入“模版库”统一展示
+		    function renderTasks(taskList) {
+		      tasks = taskList || [];
+		      // 如果存在未完成任务，自动开启轮询；否则关闭，避免常驻轮询
+		      const hasActive = (tasks || []).some(t => ['pending','running','extracted','analyzing'].includes(t.status));
+		      vscode.postMessage({ type: hasActive ? 'startTaskPolling' : 'stopTaskPolling' });
+		      filterHistory();
+		    }
+	
+		    function stripOriginFromUrl(url) {
+		      if (!url) return '';
+		      const idx = url.indexOf('://');
+		      if (idx < 0) return url;
+		      const rest = url.slice(idx + 3);
+		      const slash = rest.indexOf('/');
+		      if (slash < 0) return '/';
+		      return rest.slice(slash);
+		    }
 
-    function retryTask(id) { vscode.postMessage({type:'retryTask', taskId: id}); }
-    function deleteTask(id) { vscode.postMessage({type:'deleteTask', taskId: id}); }
-    function retryAllFailed() {
-      tasks.filter(t => t.status === 'failed').forEach(t => retryTask(t.id));
-    }
+	    function retryTask(id) { vscode.postMessage({type:'retryTask', taskId: id}); }
+	    function deleteTask(id) { vscode.postMessage({type:'deleteTask', taskId: id}); }
 
     // 提取按钮
     document.getElementById('extractBtn').onclick = () => {
@@ -965,29 +1108,32 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
     function updateServerStatus(connected, url) {
       const dot = document.getElementById('serverDot');
-      dot.className = 'server-dot ' + (connected ? 'connected' : 'disconnected');
-      dot.title = connected ? '服务器已连接: ' + url : '服务器未连接';
-      document.getElementById('serverUrlInput').value = url;
+      if (dot) {
+        dot.className = 'server-dot ' + (connected ? 'connected' : 'disconnected');
+        dot.title = connected ? '服务器已连接: ' + url : '服务器未连接';
+      }
+      const input = document.getElementById('serverUrlInput');
+      if (input) input.value = url;
     }
 
     // 模型管理
-    function renderModels() {
-      const container = document.getElementById('modelList');
-      if (!models.length) {
-        container.innerHTML = '<div class="empty-state"><p>尚未配置 AI 模型</p></div>';
-        return;
-      }
-      container.innerHTML = models.map(m => {
-        const isSelected = m.id === selectedModelId;
-        const initial = (m.name || 'AI')[0].toUpperCase();
-        return '<div class="model-item' + (isSelected ? ' selected' : '') + '" data-id="' + m.id + '">' +
-          '<div class="model-icon">' + initial + '</div>' +
-          '<div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-id">' + m.modelId + '</div></div>' +
-          '<div class="model-actions">' +
-          '<button onclick="event.stopPropagation();editModel(\\'' + m.id + '\\')"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/></svg></button>' +
-          '<button class="delete" onclick="event.stopPropagation();deleteModel(\\'' + m.id + '\\')"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
-          '</div></div>';
-      }).join('');
+	    function renderModels() {
+	      const container = document.getElementById('modelList');
+	      if (!models.length) {
+	        container.innerHTML = '<div class="empty-state"><p>尚未配置 AI 模型</p></div>';
+	        return;
+	      }
+	      container.innerHTML = models.map(m => {
+	        const isSelected = m.id === selectedModelId;
+	        const initial = (m.name || 'AI')[0].toUpperCase();
+	        return '<div class="model-item' + (isSelected ? ' selected' : '') + '" data-id="' + m.id + '">' +
+	          '<div class="model-icon">' + initial + '</div>' +
+	          '<div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-id">' + m.modelId + '</div></div>' +
+	          '<div class="model-actions">' +
+	          '<button data-action="edit-model" data-id="' + m.id + '"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/></svg></button>' +
+	          '<button class="delete" data-action="delete-model" data-id="' + m.id + '"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
+	          '</div></div>';
+	      }).join('');
 
       // 点击选择模型
       container.querySelectorAll('.model-item').forEach(el => {
@@ -1046,46 +1192,191 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       }
     }
 
-    // 快照列表
-    function renderSnapshots(snapshots) {
-      document.getElementById('snapshotCount').textContent = snapshots.length;
-      const c = document.getElementById('snapshotList');
-      if (!snapshots.length) {
-        c.innerHTML = '<div class="empty-state"><p>暂无快照</p></div>';
-        return;
-      }
-      snapshotPaths = {};
-      snapshots.forEach((s, i) => { snapshotPaths[i] = s.path; });
-      c.innerHTML = snapshots.map((s, idx) =>
-        '<div class="snapshot-item" data-idx="' + idx + '">' +
-        '<div class="snapshot-title">' + s.title + '</div>' +
-        (s.url ? '<div class="snapshot-url">' + s.url + '</div>' : '') +
-        '<div class="snapshot-meta">' +
-        (s.date ? '<span class="snapshot-date">' + s.date + '</span>' : '') +
-        (s.hasAnalysis ? '<span class="snapshot-badge">AI</span>' : '') +
-        '</div>' +
-        '<div class="snapshot-actions">' +
-        '<button class="snapshot-action" data-action="analyze" title="AI分析"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg></button>' +
-        '<button class="snapshot-action" data-action="view" title="查看"><svg viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg></button>' +
-        '<button class="snapshot-action" data-action="open" title="打开"><svg viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" stroke-width="2"/></svg></button>' +
-        '<button class="snapshot-action delete" data-action="delete" title="删除"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
-        '</div></div>'
-      ).join('');
-    }
+	    // 模版库数据（快照 + 未完成任务）
+	    function renderSnapshots(snapshots) {
+	      allSnapshots = snapshots;
+	      filterHistory();
+	    }
 
-    document.getElementById('snapshotList').addEventListener('click', function(e) {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      e.stopPropagation();
-      const item = btn.closest('.snapshot-item');
-      const path = snapshotPaths[item.dataset.idx];
-      if (!path) return;
-      const action = btn.dataset.action;
-      if (action === 'analyze') vscode.postMessage({type:'analyzeSnapshot', path});
-      else if (action === 'view') vscode.postMessage({type:'viewSnapshot', path});
-      else if (action === 'open') vscode.postMessage({type:'openSnapshot', path});
-      else if (action === 'delete') vscode.postMessage({type:'deleteSnapshot', path});
-    });
+	    function filterHistory() {
+	      const search = (document.getElementById('historySearch').value || '').toLowerCase();
+	      const filter = document.getElementById('historyFilter').value;
+	      const sort = document.getElementById('historySort').value;
+
+	      const isTaskActive = (t) => ['pending','running','extracted','analyzing'].includes(t.status);
+	      const taskStatusGroup = (t) => {
+	        if (t.status === 'failed') return 'failed';
+	        if (isTaskActive(t)) return 'processing';
+	        return 'completed';
+	      };
+
+	      const taskItems = (tasks || [])
+	        .filter(t => t && t.id && (t.status !== 'completed'))
+	        .map(t => ({
+	          key: 't:' + t.id,
+	          type: 'task',
+	          id: t.id,
+	          title: stripOriginFromUrl(t.url || '') || (t.domain || '任务'),
+	          url: t.url || '',
+	          date: t.updatedAt || t.createdAt || '',
+	          statusGroup: taskStatusGroup(t),
+	          stage: t.stage || t.status,
+	          progress: t.progress,
+	          error: t.error
+	        }));
+
+	      const snapshotItems = (allSnapshots || []).map(s => ({
+	        key: 's:' + (s.id || s.path),
+	        type: 'snapshot',
+	        id: s.id || s.path,
+	        title: s.title || '未命名',
+	        url: s.url || '',
+	        date: s.date || '',
+	        statusGroup: 'completed',
+	        path: s.path
+	      }));
+
+	      let items = snapshotItems.concat(taskItems);
+
+	      // 搜索/过滤
+	      items = items.filter(it => {
+	        if (search) {
+	          const title = (it.title || '').toLowerCase();
+	          const url = (it.url || '').toLowerCase();
+	          const stage = (it.stage || '').toLowerCase();
+	          if (!title.includes(search) && !url.includes(search) && !stage.includes(search)) return false;
+	        }
+	        if (filter === 'all') return true;
+	        if (filter === 'completed') return it.statusGroup === 'completed';
+	        if (filter === 'failed') return it.statusGroup === 'failed';
+	        if (filter === 'processing') return it.statusGroup === 'processing';
+	        return true;
+	      });
+
+	      // 计数（包含处理中的任务）
+	      document.getElementById('snapshotCount').textContent = String(items.length);
+
+	      const getDateValue = (v) => {
+	        const t = Date.parse(v || '');
+	        return Number.isFinite(t) ? t : 0;
+	      };
+
+	      if (sort === 'oldest') {
+	        items = items.slice().sort((a, b) => getDateValue(a.date) - getDateValue(b.date));
+	      } else if (sort === 'grouped') {
+	        items = items.slice().sort((a, b) => {
+	          const hostA = a.url ? new URL(a.url).hostname : '';
+	          const hostB = b.url ? new URL(b.url).hostname : '';
+	          return hostA.localeCompare(hostB);
+	        });
+	      } else {
+	        items = items.slice().sort((a, b) => getDateValue(b.date) - getDateValue(a.date));
+	      }
+
+	      renderHistoryList(items);
+	    }
+
+	    function renderHistoryList(items) {
+	      const c = document.getElementById('historyList');
+	      libraryItemsByKey = {};
+	      if (!items.length) {
+	        c.innerHTML = '<div style="padding:20px;text-align:center;color:var(--vscode-descriptionForeground);">暂无记录</div>';
+	        return;
+	      }
+
+	      const groups = { processing: [], failed: [], completed: [] };
+	      items.forEach((it) => {
+	        if (!groups[it.statusGroup]) groups[it.statusGroup] = [];
+	        groups[it.statusGroup].push(it);
+	      });
+
+	      const renderItem = (it) => {
+	        libraryItemsByKey[it.key] = it;
+	        const statusText = it.statusGroup === 'processing' ? '处理中' : (it.statusGroup === 'failed' ? '失败' : '已完成');
+	        const statusClass = it.statusGroup === 'processing' ? 'processing' : (it.statusGroup === 'failed' ? 'failed' : 'completed');
+	        const metaLeft = it.date ? it.date : '';
+	        const subline = it.type === 'task'
+	          ? ('<div class="history-item-url">' + (it.url || '') + '</div>' +
+	             '<div class="task-progress" style="margin-top:4px;">' + (it.stage || '') + (it.progress ? (' ' + it.progress + '%') : '') + (it.error ? (' - ' + it.error) : '') + '</div>')
+	          : (it.url ? '<div class="history-item-url">' + it.url + '</div>' : '');
+
+	        const actions = it.type === 'snapshot'
+	          ? ('<button data-action="analyze">AI分析</button>' +
+	             '<button data-action="view">查看</button>' +
+	             '<button data-action="copy" data-id="' + it.id + '">复制ID</button>')
+	          : ((it.statusGroup === 'failed' ? '<button data-action="retryTask">重试</button>' : '') +
+	             '<button data-action="deleteTask">删除</button>');
+
+	        return (
+	          '<div class="history-item" data-key="' + it.key + '">' +
+	          '<div class="history-item-title">' + (it.title || '') + '</div>' +
+	          subline +
+	          '<div class="history-item-meta">' +
+	          '<span>' + metaLeft + '</span>' +
+	          '<span class="history-item-status ' + statusClass + '">' + statusText + '</span>' +
+	          '</div>' +
+	          '<div class="history-item-actions">' + actions + '</div>' +
+	          '</div>'
+	        );
+	      };
+
+	      const renderGroup = (key, title) => {
+	        const list = groups[key] || [];
+	        if (!list.length) return '';
+	        const collapsed = !!libraryGroupCollapsed[key];
+	        return (
+	          '<div class="library-group" data-group="' + key + '">' +
+	          '<div class="library-group-header" data-action="toggleGroup" data-group="' + key + '">' +
+	          '<div class="library-group-title">' + title + '<span class="panel-badge">' + list.length + '</span></div>' +
+	          '<svg class="library-group-arrow' + (collapsed ? ' collapsed' : '') + '" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+	          '</div>' +
+	          '<div class="library-group-body' + (collapsed ? ' collapsed' : '') + '" data-group-body="' + key + '">' +
+	          list.map(renderItem).join('') +
+	          '</div></div>'
+	        );
+	      };
+
+	      c.innerHTML =
+	        renderGroup('processing', '处理中') +
+	        renderGroup('failed', '失败') +
+	        renderGroup('completed', '已完成');
+	    }
+
+	    const historyListEl = document.getElementById('historyList');
+	    if (historyListEl) {
+	      historyListEl.addEventListener('click', function(e) {
+	        const btn = e.target.closest('[data-action]');
+	        if (!btn) return;
+	        e.stopPropagation();
+	        const action = btn.dataset.action;
+	        if (action === 'toggleGroup') {
+	          const group = btn.dataset.group;
+	          if (!group) return;
+	          libraryGroupCollapsed[group] = !libraryGroupCollapsed[group];
+	          filterHistory();
+	          return;
+	        }
+
+	        const itemEl = btn.closest('.history-item');
+	        if (!itemEl) return;
+	        const key = itemEl.dataset.key;
+	        const it = key ? libraryItemsByKey[key] : null;
+	        if (!it) return;
+
+	        if (action === 'analyze' && it.type === 'snapshot') vscode.postMessage({type:'analyzeSnapshot', path: it.path});
+	        else if (action === 'view' && it.type === 'snapshot') vscode.postMessage({type:'viewSnapshot', path: it.path});
+	        else if (action === 'copy') {
+	          const id = btn.dataset.id;
+	          navigator.clipboard.writeText(id);
+	          btn.textContent = '已复制';
+	          setTimeout(() => btn.textContent = '复制ID', 1500);
+	        } else if (action === 'retryTask' && it.type === 'task') {
+	          retryTask(it.id);
+	        } else if (action === 'deleteTask' && it.type === 'task') {
+	          deleteTask(it.id);
+	        }
+	      });
+	    }
 
     // 设置
     function saveConfig() {

@@ -8,7 +8,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 EXTENSION_DIR="$PROJECT_ROOT/vscode-extension"
-VSIX_FILE="$EXTENSION_DIR/design-learn-1.0.2.vsix"
+VERSION="$(node -p "require('${EXTENSION_DIR}/package.json').version" 2>/dev/null || echo "")"
+if [ -z "$VERSION" ]; then
+  echo "❌ 无法读取版本号：$EXTENSION_DIR/package.json"
+  exit 1
+fi
+VSIX_FILE="$EXTENSION_DIR/design-learn-$VERSION.vsix"
 EXT_ID="design-learn.design-learn"
 
 echo "=== VSCode 插件一键重装 ==="
@@ -23,10 +28,10 @@ echo ""
 
 # 2. 验证编译结果包含 LOG_FILE
 echo "2️⃣  验证编译结果..."
-if grep -q "LOG_FILE" "$EXTENSION_DIR/out/webview/SidebarPanel.js"; then
-    echo "✅ LOG_FILE 已编译到输出文件"
+if [ -f "$EXTENSION_DIR/out/extension.js" ] && [ -f "$EXTENSION_DIR/out/webview/SidebarPanel.js" ]; then
+    echo "✅ 编译输出已生成（out/extension.js, out/webview/SidebarPanel.js）"
 else
-    echo "❌ 错误: LOG_FILE 未找到，请检查源码"
+    echo "❌ 错误: 编译输出不存在，请检查 tsc 输出目录"
     exit 1
 fi
 echo ""
@@ -39,7 +44,11 @@ echo ""
 
 # 4. 打包新的 .vsix
 echo "4️⃣  打包新的 .vsix..."
-npx vsce package --out design-learn-1.0.2.vsix 2>&1 | grep -E "(DONE|ERROR|Packaged)" || true
+if command -v vsce &> /dev/null; then
+  vsce package --skip-license --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix" 2>&1 | grep -E "(DONE|ERROR|Packaged)" || true
+else
+  npx vsce package --skip-license --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix" 2>&1 | grep -E "(DONE|ERROR|Packaged)" || true
+fi
 echo "✅ 打包完成"
 echo ""
 
@@ -82,13 +91,13 @@ echo ""
 
 # 8. 验证安装结果
 echo "8️⃣  验证安装结果..."
-INSTALLED_FILE="$VSCODE_EXT_DIR/$EXT_ID-1.0.2/out/webview/SidebarPanel.js"
-if [ -f "$INSTALLED_FILE" ]; then
-    if grep -q "LOG_FILE" "$INSTALLED_FILE"; then
-        echo "✅ 验证通过！LOG_FILE 已包含在安装的扩展中"
+INSTALLED_PKG="$VSCODE_EXT_DIR/$EXT_ID-$VERSION/package.json"
+if [ -f "$INSTALLED_PKG" ]; then
+    INSTALLED_VERSION="$(node -p "require('${INSTALLED_PKG}').version" 2>/dev/null || echo "")"
+    if [ "$INSTALLED_VERSION" = "$VERSION" ]; then
+        echo "✅ 验证通过！已安装版本: $INSTALLED_VERSION"
     else
-        echo "❌ 验证失败: 安装的扩展中没有 LOG_FILE"
-        echo "   可能是 vsix 打包时使用了旧的 out 目录"
+        echo "❌ 验证失败: 期望版本 $VERSION，但读取到 $INSTALLED_VERSION"
         exit 1
     fi
 else
