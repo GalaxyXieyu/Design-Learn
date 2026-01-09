@@ -385,10 +385,13 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       models.push(model);
     }
     await config.update('aiModels', models, vscode.ConfigurationTarget.Global);
+    let selectedModelId = config.get<string>('selectedModel', '');
     if (models.length === 1) {
+      selectedModelId = model.id;
       await config.update('selectedModel', model.id, vscode.ConfigurationTarget.Global);
     }
-    this._loadModels();
+    // 直接发送更新后的数据
+    this._view?.webview.postMessage({ type: 'updateModels', models, selectedModelId });
     vscode.window.showInformationMessage(`模型 "${model.name}" 已保存`);
   }
 
@@ -535,10 +538,28 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
     /* 头部 */
     .header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
-    .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), #67b8ff); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-    .logo-icon svg { width: 16px; height: 16px; color: white; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #67b8ff); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 20px; height: 20px; color: white; }
+    .logo-text { flex: 1; }
     .logo-text h1 { font-size: 14px; font-weight: 600; }
     .logo-text p { font-size: 10px; color: var(--vscode-descriptionForeground); }
+    .server-dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; cursor: pointer; transition: background 0.2s; }
+    .server-dot.connected { background: #22c55e; }
+    .server-dot.disconnected { background: #ef4444; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .settings-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; color: var(--vscode-descriptionForeground); }
+    .settings-btn:hover { background: var(--vscode-list-hoverBackground); color: var(--vscode-foreground); }
+    .settings-dropdown { position: absolute; top: 100%; right: 0; width: 220px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; display: none; }
+    .settings-dropdown.show { display: block; }
+    .dropdown-section { padding: 8px 0; border-bottom: 1px solid var(--vscode-panel-border); }
+    .dropdown-section:last-child { border-bottom: none; }
+    .dropdown-label { padding: 4px 12px; font-size: 10px; color: var(--vscode-descriptionForeground); text-transform: uppercase; }
+    .dropdown-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+    .dropdown-item:hover { background: var(--vscode-list-hoverBackground); }
+    .dropdown-item svg { width: 14px; height: 14px; margin-right: 8px; }
+    .dropdown-link { display: flex; align-items: center; padding: 8px 12px; font-size: 12px; cursor: pointer; color: var(--vscode-foreground); }
+    .dropdown-link:hover { background: var(--vscode-list-hoverBackground); }
+    .dropdown-link svg { width: 14px; height: 14px; margin-right: 8px; opacity: 0.7; }
 
     /* URL 输入 */
     .url-section { margin-bottom: 12px; }
@@ -672,15 +693,6 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div class="container">
-    <!-- 服务器状态 -->
-    <div class="server-status" id="serverStatus" onclick="document.getElementById('serverModal').classList.add('show')">
-      <div class="status-indicator" id="statusIndicator"></div>
-      <div class="status-info">
-        <div class="status-title" id="statusTitle">检查中...</div>
-        <div class="status-url" id="statusUrl">http://localhost:3100</div>
-      </div>
-    </div>
-
     <!-- 头部 -->
     <div class="header">
       <div class="logo-icon">
@@ -689,6 +701,38 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       <div class="logo-text">
         <h1>Design-Learn</h1>
         <p>智能学习页面设计</p>
+      </div>
+      <div class="header-actions" style="position:relative;">
+        <div class="server-dot" id="serverDot" title="服务器状态" onclick="document.getElementById('serverModal').classList.add('show')"></div>
+        <div class="settings-btn" id="settingsBtn" onclick="toggleSettingsMenu()">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg>
+        </div>
+        <!-- 设置下拉菜单 -->
+        <div class="settings-dropdown" id="settingsDropdown">
+          <div class="dropdown-section">
+            <div class="dropdown-label">资源下载</div>
+            <div class="dropdown-item"><span>内联 CSS</span><label class="setting-toggle"><input type="checkbox" id="inlineCSS" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>下载图片</span><label class="setting-toggle"><input type="checkbox" id="includeImages" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>下载字体</span><label class="setting-toggle"><input type="checkbox" id="includeFonts" checked><span class="slider"></span></label></div>
+          </div>
+          <div class="dropdown-section">
+            <div class="dropdown-label">AI 分析</div>
+            <div class="dropdown-item"><span>颜色</span><label class="setting-toggle"><input type="checkbox" id="analyzeColors" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>排版</span><label class="setting-toggle"><input type="checkbox" id="analyzeTypography" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>布局</span><label class="setting-toggle"><input type="checkbox" id="analyzeLayout" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>组件</span><label class="setting-toggle"><input type="checkbox" id="analyzeComponents" checked><span class="slider"></span></label></div>
+          </div>
+          <div class="dropdown-section">
+            <div class="dropdown-link" onclick="openModelConfig()">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
+              AI 模型配置
+            </div>
+            <div class="dropdown-link" onclick="document.getElementById('serverModal').classList.add('show');closeSettingsMenu();">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2"/></svg>
+              服务器配置
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -714,25 +758,6 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       </button>
     </div>
 
-    <!-- AI 模型面板 -->
-    <div class="panel" id="modelPanel">
-      <div class="panel-header" onclick="togglePanel('modelPanel')">
-        <span class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
-          AI 模型
-        </span>
-        <svg class="panel-arrow" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </div>
-      <div class="panel-content">
-        <div id="modelList"></div>
-        <div id="modelForm" style="display:none;"></div>
-        <button class="add-btn" id="addModelBtn" onclick="showModelForm()">
-          <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          添加模型
-        </button>
-      </div>
-    </div>
-
     <!-- 任务队列面板 -->
     <div class="panel" id="taskPanel" style="display:none;">
       <div class="panel-header" onclick="togglePanel('taskPanel')">
@@ -752,12 +777,12 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       </div>
     </div>
 
-    <!-- 快照列表面板 -->
+    <!-- 历史记录面板 -->
     <div class="panel" id="snapshotPanel">
       <div class="panel-header" onclick="togglePanel('snapshotPanel')">
         <span class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          快照列表
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          历史记录
           <span class="panel-badge" id="snapshotCount">0</span>
         </span>
         <svg class="panel-arrow" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -768,50 +793,6 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
           <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
           批量 AI 分析
         </button>
-      </div>
-    </div>
-
-    <!-- 设置面板 -->
-    <div class="panel collapsed" id="settingsPanel">
-      <div class="panel-header" onclick="togglePanel('settingsPanel')">
-        <span class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg>
-          提取设置
-        </span>
-        <svg class="panel-arrow" viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </div>
-      <div class="panel-content">
-        <div class="setting-group-label">资源下载</div>
-        <div class="setting-item">
-          <span class="setting-label">内联 CSS</span>
-          <label class="setting-toggle"><input type="checkbox" id="inlineCSS" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">下载图片</span>
-          <label class="setting-toggle"><input type="checkbox" id="includeImages" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">下载字体</span>
-          <label class="setting-toggle"><input type="checkbox" id="includeFonts" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-group-label" style="margin-top:10px;">AI 分析内容</div>
-        <div class="setting-item">
-          <span class="setting-label">颜色</span>
-          <label class="setting-toggle"><input type="checkbox" id="analyzeColors" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">排版</span>
-          <label class="setting-toggle"><input type="checkbox" id="analyzeTypography" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">布局</span>
-          <label class="setting-toggle"><input type="checkbox" id="analyzeLayout" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">组件</span>
-          <label class="setting-toggle"><input type="checkbox" id="analyzeComponents" checked><span class="slider"></span></label>
-        </div>
-        <button class="add-btn" style="margin-top:10px;" onclick="saveConfig()">保存设置</button>
       </div>
     </div>
   </div>
@@ -828,6 +809,30 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     </div>
   </div>
 
+  <!-- 模型配置模态框 -->
+  <div class="modal" id="modelModal">
+    <div class="modal-content" style="width:320px;">
+      <div class="modal-header">AI 模型配置</div>
+      <div id="modelModalList"></div>
+      <div id="modelModalForm" style="display:none;">
+        <input type="text" id="modalModelName" class="modal-input" placeholder="模型名称">
+        <select id="modalModelProvider" class="modal-input">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="custom">自定义</option>
+        </select>
+        <input type="password" id="modalModelApiKey" class="modal-input" placeholder="API Key">
+        <input type="text" id="modalModelBaseUrl" class="modal-input" placeholder="Base URL (可选)">
+        <input type="text" id="modalModelId" class="modal-input" placeholder="Model ID">
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" onclick="closeModelModal()">关闭</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalSaveBtn" onclick="saveModelFromModal()" style="display:none;">保存</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalAddBtn" onclick="showModelForm()">添加模型</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const vscode = acquireVsCodeApi();
     let isExtracting = false;
@@ -837,6 +842,27 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     let editingModelId = null;
     let currentMode = 'current';
     let tasks = [];
+
+    // 设置下拉菜单
+    function toggleSettingsMenu() {
+      const dropdown = document.getElementById('settingsDropdown');
+      dropdown.classList.toggle('show');
+    }
+    function closeSettingsMenu() {
+      document.getElementById('settingsDropdown').classList.remove('show');
+    }
+    function openModelConfig() {
+      closeSettingsMenu();
+      vscode.postMessage({type:'openSettings'});
+    }
+    // 点击外部关闭下拉菜单
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('settingsDropdown');
+      const btn = document.getElementById('settingsBtn');
+      if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
 
     // 折叠面板
     function togglePanel(id) {
@@ -938,9 +964,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     }
 
     function updateServerStatus(connected, url) {
-      document.getElementById('statusIndicator').className = 'status-indicator ' + (connected ? 'connected' : 'disconnected');
-      document.getElementById('statusTitle').textContent = connected ? '服务器已连接' : '服务器未连接';
-      document.getElementById('statusUrl').textContent = url;
+      const dot = document.getElementById('serverDot');
+      dot.className = 'server-dot ' + (connected ? 'connected' : 'disconnected');
+      dot.title = connected ? '服务器已连接: ' + url : '服务器未连接';
       document.getElementById('serverUrlInput').value = url;
     }
 
