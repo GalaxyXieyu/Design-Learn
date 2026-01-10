@@ -35,6 +35,7 @@ function createStorage(options = {}) {
     createVersion: (input) => createVersion(db, dataDir, input),
     listVersions: (designId) => listVersions(db, designId),
     getVersion: (versionId) => getVersion(db, dataDir, versionId),
+    updateVersion: (versionId, patch) => updateVersion(db, dataDir, versionId, patch),
     deleteVersion: (versionId) => deleteVersion(db, dataDir, versionId),
     listSnapshots: (filters) => listSnapshots(db, dataDir, filters),
     getSnapshot: (snapshotId) => getSnapshot(db, dataDir, snapshotId),
@@ -339,6 +340,39 @@ async function getVersion(db, dataDir, versionId) {
   const rules = await readJson(row.rules_path);
   const snapshots = await readJson(row.snapshots_path);
   const styleguideMarkdown = await readText(row.styleguide_path);
+
+  return {
+    id: row.id,
+    designId: row.design_id,
+    versionNumber: row.version_number,
+    styleguideMarkdown,
+    rules,
+    snapshots,
+    createdAt: row.created_at,
+    createdBy: row.created_by,
+  };
+}
+
+async function updateVersion(db, dataDir, versionId, patch = {}) {
+  const row = db.prepare('SELECT * FROM versions WHERE id = ?').get(versionId);
+  if (!row) {
+    return null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'styleguideMarkdown')) {
+    await writeText(row.styleguide_path, patch.styleguideMarkdown || '');
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'rules')) {
+    await writeJson(row.rules_path, patch.rules || {});
+  }
+
+  const snapshots = await readJson(row.snapshots_path);
+  const styleguideMarkdown = Object.prototype.hasOwnProperty.call(patch, 'styleguideMarkdown')
+    ? patch.styleguideMarkdown || ''
+    : await readText(row.styleguide_path);
+  const rules = Object.prototype.hasOwnProperty.call(patch, 'rules')
+    ? patch.rules || {}
+    : await readJson(row.rules_path);
 
   return {
     id: row.id,

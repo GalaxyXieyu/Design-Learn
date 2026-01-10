@@ -67,6 +67,12 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, transparent); border-radius: 8px; cursor: pointer; color: var(--vscode-button-secondaryForeground); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .history-item-actions button:hover { background: var(--vscode-button-secondaryHoverBackground); }
 .history-item-actions button svg { width: 12px; height: 12px; opacity: 0.9; flex-shrink: 0; }
+.route-details { margin-top: 4px; background: var(--vscode-input-background); border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 6px 8px; }
+.route-details summary { cursor: pointer; font-size: 10px; color: var(--vscode-descriptionForeground); list-style: none; }
+.route-details summary::-webkit-details-marker { display: none; }
+.route-list { margin-top: 6px; max-height: 120px; overflow-y: auto; display: grid; gap: 4px; }
+.route-item { font-size: 10px; color: var(--vscode-foreground); padding: 2px 6px; background: var(--vscode-editor-background); border-radius: 6px; border: 1px solid var(--vscode-panel-border); }
+.route-error { margin-top: 6px; font-size: 10px; color: #ef4444; }
 
 .library-group { margin-bottom: 10px; }
 .library-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); border-radius: 10px; cursor: pointer; user-select: none; }
@@ -214,3 +220,14 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .modal-btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .modal-btn-primary { background: var(--accent); color: white; }
 .modal-btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+
+/* 模型配置弹窗列表 */
+.modal-model-list { display: flex; flex-direction: column; gap: 6px; }
+.modal-model-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-input-background); }
+.modal-model-info { flex: 1; min-width: 0; }
+.modal-model-name { font-size: 12px; font-weight: 600; }
+.modal-model-id { font-size: 10px; color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-model-actions { display: flex; gap: 4px; }
+.modal-icon-btn { width: 24px; height: 24px; border: none; border-radius: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.modal-icon-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.modal-icon-btn.delete:hover { background: #ef4444; color: white; }

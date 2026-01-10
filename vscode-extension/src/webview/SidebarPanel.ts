@@ -3,12 +3,16 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
 import { FileManager } from '../fileManager';
+import { AIAnalyzer } from '../aiAnalyzer';
+import { Snapshot } from '../types';
 
 export class SidebarPanel implements vscode.WebviewViewProvider {
   public static readonly viewType = 'designLearnSidebar';
   private _view?: vscode.WebviewView;
   private _extensionUri: vscode.Uri;
   private _designPollInterval?: NodeJS.Timeout;
+  private _pendingAiJobs = new Map<string, { designId: string }>();
+  private _analysisInFlight = new Set<string>();
 
   constructor(extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
@@ -120,13 +124,14 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   }
 
   private async _importUrl(url: string, useAI: boolean) {
-    if (!url || !url.trim()) {
+    const normalizedUrl = this._normalizeUrlInput(url);
+    if (!normalizedUrl) {
       vscode.window.showErrorMessage('请输入有效的 URL');
       return;
     }
 
     try {
-      new URL(url);
+      new URL(normalizedUrl);
     } catch {
       vscode.window.showErrorMessage('请输入有效的 URL 格式');
       return;
@@ -138,7 +143,10 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     this._view?.webview.postMessage({ type: 'extracting', status: true });
 
     try {
-      await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url, options: { useAI: !!useAI } });
+      const result = await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url: normalizedUrl, options: { useAI: !!useAI } });
+      if (useAI && result?.job?.id && result?.designId) {
+        this._pendingAiJobs.set(result.job.id, { designId: result.designId });
+      }
       this._loadDesigns();
       this._startDesignPolling();
     } catch (err: any) {
@@ -167,8 +175,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   // ==================== 路由扫描和批量提取 ====================
 
   private async _scanRoutes(url: string) {
-    if (!url?.trim()) return;
-    try { new URL(url); } catch { return; }
+    const normalizedUrl = this._normalizeUrlInput(url);
+    if (!normalizedUrl) return;
+    try { new URL(normalizedUrl); } catch { return; }
 
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
@@ -176,35 +185,45 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     this._view?.webview.postMessage({ type: 'scanningRoutes', status: true });
 
     try {
-      const result = await this._serverRequest('POST', `${serverUrl}/api/scan-routes`, { url, limit: 10 });
-      this._view?.webview.postMessage({ type: 'routesScanned', routes: result.routes || [], baseUrl: url });
+      const result = await this._serverRequest('POST', `${serverUrl}/api/scan-routes`, { url: normalizedUrl, limit: 10 });
+      this._view?.webview.postMessage({ type: 'routesScanned', routes: result.routes || [], baseUrl: normalizedUrl });
     } catch (err: any) {
       vscode.window.showErrorMessage(`扫描路由失败: ${err.message}`);
-      this._view?.webview.postMessage({ type: 'routesScanned', routes: [], baseUrl: url, error: err.message });
+      this._view?.webview.postMessage({ type: 'routesScanned', routes: [], baseUrl: normalizedUrl, error: err.message });
     } finally {
       this._view?.webview.postMessage({ type: 'scanningRoutes', status: false });
     }
   }
 
   private async _importAllRoutes(baseUrl: string, useAI: boolean) {
-    if (!baseUrl?.trim()) return;
+    const normalizedBaseUrl = this._normalizeUrlInput(baseUrl);
+    if (!normalizedBaseUrl) return;
 
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
 
     try {
-      const result = await this._serverRequest('POST', `${serverUrl}/api/scan-routes`, { url: baseUrl, limit: 10 });
+      const result = await this._serverRequest('POST', `${serverUrl}/api/scan-routes`, { url: normalizedBaseUrl, limit: 10 });
       const routes: string[] = result.routes || [];
+      this._view?.webview.postMessage({
+        type: 'routesScanned',
+        routes,
+        baseUrl: normalizedBaseUrl,
+        total: routes.length,
+      });
 
       if (!routes.length) {
         vscode.window.showWarningMessage('未找到可提取的路由');
         return;
       }
 
-      const baseUrlObj = new URL(baseUrl);
+      const baseUrlObj = new URL(normalizedBaseUrl);
       for (const route of routes) {
         const fullUrl = `${baseUrlObj.origin}${route}`;
-        await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url: fullUrl, options: { useAI: !!useAI } });
+        const result = await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url: fullUrl, options: { useAI: !!useAI } });
+        if (useAI && result?.job?.id && result?.designId) {
+          this._pendingAiJobs.set(result.job.id, { designId: result.designId });
+        }
       }
 
       vscode.window.showInformationMessage(`已开始导入 ${routes.length} 个路由`);
@@ -215,6 +234,14 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     }
   }
 
+  private _normalizeUrlInput(url: string): string {
+    const value = (url || '').trim();
+    if (!value) return '';
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value)) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    return `https://${value}`;
+  }
+
   // ==================== 设计列表（服务端 DB） ====================
 
   private async _loadDesigns() {
@@ -223,10 +250,269 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
     try {
       const result = await this._serverRequest('GET', `${serverUrl}/api/designs?limit=200`, null);
-      this._view?.webview.postMessage({ type: 'updateDesigns', items: result.items || [] });
+      const items = Array.isArray(result.items) ? result.items : [];
+      const jobIds = items
+        .map((item: any) => item?.metadata?.processingJobId)
+        .filter((jobId: string) => !!jobId);
+
+      let jobsById = new Map<string, any>();
+      if (jobIds.length) {
+        try {
+          const jobsResult = await this._serverRequest('GET', `${serverUrl}/api/import/jobs`, null);
+          const jobs = Array.isArray(jobsResult.jobs) ? jobsResult.jobs : [];
+          jobsById = new Map(jobs.map((job: any) => [job.id, job]));
+        } catch {
+          jobsById = new Map();
+        }
+      }
+
+      const merged = items.map((item: any) => {
+        const jobId = item?.metadata?.processingJobId;
+        const job = jobId ? jobsById.get(jobId) : null;
+        if (!job) return item;
+        const meta = item?.metadata || {};
+        const jobError = job?.error?.message || job?.error || null;
+        const existingError = meta.processingError || null;
+        const isAiPhase =
+          meta.processingStatus === 'analyzing' ||
+          (typeof meta.processingMessage === 'string' && meta.processingMessage.startsWith('ai_'));
+        const processingMessage = isAiPhase ? meta.processingMessage : job.message;
+        const processingProgress =
+          isAiPhase && typeof meta.processingProgress === 'number' ? meta.processingProgress : job.progress;
+        return {
+          ...item,
+          metadata: {
+            ...(meta || {}),
+            processingProgress,
+            processingMessage,
+            processingJobStatus: job.status,
+            processingError: existingError || jobError,
+          },
+        };
+      });
+
+      const decorated = this._applyAiPendingStatus(merged);
+      this._view?.webview.postMessage({ type: 'updateDesigns', items: decorated });
+      this._maybeRunAiAnalysis(decorated, jobsById);
     } catch {
       this._view?.webview.postMessage({ type: 'updateDesigns', items: [] });
     }
+  }
+
+  private _applyAiPendingStatus(items: any[]) {
+    if (!Array.isArray(items) || !items.length) return items;
+    const pendingDesignIds = new Set(
+      Array.from(this._pendingAiJobs.values()).map((entry) => entry.designId)
+    );
+
+    return items.map((item: any) => {
+      const designId = item?.id;
+      if (!designId) return item;
+      const meta = item?.metadata || {};
+      if (meta.processingStatus === 'failed') return item;
+      const aiRequested = !!meta.aiRequested;
+      const aiCompleted = meta.processingMessage === 'ai_completed' || meta.aiCompleted;
+      const jobStatus = meta.processingJobStatus;
+      const jobRunning = jobStatus === 'running' || jobStatus === 'queued';
+
+      if (this._analysisInFlight.has(designId)) {
+        return {
+          ...item,
+          metadata: {
+            ...meta,
+            processingStatus: 'analyzing',
+            processingMessage: 'ai_analyzing',
+            processingProgress: 90,
+            processingError: null,
+          },
+        };
+      }
+
+      if (pendingDesignIds.has(designId)) {
+        return {
+          ...item,
+          metadata: {
+            ...meta,
+            processingStatus: 'analyzing',
+            processingMessage: 'ai_pending',
+            processingProgress: 80,
+            processingError: null,
+          },
+        };
+      }
+
+      if (aiRequested && !aiCompleted && !jobRunning) {
+        return {
+          ...item,
+          metadata: {
+            ...meta,
+            processingStatus: 'analyzing',
+            processingMessage: meta.processingMessage?.startsWith('ai_') ? meta.processingMessage : 'ai_pending',
+            processingProgress: typeof meta.processingProgress === 'number' ? meta.processingProgress : 80,
+            processingError: null,
+          },
+        };
+      }
+
+      return item;
+    });
+  }
+
+  private _maybeRunAiAnalysis(items: any[], jobsById: Map<string, any>) {
+    if (this._pendingAiJobs.size) {
+      for (const [jobId, data] of this._pendingAiJobs.entries()) {
+        const job = jobsById.get(jobId);
+        if (!job) continue;
+        if (job.status === 'failed') {
+          this._pendingAiJobs.delete(jobId);
+          continue;
+        }
+        if (job.status !== 'completed') continue;
+        this._pendingAiJobs.delete(jobId);
+        if (this._analysisInFlight.has(data.designId)) continue;
+        void this._runAiAnalysisForDesign(data.designId);
+      }
+    }
+
+    if (!Array.isArray(items) || !items.length) return;
+    for (const item of items) {
+      const designId = item?.id;
+      if (!designId) continue;
+      if (this._analysisInFlight.has(designId)) continue;
+      const meta = item?.metadata || {};
+      const aiRequested = !!meta.aiRequested;
+      const aiCompleted = meta.processingMessage === 'ai_completed' || meta.aiCompleted;
+      if (!aiRequested || aiCompleted) continue;
+      if (meta.processingStatus === 'failed' || meta.processingMessage === 'failed') continue;
+      const jobStatus = meta.processingJobStatus;
+      if (jobStatus === 'running' || jobStatus === 'queued') continue;
+      void this._runAiAnalysisForDesign(designId);
+    }
+  }
+
+  private async _runAiAnalysisForDesign(designId: string) {
+    this._analysisInFlight.add(designId);
+    try {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
+
+      await this._updateDesignProcessing(designId, {
+        processingStatus: 'analyzing',
+        processingMessage: 'ai_analyzing',
+        processingProgress: 90,
+        processingError: null,
+        aiRequested: true,
+        aiCompleted: false,
+      });
+
+      const result = await this._serverRequest(
+        'GET',
+        `${serverUrl}/api/snapshots?designId=${encodeURIComponent(designId)}&limit=1`,
+        null
+      );
+      const snapshot = Array.isArray(result.items) ? result.items[0] : null;
+      if (!snapshot || !snapshot.versionId) return;
+
+      const existing = await this._serverRequest(
+        'GET',
+        `${serverUrl}/api/versions/${encodeURIComponent(snapshot.versionId)}`,
+        null
+      );
+      if (existing?.styleguideMarkdown) {
+        await this._updateDesignProcessing(designId, {
+          processingStatus: 'completed',
+          processingMessage: 'ai_completed',
+          processingProgress: 100,
+          processingError: null,
+          lastImportVersionId: snapshot.versionId,
+          lastImportAt: new Date().toISOString(),
+          aiRequested: false,
+          aiCompleted: true,
+        });
+        return;
+      }
+
+      const analyzer = new AIAnalyzer();
+      const analysis = await analyzer.analyze(this._toAnalyzerSnapshot(snapshot));
+
+      if (analysis?.markdown) {
+        await this._serverRequest(
+          'PATCH',
+          `${serverUrl}/api/versions/${encodeURIComponent(snapshot.versionId)}`,
+          { styleguideMarkdown: analysis.markdown }
+        );
+        await this._updateDesignProcessing(designId, {
+          processingStatus: 'completed',
+          processingMessage: 'ai_completed',
+          processingProgress: 100,
+          processingError: null,
+          lastImportVersionId: snapshot.versionId,
+          lastImportAt: new Date().toISOString(),
+          aiRequested: false,
+          aiCompleted: true,
+        });
+        vscode.window.showInformationMessage('AI 分析完成');
+      }
+    } catch (err: any) {
+      await this._updateDesignProcessing(designId, {
+        processingStatus: 'failed',
+        processingMessage: 'failed',
+        processingProgress: 100,
+        processingError: err?.message || String(err),
+        aiRequested: false,
+        aiCompleted: false,
+      });
+      vscode.window.showWarningMessage(`AI 分析失败: ${err?.message || String(err)}`);
+    } finally {
+      this._analysisInFlight.delete(designId);
+    }
+  }
+
+  private async _updateDesignProcessing(designId: string, metaPatch: Record<string, any>) {
+    if (!designId) return;
+    try {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
+      await this._serverRequest(
+        'PATCH',
+        `${serverUrl}/api/designs/${encodeURIComponent(designId)}`,
+        { metadata: metaPatch }
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  private _toAnalyzerSnapshot(snapshot: any): Snapshot {
+    const meta = snapshot?.metadata || {};
+    const viewport = meta.viewport || { width: 1280, height: 720, devicePixelRatio: 1 };
+    const stats = meta.stats || {
+      totalElements: 0,
+      totalImages: 0,
+      totalLinks: 0,
+      totalScripts: 0,
+      totalStyles: 0,
+    };
+
+    return {
+      id: String(snapshot.id || ''),
+      url: snapshot.url || '',
+      title: snapshot.title || snapshot.url || 'Untitled',
+      html: snapshot.html || '',
+      css: snapshot.css || '',
+      assets: { images: [], fonts: [] },
+      metadata: {
+        viewport,
+        userAgent: meta.userAgent || '',
+        language: meta.language || '',
+        charset: meta.charset || '',
+        meta: meta.meta || {},
+        performance: meta.performance,
+        stats,
+      },
+      extractedAt: snapshot.createdAt || new Date().toISOString(),
+      extractionTime: snapshot.extractionTime || 0,
+    };
   }
 
   private _startDesignPolling() {
@@ -266,6 +552,36 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
     try {
       const design = await this._serverRequest('GET', `${serverUrl}/api/designs/${encodeURIComponent(designId)}`, null);
+      let versionId = design?.metadata?.lastImportVersionId;
+      if (!versionId) {
+        try {
+          const result = await this._serverRequest(
+            'GET',
+            `${serverUrl}/api/snapshots?designId=${encodeURIComponent(designId)}&limit=1`,
+            null
+          );
+          const snapshot = Array.isArray(result.items) ? result.items[0] : null;
+          versionId = snapshot?.versionId || null;
+        } catch {
+          versionId = null;
+        }
+      }
+      if (versionId) {
+        try {
+          const version = await this._serverRequest('GET', `${serverUrl}/api/versions/${encodeURIComponent(versionId)}`, null);
+          if (version?.styleguideMarkdown) {
+            const doc = await vscode.workspace.openTextDocument({
+              language: 'markdown',
+              content: version.styleguideMarkdown,
+            });
+            await vscode.window.showTextDocument(doc, { preview: true });
+            return;
+          }
+        } catch {
+          // fallback to design json
+        }
+      }
+
       const doc = await vscode.workspace.openTextDocument({
         language: 'json',
         content: JSON.stringify(design, null, 2),

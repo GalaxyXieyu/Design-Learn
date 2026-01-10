@@ -8,16 +8,50 @@ const { z } = require('zod');
 
 const { createStorage } = require('./storage');
 
-const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || './data';
-const storage = createStorage({ dataDir });
+const serverRoot = path.resolve(__dirname, '..');
+const autoInstallPlaywright = process.env.DESIGN_LEARN_AUTO_INSTALL_PLAYWRIGHT !== '0';
 
-// 同时启动 HTTP 服务（给 Chrome/VSCode 插件用）
-const httpServer = spawn('node', [path.join(__dirname, 'server.js')], {
-  stdio: 'ignore',
-  detached: true,
-  env: { ...process.env, DESIGN_LEARN_DATA_DIR: dataDir },
-});
-httpServer.unref();
+function isPlaywrightInstalled() {
+  try {
+    require.resolve('playwright', { paths: [serverRoot] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function installPlaywright() {
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  return new Promise((resolve, reject) => {
+    const child = spawn(npmCmd, ['install', 'playwright'], {
+      cwd: serverRoot,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    child.stdout?.on('data', (chunk) => process.stderr.write(chunk));
+    child.stderr?.on('data', (chunk) => process.stderr.write(chunk));
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`npm_install_failed:${code ?? 'unknown'}`));
+    });
+  });
+}
+
+async function ensurePlaywright() {
+  if (!autoInstallPlaywright) return;
+  if (isPlaywrightInstalled()) return;
+  console.error('[design-learn-mcp] Playwright not found, installing...');
+  try {
+    await installPlaywright();
+    console.error('[design-learn-mcp] Playwright installed.');
+  } catch (error) {
+    console.error('[design-learn-mcp] Playwright install failed:', error?.message || error);
+  }
+}
+
+const defaultDataDir = path.resolve(__dirname, '..', 'data');
+const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
+const storage = createStorage({ dataDir });
 
 const server = new McpServer(
   {
@@ -34,10 +68,6 @@ const server = new McpServer(
 );
 
 // Tools
-server.tool('ping', 'Check MCP server status', {}, async () => ({
-  content: [{ type: 'text', text: 'pong' }],
-}));
-
 server.tool(
   'list_designs',
   'List stored design resources',
@@ -47,23 +77,6 @@ server.tool(
     const data = typeof limit === 'number' ? designs.slice(0, limit) : designs;
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'get_design',
-  'Fetch design metadata by ID',
-  { designId: z.string() },
-  async ({ designId }) => {
-    const design = await storage.getDesign(designId);
-    if (!design) {
-      return {
-        content: [{ type: 'text', text: `Design not found: ${designId}` }],
-      };
-    }
-    return {
-      content: [{ type: 'text', text: JSON.stringify(design, null, 2) }],
     };
   }
 );
@@ -94,105 +107,31 @@ server.tool(
 );
 
 server.tool(
-  'get_rules',
-  'Fetch rules for a version (colors/typography/spacing/components).',
-  { versionId: z.string() },
-  async ({ versionId }) => {
-    const version = await storage.getVersion(versionId);
-    if (!version) {
-      return {
-        content: [{ type: 'text', text: `Version not found: ${versionId}` }],
-      };
-    }
-    const rules = version.rules || {};
-    return {
-      content: [{ type: 'text', text: JSON.stringify(rules, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'list_versions',
-  'List versions for a design.',
-  {
-    designId: z.string(),
-    limit: z.number().min(1).max(100).optional(),
-  },
-  async ({ designId, limit }) => {
+  'get_styleguide',
+  'Get styleguide markdown by design ID (latest version).',
+  { designId: z.string() },
+  async ({ designId }) => {
     const versions = storage.listVersions(designId);
-    const data = typeof limit === 'number' ? versions.slice(0, limit) : versions;
-    return {
-      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'get_version',
-  'Fetch a version by ID.',
-  { versionId: z.string() },
-  async ({ versionId }) => {
-    const version = await storage.getVersion(versionId);
+    if (!versions || versions.length === 0) {
+      return {
+        content: [{ type: 'text', text: `No versions found for design: ${designId}` }],
+      };
+    }
+    const latest = versions[0];
+    const version = await storage.getVersion(latest.id);
     if (!version) {
       return {
-        content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+        content: [{ type: 'text', text: `Version not found: ${latest.id}` }],
       };
     }
-    return {
-      content: [{ type: 'text', text: JSON.stringify(version, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'list_components',
-  'List components with optional filters.',
-  {
-    designId: z.string().optional(),
-    versionId: z.string().optional(),
-    type: z.string().optional(),
-    limit: z.number().min(1).max(100).optional(),
-  },
-  async ({ designId, versionId, type, limit }) => {
-    const components = await storage.listComponents({ designId, versionId, type });
-    const data = typeof limit === 'number' ? components.slice(0, limit) : components;
-    return {
-      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'get_component',
-  'Fetch component detail by ID.',
-  { componentId: z.string() },
-  async ({ componentId }) => {
-    const component = await storage.getComponent(componentId);
-    if (!component) {
+    const markdown = version.styleguideMarkdown || '';
+    if (!markdown) {
       return {
-        content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+        content: [{ type: 'text', text: `Styleguide is empty for design: ${designId}` }],
       };
     }
     return {
-      content: [{ type: 'text', text: JSON.stringify(component, null, 2) }],
-    };
-  }
-);
-
-server.tool(
-  'get_component_preview',
-  'Fetch preview data for a component.',
-  { componentId: z.string() },
-  async ({ componentId }) => {
-    const component = await storage.getComponent(componentId);
-    if (!component) {
-      return {
-        content: [{ type: 'text', text: `Component not found: ${componentId}` }],
-      };
-    }
-    const payload = { componentId: component.id, preview: component.preview || null };
-    return {
-      content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+      content: [{ type: 'text', text: markdown }],
     };
   }
 );
@@ -235,6 +174,14 @@ server.prompt(
 );
 
 async function main() {
+  await ensurePlaywright();
+  // 同时启动 HTTP 服务（给 Chrome/VSCode 插件用）
+  const httpServer = spawn('node', [path.join(__dirname, 'server.js')], {
+    stdio: 'ignore',
+    detached: true,
+    env: { ...process.env, DESIGN_LEARN_DATA_DIR: dataDir },
+  });
+  httpServer.unref();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

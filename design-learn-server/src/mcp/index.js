@@ -7,11 +7,6 @@ const { z } = require('zod');
 const { createStorage } = require('../storage');
 
 const tools = {
-  ping: {
-    title: 'Ping',
-    description: 'Check MCP server status.',
-    inputSchema: {},
-  },
   list_designs: {
     title: 'List Designs',
     description: 'List stored design resources.',
@@ -27,57 +22,11 @@ const tools = {
       limit: z.number().min(1).max(100).optional(),
     },
   },
-  get_design: {
-    title: 'Get Design',
-    description: 'Fetch design metadata by ID.',
+  get_styleguide: {
+    title: 'Get Styleguide',
+    description: 'Fetch styleguide markdown by design ID (latest version).',
     inputSchema: {
       designId: z.string(),
-    },
-  },
-  get_rules: {
-    title: 'Get Rules',
-    description: 'Fetch rules for a version (colors/typography/spacing/components).',
-    inputSchema: {
-      versionId: z.string(),
-    },
-  },
-  list_versions: {
-    title: 'List Versions',
-    description: 'List versions for a design.',
-    inputSchema: {
-      designId: z.string(),
-      limit: z.number().min(1).max(100).optional(),
-    },
-  },
-  get_version: {
-    title: 'Get Version',
-    description: 'Fetch a version by ID.',
-    inputSchema: {
-      versionId: z.string(),
-    },
-  },
-  list_components: {
-    title: 'List Components',
-    description: 'List components with optional filters.',
-    inputSchema: {
-      designId: z.string().optional(),
-      versionId: z.string().optional(),
-      type: z.string().optional(),
-      limit: z.number().min(1).max(100).optional(),
-    },
-  },
-  get_component: {
-    title: 'Get Component',
-    description: 'Fetch component detail by ID.',
-    inputSchema: {
-      componentId: z.string(),
-    },
-  },
-  get_component_preview: {
-    title: 'Get Component Preview',
-    description: 'Fetch preview data for a component.',
-    inputSchema: {
-      componentId: z.string(),
     },
   },
 };
@@ -94,10 +43,6 @@ const prompts = {
 
 function createToolHandlers(storage) {
   return {
-    ping: async () => ({
-      content: [{ type: 'text', text: 'pong' }],
-      structuredContent: { status: 'ok', timestamp: new Date().toISOString() },
-    }),
     list_designs: async ({ limit }) => {
       const designs = storage.listDesigns();
       const data = typeof limit === 'number' ? designs.slice(0, limit) : designs;
@@ -123,82 +68,29 @@ function createToolHandlers(storage) {
         structuredContent: data,
       };
     },
-    get_design: async ({ designId }) => {
-      const design = await storage.getDesign(designId);
-      if (!design) {
-        return {
-          content: [{ type: 'text', text: `Design not found: ${designId}` }],
-        };
-      }
-      return {
-        content: [{ type: 'text', text: JSON.stringify(design, null, 2) }],
-        structuredContent: design,
-      };
-    },
-    get_rules: async ({ versionId }) => {
-      const version = await storage.getVersion(versionId);
-      if (!version) {
-        return {
-          content: [{ type: 'text', text: `Version not found: ${versionId}` }],
-        };
-      }
-      const rules = version.rules || {};
-      return {
-        content: [{ type: 'text', text: JSON.stringify(rules, null, 2) }],
-        structuredContent: rules,
-      };
-    },
-    list_versions: async ({ designId, limit }) => {
+    get_styleguide: async ({ designId }) => {
       const versions = storage.listVersions(designId);
-      const data = typeof limit === 'number' ? versions.slice(0, limit) : versions;
-      return {
-        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
-      };
-    },
-    get_version: async ({ versionId }) => {
-      const version = await storage.getVersion(versionId);
+      if (!versions || versions.length === 0) {
+        return {
+          content: [{ type: 'text', text: `No versions found for design: ${designId}` }],
+        };
+      }
+      const latest = versions[0];
+      const version = await storage.getVersion(latest.id);
       if (!version) {
         return {
-          content: [{ type: 'text', text: `Version not found: ${versionId}` }],
+          content: [{ type: 'text', text: `Version not found: ${latest.id}` }],
         };
       }
-      return {
-        content: [{ type: 'text', text: JSON.stringify(version, null, 2) }],
-        structuredContent: version,
-      };
-    },
-    list_components: async ({ designId, versionId, type, limit }) => {
-      const components = await storage.listComponents({ designId, versionId, type });
-      const data = typeof limit === 'number' ? components.slice(0, limit) : components;
-      return {
-        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
-      };
-    },
-    get_component: async ({ componentId }) => {
-      const component = await storage.getComponent(componentId);
-      if (!component) {
+      const markdown = version.styleguideMarkdown || '';
+      if (!markdown) {
         return {
-          content: [{ type: 'text', text: `Component not found: ${componentId}` }],
+          content: [{ type: 'text', text: `Styleguide is empty for design: ${designId}` }],
         };
       }
       return {
-        content: [{ type: 'text', text: JSON.stringify(component, null, 2) }],
-        structuredContent: component,
-      };
-    },
-    get_component_preview: async ({ componentId }) => {
-      const component = await storage.getComponent(componentId);
-      if (!component) {
-        return {
-          content: [{ type: 'text', text: `Component not found: ${componentId}` }],
-        };
-      }
-      const payload = { componentId: component.id, preview: component.preview || null };
-      return {
-        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
-        structuredContent: payload,
+        content: [{ type: 'text', text: markdown }],
+        structuredContent: { designId, versionId: latest.id, markdown },
       };
     },
   };

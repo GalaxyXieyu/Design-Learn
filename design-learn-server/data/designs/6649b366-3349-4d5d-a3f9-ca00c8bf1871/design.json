@@ -1,0 +1,28 @@
+{
+  "id": "6649b366-3349-4d5d-a3f9-ca00c8bf1871",
+  "name": "www.baidu.com",
+  "url": "https://www.baidu.com/",
+  "source": "script",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 1,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "playwright",
+    "processingStatus": "completed",
+    "processingStartedAt": "2026-01-10T09:47:06.928Z",
+    "processingError": null,
+    "tags": [],
+    "extractorVersion": "",
+    "processingJobId": "bdc36a3f-6ff7-47c5-a414-878962bd174f",
+    "processingUpdatedAt": "2026-01-10T09:47:08.114Z",
+    "lastImportAt": "2026-01-10T09:47:08.114Z",
+    "lastImportVersionId": "52a67bd1-6fba-4627-b908-81d846569358"
+  },
+  "createdAt": "2026-01-10T09:47:06.928Z",
+  "updatedAt": "2026-01-10T09:47:08.114Z"
+}

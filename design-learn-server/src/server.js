@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const crypto = require('crypto');
 const { URL } = require('url');
 
@@ -9,6 +10,7 @@ const { createMcpHandler } = require('./mcp');
 const { createStorage } = require('./storage');
 const { createExtractionPipeline } = require('./pipeline');
 const { createPreviewPipeline } = require('./preview');
+const { loadPlaywright } = require('./playwrightSupport');
 const { getConfigPath } = require('./storage/paths');
 const { readJson, writeJson } = require('./storage/fileStore');
 
@@ -26,21 +28,41 @@ extractionPipeline.onProgress((event) => {
   }
 
   const now = new Date().toISOString();
-  const metaPatch = {
-    processingStatus: event.event === 'failed' ? 'failed' : event.event === 'completed' ? 'completed' : 'processing',
-    processingJobId: event.job.id,
-    processingUpdatedAt: now,
-  };
+  void (async () => {
+    const design = await storage.getDesign(designId);
+    const meta = design?.metadata || {};
+    const aiRequested = !!meta.aiRequested;
+    const aiCompleted = meta.processingMessage === 'ai_completed' || meta.aiCompleted;
 
-  if (event.event === 'failed') {
-    metaPatch.processingError = event.job.error?.message || 'unknown_error';
-  } else if (event.event === 'completed') {
-    metaPatch.processingError = null;
-    metaPatch.lastImportAt = now;
-    metaPatch.lastImportVersionId = event.job.result?.versionId || null;
-  }
+    const metaPatch = {
+      processingStatus: event.event === 'failed' ? 'failed' : event.event === 'completed' ? 'completed' : 'processing',
+      processingJobId: event.job.id,
+      processingUpdatedAt: now,
+    };
 
-  void storage.updateDesign(designId, { metadata: metaPatch }).catch(() => undefined);
+    if (event.event === 'failed') {
+      metaPatch.processingError = event.job.error?.message || 'unknown_error';
+      metaPatch.processingMessage = 'failed';
+      metaPatch.processingProgress = 100;
+    } else if (event.event === 'completed') {
+      metaPatch.processingError = null;
+      metaPatch.lastImportAt = now;
+      metaPatch.lastImportVersionId = event.job.result?.versionId || null;
+      if (aiRequested && !aiCompleted) {
+        metaPatch.processingStatus = 'analyzing';
+        metaPatch.processingMessage = 'ai_pending';
+        metaPatch.processingProgress = 80;
+      } else {
+        metaPatch.processingMessage = 'completed';
+        metaPatch.processingProgress = 100;
+      }
+    } else {
+      metaPatch.processingMessage = event.job.message || 'processing';
+      metaPatch.processingProgress = event.job.progress || 0;
+    }
+
+    await storage.updateDesign(designId, { metadata: metaPatch });
+  })().catch(() => undefined);
 
   if (event.event === 'failed' || event.event === 'completed') {
     importJobDesignMap.delete(event.job.id);
@@ -92,6 +114,7 @@ function handleRoot(req, res) {
       importJobs: '/api/import/jobs',
       importStream: '/api/import/stream',
       designs: '/api/designs',
+      versions: '/api/versions/:id',
       snapshots: '/api/snapshots',
       config: '/api/config',
       previews: '/api/previews',
@@ -282,6 +305,7 @@ async function handleImportUrl(req, res) {
 
     const existing = storage.listDesigns().find((item) => item.url === rawUrl);
     const now = new Date().toISOString();
+    const useAI = !!body?.options?.useAI;
 
     let designId = existing?.id || null;
     if (!designId) {
@@ -300,6 +324,8 @@ async function handleImportUrl(req, res) {
           processingStatus: 'processing',
           processingStartedAt: now,
           processingError: null,
+          aiRequested: useAI,
+          aiCompleted: false,
           tags: [],
         },
       });
@@ -316,6 +342,8 @@ async function handleImportUrl(req, res) {
         processingStartedAt: now,
         processingJobId: job.id,
         processingError: null,
+        aiRequested: useAI,
+        ...(useAI ? { aiCompleted: false } : {}),
       },
     });
 
@@ -368,6 +396,35 @@ async function handleDesignDelete(res, designId) {
   }
   await storage.deleteDesign(designId);
   return sendNoContent(res);
+}
+
+async function handleVersionGet(res, versionId) {
+  const version = await storage.getVersion(versionId);
+  if (!version) {
+    return sendJson(res, 404, { error: 'version_not_found' });
+  }
+  return sendJson(res, 200, version);
+}
+
+async function handleVersionPatch(req, res, versionId) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+
+  const patch = {};
+  if (Object.prototype.hasOwnProperty.call(body, 'styleguideMarkdown')) {
+    patch.styleguideMarkdown = body.styleguideMarkdown;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'rules')) {
+    patch.rules = body.rules;
+  }
+
+  const version = await storage.updateVersion(versionId, patch);
+  if (!version) {
+    return sendJson(res, 404, { error: 'version_not_found' });
+  }
+  return sendJson(res, 200, version);
 }
 
 async function handleSnapshotsList(res, url) {
@@ -584,12 +641,9 @@ async function handleScanRoutes(req, res) {
 }
 
 async function scanWebsiteRoutes(baseUrl, maxRoutes = 10) {
-  let playwright;
-  try {
-    playwright = await import('playwright');
-  } catch (error) {
-    throw new Error('playwright_not_installed');
-  }
+  const playwright = await loadPlaywright({
+    logger: (text) => process.stderr.write(text),
+  });
 
   const { chromium } = playwright;
   const browser = await chromium.launch({ headless: true });
@@ -598,6 +652,7 @@ async function scanWebsiteRoutes(baseUrl, maxRoutes = 10) {
 
   try {
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(1200);
 
     // 收集所有链接
     const routes = new Set();
@@ -623,6 +678,14 @@ async function scanWebsiteRoutes(baseUrl, maxRoutes = 10) {
       }
     });
 
+    // 尝试获取 sitemap
+    const sitemapRoutes = await fetchSitemapRoutes(baseUrl, maxRoutes * 5);
+    sitemapRoutes.forEach((route) => {
+      if (route && !routes.has(route)) {
+        routes.add(route);
+      }
+    });
+
     // 排序并限制数量
     const sortedRoutes = Array.from(routes)
       .sort((a, b) => {
@@ -639,6 +702,128 @@ async function scanWebsiteRoutes(baseUrl, maxRoutes = 10) {
     await context.close().catch(() => undefined);
     await browser.close().catch(() => undefined);
   }
+}
+
+function fetchUrlText(targetUrl, timeoutMs = 15000) {
+  return new Promise((resolve) => {
+    let urlObj;
+    try {
+      urlObj = new URL(targetUrl);
+    } catch {
+      resolve(null);
+      return;
+    }
+
+    const lib = urlObj.protocol === 'https:' ? https : http;
+    const req = lib.get(
+      {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+        path: urlObj.pathname + urlObj.search,
+        timeout: timeoutMs,
+        headers: { 'User-Agent': 'design-learn-scan' },
+      },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const redirectUrl = new URL(res.headers.location, urlObj).toString();
+          res.resume();
+          resolve(fetchUrlText(redirectUrl, timeoutMs));
+          return;
+        }
+
+        if (res.statusCode !== 200) {
+          res.resume();
+          resolve(null);
+          return;
+        }
+
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => resolve(data));
+      }
+    );
+
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+function extractSitemapLocs(xml, tagName) {
+  const matches = xml.matchAll(
+    new RegExp(`<${tagName}[^>]*>[\\s\\S]*?<loc>([\\s\\S]*?)<\\/loc>[\\s\\S]*?<\\/${tagName}>`, 'gi')
+  );
+  const items = [];
+  for (const match of matches) {
+    const raw = match[1] || '';
+    const cleaned = raw.replace(/<!\\[CDATA\\[(.*)\\]\\]>/, '$1').trim();
+    if (cleaned) items.push(cleaned);
+  }
+  return items;
+}
+
+async function fetchRobotsSitemaps(baseUrl) {
+  try {
+    const base = new URL(baseUrl);
+    const robotsUrl = new URL('/robots.txt', base.origin).toString();
+    const text = await fetchUrlText(robotsUrl);
+    if (!text) return [];
+    return text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => /^sitemap:/i.test(line))
+      .map((line) => line.split(':').slice(1).join(':').trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchSitemapRoutes(baseUrl, limit) {
+  const base = new URL(baseUrl);
+  const defaultSitemaps = ['/sitemap.xml', '/wp-sitemap.xml', '/sitemap_index.xml'].map((p) =>
+    new URL(p, base.origin).toString()
+  );
+  const robotsSitemaps = await fetchRobotsSitemaps(baseUrl);
+  const queue = Array.from(new Set([...robotsSitemaps, ...defaultSitemaps]));
+  const visited = new Set();
+  const routes = new Set();
+
+  while (queue.length && routes.size < limit) {
+    const sitemapUrl = queue.shift();
+    if (!sitemapUrl || visited.has(sitemapUrl)) continue;
+    visited.add(sitemapUrl);
+
+    const xml = await fetchUrlText(sitemapUrl);
+    if (!xml) continue;
+
+    const urlLocs = extractSitemapLocs(xml, 'url');
+    for (const raw of urlLocs) {
+      if (routes.size >= limit) break;
+      try {
+        const urlObj = new URL(raw, base.origin);
+        if (urlObj.origin === base.origin) {
+          routes.add(urlObj.pathname);
+        }
+      } catch {
+        // ignore invalid
+      }
+    }
+
+    const sitemapLocs = extractSitemapLocs(xml, 'sitemap');
+    sitemapLocs.forEach((loc) => {
+      try {
+        const urlObj = new URL(loc, base.origin);
+        if (!visited.has(urlObj.toString())) queue.push(urlObj.toString());
+      } catch {
+        // ignore invalid
+      }
+    });
+  }
+
+  return Array.from(routes);
 }
 
 async function handleRequest(req, res) {
@@ -743,6 +928,20 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'DELETE') {
       return handleDesignDelete(res, designId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/versions/')) {
+    const versionId = pathname.split('/').pop();
+    if (!versionId) {
+      return sendJson(res, 400, { error: 'version_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handleVersionGet(res, versionId);
+    }
+    if (req.method === 'PATCH' || req.method === 'PUT') {
+      return handleVersionPatch(req, res, versionId);
     }
     return sendMethodNotAllowed(res);
   }

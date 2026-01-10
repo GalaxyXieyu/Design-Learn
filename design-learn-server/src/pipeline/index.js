@@ -2,6 +2,7 @@ const { EventEmitter } = require('events');
 const { randomUUID } = require('crypto');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { ensurePlaywrightInstalled, loadPlaywright } = require('../playwrightSupport');
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -197,6 +198,10 @@ async function importFromUrl(storage, payload = {}, report) {
     throw new Error('url_required');
   }
 
+  await ensurePlaywrightInstalled({
+    onProgress: (message) => report(8, message),
+  });
+
   report(10, 'launching_browser');
   const snapshot = await extractWithPlaywright(url, payload.options || {}, report);
   report(65, 'extracted');
@@ -266,12 +271,9 @@ async function storeImport(storage, normalized, report) {
 }
 
 async function extractWithPlaywright(url, options = {}, report) {
-  let playwright;
-  try {
-    playwright = await import('playwright');
-  } catch (error) {
-    throw new Error('playwright_not_installed');
-  }
+  const playwright = await loadPlaywright({
+    onProgress: (message) => report(8, message),
+  });
 
   const extractorPath = path.resolve(__dirname, '../../../scripts/lib/extractor.js');
   let extractPage;

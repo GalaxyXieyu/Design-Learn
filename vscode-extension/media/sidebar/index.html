@@ -55,13 +55,9 @@
       <div class="url-row">
         <input type="url" id="urlInput" class="url-input" placeholder="输入网页 URL，回车提取">
         <div class="action-btns">
-          <button id="extractBtn" class="action-btn primary" title="提取（不做 AI 分析）">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>提取</span>
-          </button>
-          <button id="extractAIBtn" class="action-btn" title="提取 + AI 分析">
+          <button id="analyzeBtn" class="action-btn primary" title="分析">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
-            <span>AI</span>
+            <span>分析</span>
           </button>
         </div>
       </div>
@@ -114,7 +110,7 @@
   <div class="modal" id="modelModal">
     <div class="modal-content" style="width:320px;">
       <div class="modal-header">AI 模型配置</div>
-      <div id="modelModalList"></div>
+      <div id="modelModalList" class="modal-model-list"></div>
       <div id="modelModalForm" style="display:none;">
         <input type="text" id="modalModelName" class="modal-input" placeholder="模型名称">
         <select id="modalModelProvider" class="modal-input">

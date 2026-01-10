@@ -1,0 +1,28 @@
+{
+  "id": "1d3df898-ec3a-4b2b-93d5-668e40e1e1d1",
+  "name": "t.bilibili.com",
+  "url": "https://t.bilibili.com/",
+  "source": "script",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 1,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "playwright",
+    "processingStatus": "completed",
+    "processingStartedAt": "2026-01-10T09:40:30.042Z",
+    "processingError": null,
+    "tags": [],
+    "extractorVersion": "",
+    "processingJobId": "0df1353a-6dc3-468c-8a38-99c643de07ab",
+    "processingUpdatedAt": "2026-01-10T09:40:32.999Z",
+    "lastImportAt": "2026-01-10T09:40:32.999Z",
+    "lastImportVersionId": "36d99fd4-0d37-49e2-8fbb-b435c94b5834"
+  },
+  "createdAt": "2026-01-10T09:40:30.042Z",
+  "updatedAt": "2026-01-10T09:40:32.999Z"
+}

@@ -2,7 +2,7 @@
   "name": "design-learn",
   "displayName": "Design-Learn",
   "description": "在 VSCode 中提取网页设计风格，AI 智能分析，保存到项目目录",
-  "version": "1.0.27",
+  "version": "1.0.41",
   "publisher": "design-learn",
   "icon": "media/icon.png",
   "engines": {
