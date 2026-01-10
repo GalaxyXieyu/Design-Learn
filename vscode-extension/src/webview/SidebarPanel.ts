@@ -509,7 +509,22 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     vscode.window.showInformationMessage('MCP URI 已复制');
   }
 
-  private _getHtmlForWebview(_webview: vscode.Webview): string {
+  private _getHtmlForWebview(webview: vscode.Webview): string {
+    const mediaPath = vscode.Uri.joinPath(this._extensionUri, 'media', 'sidebar');
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, 'styles.css'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, 'main.js'));
+    const htmlPath = vscode.Uri.joinPath(mediaPath, 'index.html').fsPath;
+
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+    html = html.replace(/\{\{cspSource\}\}/g, webview.cspSource);
+    html = html.replace(/\{\{styleUri\}\}/g, styleUri.toString());
+    html = html.replace(/\{\{scriptUri\}\}/g, scriptUri.toString());
+
+    return html;
+  }
+
+  // Legacy method kept for reference - will be removed after verification
+  private _getHtmlForWebview_OLD(_webview: vscode.Webview): string {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -856,9 +871,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
         <input type="text" id="modalModelId" class="modal-input" placeholder="Model ID">
       </div>
       <div class="modal-footer">
-        <button class="modal-btn modal-btn-secondary" onclick="closeModelModal()">关闭</button>
-        <button class="modal-btn modal-btn-primary" id="modelModalSaveBtn" onclick="saveModelFromModal()" style="display:none;">保存</button>
-        <button class="modal-btn modal-btn-primary" id="modelModalAddBtn" onclick="showModelForm()">添加模型</button>
+        <button class="modal-btn modal-btn-secondary" id="modelModalCloseBtn">关闭</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalSaveBtn" style="display:none;">保存</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalAddBtn">添加模型</button>
       </div>
     </div>
   </div>
@@ -884,6 +899,14 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	    }
 	
 	    (function initActionDelegates() {
+	      // 模型配置模态框：关闭/添加/保存（避免与侧边栏 showModelForm 重名冲突）
+	      const modalCloseBtn = document.getElementById('modelModalCloseBtn');
+	      if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModelModal);
+	      const modalAddBtn = document.getElementById('modelModalAddBtn');
+	      if (modalAddBtn) modalAddBtn.addEventListener('click', showModelFormInModal);
+	      const modalSaveBtn = document.getElementById('modelModalSaveBtn');
+	      if (modalSaveBtn) modalSaveBtn.addEventListener('click', saveModelFromModal);
+
 	      // 模型配置模态框列表：编辑/删除
 	      const modalList = document.getElementById('modelModalList');
 	      if (modalList) {
@@ -956,7 +979,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	      ).join('');
 	    }
     let editingModalModelId = null;
-    function showModelForm() {
+    function showModelFormInModal() {
       editingModalModelId = null;
       document.getElementById('modelModalForm').style.display = 'block';
       document.getElementById('modelModalList').style.display = 'none';
@@ -1409,6 +1432,16 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	      if (msg.type === 'extracting') setExtracting(msg.status);
 	      if (msg.type === 'serverStatus') updateServerStatus(msg.connected, msg.url);
 	    });
+
+    // 初始化模态框按钮事件（确保所有函数已定义）
+    (function initModalButtons() {
+      const modalCloseBtn = document.getElementById('modelModalCloseBtn');
+      const modalAddBtn = document.getElementById('modelModalAddBtn');
+      const modalSaveBtn = document.getElementById('modelModalSaveBtn');
+      if (modalCloseBtn) modalCloseBtn.onclick = closeModelModal;
+      if (modalAddBtn) modalAddBtn.onclick = showModelFormInModal;
+      if (modalSaveBtn) modalSaveBtn.onclick = saveModelFromModal;
+    })();
 
     vscode.postMessage({type:'loadData'});
   </script>

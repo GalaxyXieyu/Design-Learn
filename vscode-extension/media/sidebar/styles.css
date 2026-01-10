@@ -1,0 +1,216 @@
+:root { --accent: #4a9eff; --accent-hover: #3d8ce6; --success: #4caf50; --error: #f44336; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; position: relative; }
+body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); }
+.container { padding: 12px; }
+
+/* 服务器状态 */
+.server-status { background: var(--vscode-editor-background); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.server-status:hover { background: var(--vscode-list-hoverBackground); }
+.status-indicator { width: 8px; height: 8px; border-radius: 50%; }
+.status-indicator.connected { background: var(--success); }
+.status-indicator.disconnected { background: var(--error); }
+.status-info { flex: 1; min-width: 0; }
+.status-title { font-size: 11px; font-weight: 600; }
+.status-url { font-size: 10px; color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; }
+
+/* 头部 */
+.header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
+.logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #67b8ff); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 20px; height: 20px; color: white; }
+.logo-text { flex: 1; min-width: 0; }
+.logo-text h1 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logo-text p { font-size: 10px; color: var(--vscode-descriptionForeground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.server-dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; cursor: pointer; transition: background 0.2s; }
+.server-dot.connected { background: #22c55e; }
+.server-dot.disconnected { background: #ef4444; }
+.header-actions { display: flex; align-items: center; gap: 8px; position: relative; }
+.settings-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; color: var(--vscode-descriptionForeground); }
+.settings-btn:hover { background: var(--vscode-list-hoverBackground); color: var(--vscode-foreground); }
+.settings-dropdown { position: absolute; top: 100%; right: 0; width: 220px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; display: none; }
+.settings-dropdown.show { display: block; }
+.dropdown-section { padding: 8px 0; border-bottom: 1px solid var(--vscode-panel-border); }
+.dropdown-section:last-child { border-bottom: none; }
+.dropdown-label { padding: 4px 12px; font-size: 10px; color: var(--vscode-descriptionForeground); text-transform: uppercase; }
+.dropdown-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.dropdown-item:hover { background: var(--vscode-list-hoverBackground); }
+.dropdown-item svg { width: 16px; height: 16px; margin-right: 8px; }
+.dropdown-link { display: flex; align-items: center; padding: 8px 12px; font-size: 12px; cursor: pointer; color: var(--vscode-foreground); }
+.dropdown-link:hover { background: var(--vscode-list-hoverBackground); }
+.dropdown-link svg { width: 16px; height: 16px; margin-right: 8px; opacity: 0.7; }
+
+/* 模版库区域 */
+.history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.history-header { display: flex; align-items: center; margin-bottom: 8px; }
+.history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.history-toolbar { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "search search" "filter sort"; gap: 6px; margin-bottom: 8px; align-items: center; }
+.history-search { grid-area: search; width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 8px; color: var(--vscode-input-foreground); font-size: 11px; }
+#historyFilter { grid-area: filter; }
+#historySort { grid-area: sort; }
+.history-select { width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 8px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
+@media (min-width: 420px) {
+  .history-toolbar { grid-template-columns: 1fr 120px 120px; grid-template-areas: "search filter sort"; }
+}
+.history-list { flex: 1; overflow-y: auto; }
+.history-item { padding: 10px; border-radius: 10px; margin-bottom: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); cursor: pointer; }
+.history-item:hover { background: var(--vscode-list-hoverBackground); }
+.history-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+.history-item-url { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-item-meta { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 10px; color: var(--vscode-descriptionForeground); }
+.history-item-meta-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+.history-item-status.processing { background: #3b82f620; color: #3b82f6; }
+.history-item-status.running { background: #f59e0b20; color: #f59e0b; }
+.history-item-status.completed { background: #22c55e20; color: #22c55e; }
+.history-item-status.failed { background: #ef444420; color: #ef4444; }
+.history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, transparent); border-radius: 8px; cursor: pointer; color: var(--vscode-button-secondaryForeground); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.history-item-actions button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.history-item-actions button svg { width: 12px; height: 12px; opacity: 0.9; flex-shrink: 0; }
+
+.library-group { margin-bottom: 10px; }
+.library-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); border-radius: 10px; cursor: pointer; user-select: none; }
+.library-group-header:hover { background: var(--vscode-list-hoverBackground); }
+.library-group-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; color: var(--vscode-descriptionForeground); }
+.library-group-body { padding-top: 8px; }
+.library-group-body.collapsed { display: none; }
+.library-group-arrow { transition: transform 0.2s; }
+.library-group-arrow.collapsed { transform: rotate(-90deg); }
+
+/* 顶部快捷操作面板 */
+.quick-panel { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+.url-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.url-input { flex: 1 1 160px; min-width: 0; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
+.url-input:focus { outline: none; border-color: var(--accent); }
+.action-btns { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
+.action-btn { height: 34px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.action-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.action-btn.primary { border: none; background: linear-gradient(135deg, var(--accent), #67b8ff); color: white; }
+.action-btn.primary:hover { opacity: 0.92; }
+.action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.action-btn svg { width: 16px; height: 16px; }
+
+/* 窄宽度：仅保留图标，隐藏文字，避免溢出 */
+@media (max-width: 340px) {
+  .action-btn span { display: none; }
+  .action-btn { width: 34px; padding: 0; justify-content: center; }
+  .action-btns { gap: 4px; }
+  .url-row { gap: 6px; }
+  .action-btns { width: 100%; justify-content: flex-end; }
+  .history-item-actions button span { display: none; }
+  .history-item-actions button { width: 30px; padding: 0; justify-content: center; }
+}
+
+/* 模式切换（更轻量） */
+.mode-switch { display: flex; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; padding: 2px; margin-top: 8px; }
+.mode-btn { flex: 1; padding: 6px 8px; border: none; background: transparent; color: var(--vscode-descriptionForeground); font-size: 11px; border-radius: 8px; cursor: pointer; }
+.mode-btn.active { background: var(--accent); color: white; }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 折叠面板 */
+.panel { background: var(--vscode-editor-background); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; cursor: pointer; user-select: none; }
+.panel-header:hover { background: var(--vscode-list-hoverBackground); }
+.panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vscode-descriptionForeground); display: flex; align-items: center; gap: 6px; }
+.panel-badge { background: var(--accent); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+.panel-arrow { transition: transform 0.2s; }
+.panel.collapsed .panel-arrow { transform: rotate(-90deg); }
+.panel-content { padding: 0 12px 12px; }
+.panel.collapsed .panel-content { display: none; }
+
+/* 模型列表 */
+.model-item { padding: 10px; background: var(--vscode-input-background); border: 1px solid transparent; border-radius: 8px; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.model-item:hover { background: var(--vscode-list-hoverBackground); }
+.model-item.selected { border-color: var(--accent); background: rgba(74, 158, 255, 0.1); }
+.model-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 700; }
+.model-info { flex: 1; min-width: 0; }
+.model-name { font-size: 12px; font-weight: 600; }
+.model-id { font-size: 10px; color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; }
+.model-actions { display: flex; gap: 4px; }
+.model-actions button { width: 22px; height: 22px; border: none; background: transparent; border-radius: 4px; cursor: pointer; color: var(--vscode-descriptionForeground); display: flex; align-items: center; justify-content: center; }
+.model-actions button:hover { background: var(--vscode-button-secondaryBackground); color: var(--vscode-foreground); }
+.model-actions button.delete:hover { background: #ef4444; color: white; }
+
+/* 模型表单 */
+.model-form { background: var(--vscode-input-background); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.form-group { flex: 1; }
+.form-group label { display: block; font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+.form-group input, .form-group select { width: 100%; padding: 6px 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-input-border); border-radius: 4px; color: var(--vscode-input-foreground); font-size: 11px; }
+.form-group input:focus { outline: none; border-color: var(--accent); }
+.form-actions { display: flex; gap: 8px; margin-top: 10px; }
+.form-actions button { flex: 1; padding: 6px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.form-actions .save { background: var(--accent); color: white; }
+.form-actions .cancel { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+
+/* 添加按钮 */
+.add-btn { width: 100%; padding: 8px; border: 1px dashed var(--vscode-input-border); background: transparent; border-radius: 6px; color: var(--vscode-descriptionForeground); font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 快照列表 */
+.snapshot-list { max-height: 300px; overflow-y: auto; }
+.snapshot-item { padding: 10px; background: var(--vscode-input-background); border-radius: 8px; margin-bottom: 6px; position: relative; }
+.snapshot-item:hover { background: var(--vscode-list-hoverBackground); }
+.snapshot-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snapshot-url { font-size: 10px; color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
+.snapshot-meta { display: flex; align-items: center; gap: 8px; }
+.snapshot-date { font-size: 10px; color: var(--vscode-descriptionForeground); opacity: 0.7; }
+.snapshot-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(76, 175, 80, 0.2); color: var(--success); }
+.snapshot-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: none; gap: 4px; }
+.snapshot-item:hover .snapshot-actions { display: flex; }
+.snapshot-action { width: 26px; height: 26px; border: none; background: var(--vscode-button-secondaryBackground); border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--vscode-foreground); }
+.snapshot-action:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.snapshot-action.delete:hover { background: #ef4444; color: white; }
+.snapshot-action svg { width: 14px; height: 14px; }
+
+/* 设置选项 */
+.setting-group-label { font-size: 10px; font-weight: 600; color: var(--vscode-descriptionForeground); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+.setting-label { font-size: 11px; }
+.setting-toggle { position: relative; width: 32px; height: 18px; }
+.setting-toggle input { opacity: 0; width: 0; height: 0; }
+.setting-toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--vscode-input-background); border-radius: 9px; transition: 0.2s; }
+.setting-toggle .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background: var(--vscode-foreground); border-radius: 50%; transition: 0.2s; }
+.setting-toggle input:checked + .slider { background: var(--accent); }
+.setting-toggle input:checked + .slider:before { transform: translateX(14px); }
+
+/* 空状态 */
+.empty-state { text-align: center; padding: 16px; color: var(--vscode-descriptionForeground); }
+.empty-state svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
+.empty-state p { font-size: 11px; }
+
+/* 任务列表 */
+.task-item { padding: 8px 10px; background: var(--vscode-input-background); border-radius: 6px; margin-bottom: 6px; }
+.task-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.task-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.task-status.pending { background: var(--vscode-descriptionForeground); }
+.task-status.running { background: #f59e0b; animation: pulse 1s infinite; }
+.task-status.extracted { background: #3b82f6; }
+.task-status.analyzing { background: #8b5cf6; animation: pulse 1s infinite; }
+.task-status.completed { background: var(--success); }
+.task-status.failed { background: var(--error); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.task-url { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-progress { font-size: 10px; color: var(--vscode-descriptionForeground); }
+.task-actions { display: flex; gap: 4px; }
+.task-actions button { width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; cursor: pointer; color: var(--vscode-descriptionForeground); display: flex; align-items: center; justify-content: center; }
+.task-actions button:hover { background: var(--vscode-button-secondaryBackground); }
+.task-actions button.delete:hover { background: #ef4444; color: white; }
+.task-actions button svg { width: 12px; height: 12px; }
+.domain-group { margin-bottom: 10px; }
+.domain-header { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; font-weight: 600; }
+.batch-actions { display: flex; gap: 6px; margin-top: 8px; }
+.batch-btn { flex: 1; padding: 5px; border: 1px solid var(--vscode-input-border); background: transparent; border-radius: 4px; font-size: 10px; color: var(--vscode-descriptionForeground); cursor: pointer; }
+.batch-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 模态框 */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: var(--vscode-editor-background); border-radius: 8px; padding: 16px; width: 90%; max-width: 300px; }
+.modal-header { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.modal-input { width: 100%; padding: 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px; color: var(--vscode-input-foreground); font-size: 12px; margin-bottom: 12px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.modal-btn-primary { background: var(--accent); color: white; }
+.modal-btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }

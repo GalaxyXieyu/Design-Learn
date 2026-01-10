@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src {{cspSource}} https:; script-src {{cspSource}}; style-src {{cspSource}};">
+  <link rel="stylesheet" href="{{styleUri}}">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="logo-text">
+        <h1>Design-Learn</h1>
+        <p>智能学习页面设计</p>
+      </div>
+      <div class="header-actions">
+        <div class="server-dot" id="serverDot" title="服务器状态" data-action="openServerModal"></div>
+        <div class="settings-btn" id="settingsBtn" data-action="toggleSettings">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg>
+        </div>
+        <!-- 设置下拉菜单 -->
+        <div class="settings-dropdown" id="settingsDropdown">
+          <div class="dropdown-section">
+            <div class="dropdown-label">资源下载</div>
+            <div class="dropdown-item"><span>内联 CSS</span><label class="setting-toggle"><input type="checkbox" id="inlineCSS" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>下载图片</span><label class="setting-toggle"><input type="checkbox" id="includeImages" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>下载字体</span><label class="setting-toggle"><input type="checkbox" id="includeFonts" checked><span class="slider"></span></label></div>
+          </div>
+          <div class="dropdown-section">
+            <div class="dropdown-label">AI 分析</div>
+            <div class="dropdown-item"><span>颜色</span><label class="setting-toggle"><input type="checkbox" id="analyzeColors" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>排版</span><label class="setting-toggle"><input type="checkbox" id="analyzeTypography" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>布局</span><label class="setting-toggle"><input type="checkbox" id="analyzeLayout" checked><span class="slider"></span></label></div>
+            <div class="dropdown-item"><span>组件</span><label class="setting-toggle"><input type="checkbox" id="analyzeComponents" checked><span class="slider"></span></label></div>
+          </div>
+          <div class="dropdown-section">
+            <div class="dropdown-link" data-action="openModelConfig">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
+              AI 模型配置
+            </div>
+            <div class="dropdown-link" data-action="openServerConfig">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2"/></svg>
+              服务器配置
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-panel">
+      <div class="url-row">
+        <input type="url" id="urlInput" class="url-input" placeholder="输入网页 URL，回车提取">
+        <div class="action-btns">
+          <button id="extractBtn" class="action-btn primary" title="提取（不做 AI 分析）">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>提取</span>
+          </button>
+          <button id="extractAIBtn" class="action-btn" title="提取 + AI 分析">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" stroke="currentColor" stroke-width="2"/></svg>
+            <span>AI</span>
+          </button>
+        </div>
+      </div>
+      <div class="mode-switch">
+        <button class="mode-btn active" id="modeCurrent" data-action="setMode" data-mode="current">当前页面</button>
+        <button class="mode-btn" id="modeAll" data-action="setMode" data-mode="all">全部路由 ≤10</button>
+      </div>
+    </div>
+
+    <!-- 模版库区域 -->
+    <div class="history-section">
+      <div class="history-header">
+        <span class="history-title">
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          模版库
+          <span class="panel-badge" id="snapshotCount">0</span>
+        </span>
+      </div>
+      <div class="history-toolbar">
+        <input type="text" id="historySearch" class="history-search" placeholder="搜索...">
+        <select id="historyFilter" class="history-select">
+          <option value="all">全部</option>
+          <option value="processing">处理中</option>
+          <option value="completed">已完成</option>
+          <option value="failed">失败</option>
+        </select>
+        <select id="historySort" class="history-select">
+          <option value="newest">最新</option>
+          <option value="oldest">最早</option>
+          <option value="grouped">按网站</option>
+        </select>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+  </div>
+
+  <!-- 服务器配置模态框 -->
+  <div class="modal" id="serverModal">
+    <div class="modal-content">
+      <div class="modal-header">服务器配置</div>
+      <input type="text" id="serverUrlInput" class="modal-input" placeholder="http://localhost:3100">
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" data-action="closeServerModal">取消</button>
+        <button class="modal-btn modal-btn-primary" data-action="saveServerUrl">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模型配置模态框 -->
+  <div class="modal" id="modelModal">
+    <div class="modal-content" style="width:320px;">
+      <div class="modal-header">AI 模型配置</div>
+      <div id="modelModalList"></div>
+      <div id="modelModalForm" style="display:none;">
+        <input type="text" id="modalModelName" class="modal-input" placeholder="模型名称">
+        <select id="modalModelProvider" class="modal-input">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="custom">自定义</option>
+        </select>
+        <input type="password" id="modalModelApiKey" class="modal-input" placeholder="API Key">
+        <input type="text" id="modalModelBaseUrl" class="modal-input" placeholder="Base URL (可选)">
+        <input type="text" id="modalModelId" class="modal-input" placeholder="Model ID">
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="modelModalCloseBtn">关闭</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalSaveBtn" style="display:none;">保存</button>
+        <button class="modal-btn modal-btn-primary" id="modelModalAddBtn">添加模型</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{scriptUri}}"></script>
+</body>
+</html>
