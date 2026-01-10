@@ -15,6 +15,37 @@ const { readJson, writeJson } = require('./storage/fileStore');
 const storage = createStorage({ dataDir: process.env.DESIGN_LEARN_DATA_DIR });
 const extractionPipeline = createExtractionPipeline({ storage });
 const previewPipeline = createPreviewPipeline({ storage });
+
+// import job -> designId，用于将 pipeline 状态回写到 design metadata（便于 UI 与 MCP 立刻可见）
+const importJobDesignMap = new Map();
+
+extractionPipeline.onProgress((event) => {
+  const designId = importJobDesignMap.get(event.job.id);
+  if (!designId) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const metaPatch = {
+    processingStatus: event.event === 'failed' ? 'failed' : event.event === 'completed' ? 'completed' : 'processing',
+    processingJobId: event.job.id,
+    processingUpdatedAt: now,
+  };
+
+  if (event.event === 'failed') {
+    metaPatch.processingError = event.job.error?.message || 'unknown_error';
+  } else if (event.event === 'completed') {
+    metaPatch.processingError = null;
+    metaPatch.lastImportAt = now;
+    metaPatch.lastImportVersionId = event.job.result?.versionId || null;
+  }
+
+  void storage.updateDesign(designId, { metadata: metaPatch }).catch(() => undefined);
+
+  if (event.event === 'failed' || event.event === 'completed') {
+    importJobDesignMap.delete(event.job.id);
+  }
+});
 const mcpHandler = createMcpHandler({
   storage,
   dataDir: process.env.DESIGN_LEARN_DATA_DIR,
@@ -238,8 +269,57 @@ async function handleImportUrl(req, res) {
   }
 
   try {
-    const job = extractionPipeline.enqueueImportFromUrl(body);
-    sendJson(res, 202, { job });
+    const rawUrl = body.url || '';
+    if (!rawUrl) {
+      return sendJson(res, 400, { error: 'url_required' });
+    }
+
+    try {
+      new URL(rawUrl);
+    } catch {
+      return sendJson(res, 400, { error: 'invalid_url' });
+    }
+
+    const existing = storage.listDesigns().find((item) => item.url === rawUrl);
+    const now = new Date().toISOString();
+
+    let designId = existing?.id || null;
+    if (!designId) {
+      let name = rawUrl;
+      try {
+        const parsed = new URL(rawUrl);
+        name = parsed.hostname || rawUrl;
+      } catch {}
+
+      const design = await storage.createDesign({
+        name,
+        url: rawUrl,
+        source: 'script',
+        metadata: {
+          extractedFrom: 'playwright',
+          processingStatus: 'processing',
+          processingStartedAt: now,
+          processingError: null,
+          tags: [],
+        },
+      });
+      designId = design.id;
+    }
+
+    const job = extractionPipeline.enqueueImportFromUrl({ ...body, designId });
+    importJobDesignMap.set(job.id, designId);
+
+    // 为已有 design 也补齐处理状态（避免 UI / MCP 端看到旧状态）
+    await storage.updateDesign(designId, {
+      metadata: {
+        processingStatus: 'processing',
+        processingStartedAt: now,
+        processingJobId: job.id,
+        processingError: null,
+      },
+    });
+
+    sendJson(res, 202, { job, designId });
   } catch (error) {
     sendJson(res, 400, { error: error.message });
   }

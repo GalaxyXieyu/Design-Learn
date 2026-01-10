@@ -8,7 +8,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   public static readonly viewType = 'designLearnSidebar';
   private _view?: vscode.WebviewView;
   private _extensionUri: vscode.Uri;
-  private _taskPollInterval?: NodeJS.Timeout;
+  private _designPollInterval?: NodeJS.Timeout;
 
   constructor(extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
@@ -16,8 +16,8 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
   public refresh() {
     if (this._view) {
-      this._loadSnapshots();
-      this._loadTasks();
+      this._loadDesigns();
+      this._checkServerStatus();
     }
   }
 
@@ -38,19 +38,22 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(message => {
       switch (message.type) {
         case 'extract':
-          this._extractUrl(message.url, false);
+          this._importUrl(message.url, false);
           break;
         case 'extractWithAI':
-          this._extractUrl(message.url, true);
+          this._importUrl(message.url, true);
           break;
         case 'extractAll':
-          this._extractAllRoutes(message.url, message.useAI);
+          this._importAllRoutes(message.url, message.useAI);
           break;
         case 'scanRoutes':
           this._scanRoutes(message.url);
           break;
         case 'loadData':
           this._loadData();
+          break;
+        case 'loadDesigns':
+          this._loadDesigns();
           break;
         case 'checkServer':
           this._checkServerStatus();
@@ -90,40 +93,33 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
         case 'copyMcpUri':
           this._copyMcpUri(message.snapshotId);
           break;
+        case 'copyDesignMcpUri':
+          this._copyDesignMcpUri(message.designId);
+          break;
+        case 'viewDesign':
+          this._viewDesign(message.designId);
+          break;
+        case 'deleteDesign':
+          this._deleteDesign(message.designId);
+          break;
         case 'saveConfig':
           this._saveConfig(message.config);
           break;
-        // 任务管理
-        case 'loadTasks':
-          this._loadTasks();
+        case 'startDesignPolling':
+          this._startDesignPolling();
           break;
-        case 'createTask':
-          this._createTask(message.url, message.options);
-          break;
-        case 'retryTask':
-          this._retryTask(message.taskId);
-          break;
-        case 'deleteTask':
-          this._deleteTask(message.taskId);
-          break;
-        case 'clearCompletedTasks':
-          this._clearCompletedTasks();
-          break;
-        case 'startTaskPolling':
-          this._startTaskPolling();
-          break;
-        case 'stopTaskPolling':
-          this._stopTaskPolling();
+        case 'stopDesignPolling':
+          this._stopDesignPolling();
           break;
       }
     });
 
     webviewView.onDidDispose(() => {
-      this._stopTaskPolling();
+      this._stopDesignPolling();
     });
   }
 
-  private async _extractUrl(url: string, useAI: boolean) {
+  private async _importUrl(url: string, useAI: boolean) {
     if (!url || !url.trim()) {
       vscode.window.showErrorMessage('请输入有效的 URL');
       return;
@@ -136,28 +132,34 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       return;
     }
 
+    const config = vscode.workspace.getConfiguration('designLearn');
+    const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
+
     this._view?.webview.postMessage({ type: 'extracting', status: true });
 
-    const command = useAI ? 'design-learn.extractWithAI' : 'design-learn.extract';
-    const originalShowInputBox = vscode.window.showInputBox;
-    vscode.window.showInputBox = async (options) => {
-      if (options?.prompt?.includes('URL')) return url;
-      return originalShowInputBox(options);
-    };
-    
-    await vscode.commands.executeCommand(command);
-    vscode.window.showInputBox = originalShowInputBox;
-    
-    this._view?.webview.postMessage({ type: 'extracting', status: false });
-    setTimeout(() => this._loadSnapshots(), 2000);
+    try {
+      await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url, options: { useAI: !!useAI } });
+      this._loadDesigns();
+      this._startDesignPolling();
+    } catch (err: any) {
+      const msg = err?.message || 'unknown_error';
+      if (msg === 'playwright_not_installed') {
+        vscode.window.showErrorMessage(
+          '服务端未安装 Playwright，无法通过 URL 导入。请在 design-learn-server 目录执行 npm install playwright。'
+        );
+      } else {
+        vscode.window.showErrorMessage(`导入失败: ${msg}`);
+      }
+    } finally {
+      this._view?.webview.postMessage({ type: 'extracting', status: false });
+    }
   }
 
   private _loadData() {
     setImmediate(() => {
       this._loadModels();
-      this._loadSnapshots();
+      this._loadDesigns();
       this._loadConfig();
-      this._loadTasks();
       this._checkServerStatus();
     });
   }
@@ -184,7 +186,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     }
   }
 
-  private async _extractAllRoutes(baseUrl: string, useAI: boolean) {
+  private async _importAllRoutes(baseUrl: string, useAI: boolean) {
     if (!baseUrl?.trim()) return;
 
     const config = vscode.workspace.getConfiguration('designLearn');
@@ -202,90 +204,83 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       const baseUrlObj = new URL(baseUrl);
       for (const route of routes) {
         const fullUrl = `${baseUrlObj.origin}${route}`;
-        await this._createTask(fullUrl, { useAI });
+        await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url: fullUrl, options: { useAI: !!useAI } });
       }
 
-      vscode.window.showInformationMessage(`已添加 ${routes.length} 个任务到队列`);
-      this._loadTasks();
-      this._startTaskPolling();
+      vscode.window.showInformationMessage(`已开始导入 ${routes.length} 个路由`);
+      this._loadDesigns();
+      this._startDesignPolling();
     } catch (err: any) {
       vscode.window.showErrorMessage(`批量提取失败: ${err.message}`);
     }
   }
 
-  // ==================== 任务管理 ====================
+  // ==================== 设计列表（服务端 DB） ====================
 
-  private async _loadTasks() {
+  private async _loadDesigns() {
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
 
     try {
-      const result = await this._serverRequest('GET', `${serverUrl}/api/tasks`, null);
-      this._view?.webview.postMessage({ type: 'updateTasks', ...result });
+      const result = await this._serverRequest('GET', `${serverUrl}/api/designs?limit=200`, null);
+      this._view?.webview.postMessage({ type: 'updateDesigns', items: result.items || [] });
     } catch {
-      this._view?.webview.postMessage({ type: 'updateTasks', tasks: [], groups: {}, stats: { total: 0, pending: 0, running: 0, completed: 0, failed: 0 } });
+      this._view?.webview.postMessage({ type: 'updateDesigns', items: [] });
     }
   }
 
-  private async _createTask(url: string, options: any = {}) {
+  private _startDesignPolling() {
+    this._stopDesignPolling();
+    this._designPollInterval = setInterval(() => this._loadDesigns(), 2000);
+  }
+
+  private _stopDesignPolling() {
+    if (this._designPollInterval) {
+      clearInterval(this._designPollInterval);
+      this._designPollInterval = undefined;
+    }
+  }
+
+  private async _deleteDesign(designId: string) {
+    if (!designId) return;
+    const confirm = await vscode.window.showWarningMessage('确定要删除这个设计记录吗？', { modal: true }, '删除');
+    if (confirm !== '删除') return;
+
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
 
     try {
-      await this._serverRequest('POST', `${serverUrl}/api/tasks`, { url, options });
-      this._loadTasks();
+      await this._serverRequest('DELETE', `${serverUrl}/api/designs/${encodeURIComponent(designId)}`, null);
+      this._loadDesigns();
+      vscode.window.showInformationMessage('已删除设计记录');
     } catch (err: any) {
-      vscode.window.showErrorMessage(`创建任务失败: ${err.message}`);
+      vscode.window.showErrorMessage(`删除失败: ${err.message}`);
     }
   }
 
-  private async _retryTask(taskId: string) {
+  private async _viewDesign(designId: string) {
+    if (!designId) return;
+
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
 
     try {
-      await this._serverRequest('POST', `${serverUrl}/api/tasks/${taskId}/retry`, {});
-      this._loadTasks();
+      const design = await this._serverRequest('GET', `${serverUrl}/api/designs/${encodeURIComponent(designId)}`, null);
+      const doc = await vscode.workspace.openTextDocument({
+        language: 'json',
+        content: JSON.stringify(design, null, 2),
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
     } catch (err: any) {
-      vscode.window.showErrorMessage(`重试任务失败: ${err.message}`);
+      vscode.window.showErrorMessage(`加载设计失败: ${err.message}`);
     }
   }
 
-  private async _deleteTask(taskId: string) {
-    const config = vscode.workspace.getConfiguration('designLearn');
-    const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
-
-    try {
-      await this._serverRequest('DELETE', `${serverUrl}/api/tasks/${taskId}`, null);
-      this._loadTasks();
-    } catch (err: any) {
-      vscode.window.showErrorMessage(`删除任务失败: ${err.message}`);
-    }
-  }
-
-  private async _clearCompletedTasks() {
-    const config = vscode.workspace.getConfiguration('designLearn');
-    const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
-
-    try {
-      const result = await this._serverRequest('DELETE', `${serverUrl}/api/tasks/clear-completed`, null);
-      vscode.window.showInformationMessage(`已清除 ${result.deleted || 0} 个已完成任务`);
-      this._loadTasks();
-    } catch (err: any) {
-      vscode.window.showErrorMessage(`清除任务失败: ${err.message}`);
-    }
-  }
-
-  private _startTaskPolling() {
-    this._stopTaskPolling();
-    this._taskPollInterval = setInterval(() => this._loadTasks(), 2000);
-  }
-
-  private _stopTaskPolling() {
-    if (this._taskPollInterval) {
-      clearInterval(this._taskPollInterval);
-      this._taskPollInterval = undefined;
-    }
+  private async _copyDesignMcpUri(designId: string) {
+    if (!designId) return;
+    const uri = `design://${designId}`;
+    await vscode.env.clipboard.writeText(uri);
+    vscode.window.showInformationMessage('MCP URI 已复制');
   }
 
   private _serverRequest(method: string, url: string, body: any): Promise<any> {
@@ -562,25 +557,33 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .dropdown-link svg { width: 16px; height: 16px; margin-right: 8px; opacity: 0.7; }
 
 	    /* 模版库区域 */
-    .history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-    .history-header { display: flex; align-items: center; margin-bottom: 8px; }
-    .history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-	    .history-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
-	    .history-search { flex: 1 1 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; color: var(--vscode-input-foreground); font-size: 11px; }
-	    .history-select { flex: 1 1 calc(50% - 3px); min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
-    .history-list { flex: 1; overflow-y: auto; }
-    .history-item { padding: 10px; border-radius: 6px; margin-bottom: 6px; background: var(--vscode-list-hoverBackground); cursor: pointer; }
-    .history-item:hover { background: var(--vscode-list-activeSelectionBackground); }
-    .history-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .history-item-url { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	    .history-item-meta { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 10px; color: var(--vscode-descriptionForeground); }
-		    .history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
-	    .history-item-status.processing { background: #3b82f620; color: #3b82f6; }
-    .history-item-status.running { background: #f59e0b20; color: #f59e0b; }
-    .history-item-status.completed { background: #22c55e20; color: #22c55e; }
-    .history-item-status.failed { background: #ef444420; color: #ef4444; }
-		    .history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; flex-wrap: wrap; }
-		    .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: none; border-radius: 3px; cursor: pointer; color: var(--vscode-button-secondaryForeground); white-space: nowrap; }
+	    .history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+	    .history-header { display: flex; align-items: center; margin-bottom: 8px; }
+	    .history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+		    .history-toolbar { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "search search" "filter sort"; gap: 6px; margin-bottom: 8px; align-items: center; }
+		    .history-search { grid-area: search; width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 8px; color: var(--vscode-input-foreground); font-size: 11px; }
+		    #historyFilter { grid-area: filter; }
+		    #historySort { grid-area: sort; }
+		    .history-select { width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 8px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
+		    @media (min-width: 420px) {
+		      .history-toolbar { grid-template-columns: 1fr 120px 120px; grid-template-areas: "search filter sort"; }
+		    }
+	    .history-list { flex: 1; overflow-y: auto; }
+	    .history-item { padding: 10px; border-radius: 10px; margin-bottom: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); cursor: pointer; }
+	    .history-item:hover { background: var(--vscode-list-hoverBackground); }
+	    .history-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+	    .history-item-url { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		    .history-item-meta { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 10px; color: var(--vscode-descriptionForeground); }
+		    .history-item-meta-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+			    .history-item-status { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+		    .history-item-status.processing { background: #3b82f620; color: #3b82f6; }
+	    .history-item-status.running { background: #f59e0b20; color: #f59e0b; }
+	    .history-item-status.completed { background: #22c55e20; color: #22c55e; }
+	    .history-item-status.failed { background: #ef444420; color: #ef4444; }
+			    .history-item-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; flex-wrap: wrap; }
+			    .history-item-actions button { padding: 4px 8px; font-size: 10px; background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, transparent); border-radius: 8px; cursor: pointer; color: var(--vscode-button-secondaryForeground); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+			    .history-item-actions button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+			    .history-item-actions button svg { width: 12px; height: 12px; opacity: 0.9; flex-shrink: 0; }
 
 	    .library-group { margin-bottom: 10px; }
 	    .library-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); border-radius: 10px; cursor: pointer; user-select: none; }
@@ -594,7 +597,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	    /* 顶部快捷操作面板 */
 	    .quick-panel { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
 		    .url-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-		    .url-input { flex: 1 1 220px; min-width: 0; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
+			    .url-input { flex: 1 1 160px; min-width: 0; height: 34px; padding: 0 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; color: var(--vscode-input-foreground); font-size: 12px; }
 		    .url-input:focus { outline: none; border-color: var(--accent); }
 		    .action-btns { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
 	    .action-btn { height: 34px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
@@ -605,13 +608,15 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     .action-btn svg { width: 16px; height: 16px; }
 
     /* 窄宽度：仅保留图标，隐藏文字，避免溢出 */
-	    @media (max-width: 340px) {
-	      .action-btn span { display: none; }
-	      .action-btn { width: 34px; padding: 0; justify-content: center; }
-	      .action-btns { gap: 4px; }
-	      .url-row { gap: 6px; }
-	      .action-btns { width: 100%; justify-content: flex-end; }
-	    }
+		    @media (max-width: 340px) {
+		      .action-btn span { display: none; }
+		      .action-btn { width: 34px; padding: 0; justify-content: center; }
+		      .action-btns { gap: 4px; }
+		      .url-row { gap: 6px; }
+		      .action-btns { width: 100%; justify-content: flex-end; }
+		      .history-item-actions button span { display: none; }
+		      .history-item-actions button { width: 30px; padding: 0; justify-content: center; }
+		    }
 
 	    /* 模式切换（更轻量） */
 	    .mode-switch { display: flex; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 10px; padding: 2px; margin-top: 8px; }
@@ -861,14 +866,13 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   <script>
     const vscode = acquireVsCodeApi();
     let isExtracting = false;
-    let models = [];
-    let selectedModelId = '';
-	    let editingModelId = null;
-	    let currentMode = 'current';
-	    let tasks = [];
-	    let allSnapshots = [];
-	    let libraryItemsByKey = {};
-	    const libraryGroupCollapsed = { processing: false, failed: false, completed: false };
+	    let models = [];
+	    let selectedModelId = '';
+		    let editingModelId = null;
+		    let currentMode = 'current';
+		    let allDesigns = [];
+		    let libraryItemsByKey = {};
+		    const libraryGroupCollapsed = { processing: false, failed: false, completed: false };
 	
 	    function findButtonFromEventTarget(target, stopAtEl) {
 	      let el = target;
@@ -1033,25 +1037,20 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       document.getElementById(id).classList.toggle('collapsed');
     }
 
-	    // 模式切换（仅影响“提取”行为，不再单独展示任务队列）
-	    function setMode(mode) {
-	      currentMode = mode;
-	      document.getElementById('modeCurrent').classList.toggle('active', mode === 'current');
-	      document.getElementById('modeAll').classList.toggle('active', mode === 'all');
-	      // 切换到全部路由时主动拉取一次任务列表，用于展示处理进度
-	      if (mode === 'all') {
-	        vscode.postMessage({type:'loadTasks'});
-	      }
-	    }
-
-		    // 任务管理：数据进入“模版库”统一展示
-		    function renderTasks(taskList) {
-		      tasks = taskList || [];
-		      // 如果存在未完成任务，自动开启轮询；否则关闭，避免常驻轮询
-		      const hasActive = (tasks || []).some(t => ['pending','running','extracted','analyzing'].includes(t.status));
-		      vscode.postMessage({ type: hasActive ? 'startTaskPolling' : 'stopTaskPolling' });
-		      filterHistory();
+		    // 模式切换（仅影响“提取”行为）
+		    function setMode(mode) {
+		      currentMode = mode;
+		      document.getElementById('modeCurrent').classList.toggle('active', mode === 'current');
+		      document.getElementById('modeAll').classList.toggle('active', mode === 'all');
 		    }
+
+			    // 设计列表：用于“模版库”展示（来自服务端 DB）
+			    function renderDesigns(designList) {
+			      allDesigns = designList || [];
+			      const hasActive = (allDesigns || []).some(d => (d && d.metadata && d.metadata.processingStatus) === 'processing');
+			      vscode.postMessage({ type: hasActive ? 'startDesignPolling' : 'stopDesignPolling' });
+			      filterHistory();
+			    }
 	
 		    function stripOriginFromUrl(url) {
 		      if (!url) return '';
@@ -1063,8 +1062,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 		      return rest.slice(slash);
 		    }
 
-	    function retryTask(id) { vscode.postMessage({type:'retryTask', taskId: id}); }
-	    function deleteTask(id) { vscode.postMessage({type:'deleteTask', taskId: id}); }
+		    function deleteDesign(id) { vscode.postMessage({type:'deleteDesign', designId: id}); }
 
     // 提取按钮
     document.getElementById('extractBtn').onclick = () => {
@@ -1193,89 +1191,72 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       }
     }
 
-	    // 模版库数据（快照 + 未完成任务）
-	    function renderSnapshots(snapshots) {
-	      allSnapshots = snapshots;
-	      filterHistory();
-	    }
+		    // 模版库数据（来自服务端 designs）
+		    function filterHistory() {
+		      const search = (document.getElementById('historySearch').value || '').toLowerCase();
+		      const filter = document.getElementById('historyFilter').value;
+		      const sort = document.getElementById('historySort').value;
 
-	    function filterHistory() {
-	      const search = (document.getElementById('historySearch').value || '').toLowerCase();
-	      const filter = document.getElementById('historyFilter').value;
-	      const sort = document.getElementById('historySort').value;
+		      const statusGroupOf = (d) => {
+		        const s = d && d.metadata ? d.metadata.processingStatus : null;
+		        if (s === 'failed') return 'failed';
+		        if (s === 'processing') return 'processing';
+		        return 'completed';
+		      };
 
-	      const isTaskActive = (t) => ['pending','running','extracted','analyzing'].includes(t.status);
-	      const taskStatusGroup = (t) => {
-	        if (t.status === 'failed') return 'failed';
-	        if (isTaskActive(t)) return 'processing';
-	        return 'completed';
-	      };
+		      let items = (allDesigns || [])
+		        .filter(d => d && d.id)
+		        .map(d => ({
+		          key: 'd:' + d.id,
+		          type: 'design',
+		          id: d.id,
+		          title: d.name || (d.url ? (new URL(d.url).hostname || '未命名') : '未命名'),
+		          url: d.url || '',
+		          date: d.updatedAt || d.createdAt || '',
+		          statusGroup: statusGroupOf(d),
+		          jobId: d.metadata ? d.metadata.processingJobId : null,
+		          error: d.metadata ? d.metadata.processingError : null,
+		          versionId: d.metadata ? d.metadata.lastImportVersionId : null
+		        }));
 
-	      const taskItems = (tasks || [])
-	        .filter(t => t && t.id && (t.status !== 'completed'))
-	        .map(t => ({
-	          key: 't:' + t.id,
-	          type: 'task',
-	          id: t.id,
-	          title: stripOriginFromUrl(t.url || '') || (t.domain || '任务'),
-	          url: t.url || '',
-	          date: t.updatedAt || t.createdAt || '',
-	          statusGroup: taskStatusGroup(t),
-	          stage: t.stage || t.status,
-	          progress: t.progress,
-	          error: t.error
-	        }));
+		      // 搜索/过滤
+		      items = items.filter(it => {
+		        if (search) {
+		          const title = (it.title || '').toLowerCase();
+		          const url = (it.url || '').toLowerCase();
+		          const error = (it.error || '').toLowerCase();
+		          const versionId = (it.versionId || '').toLowerCase();
+		          if (!title.includes(search) && !url.includes(search) && !error.includes(search) && !versionId.includes(search)) return false;
+		        }
+		        if (filter === 'all') return true;
+		        if (filter === 'completed') return it.statusGroup === 'completed';
+		        if (filter === 'failed') return it.statusGroup === 'failed';
+		        if (filter === 'processing') return it.statusGroup === 'processing';
+		        return true;
+		      });
 
-	      const snapshotItems = (allSnapshots || []).map(s => ({
-	        key: 's:' + (s.id || s.path),
-	        type: 'snapshot',
-	        id: s.id || s.path,
-	        title: s.title || '未命名',
-	        url: s.url || '',
-	        date: s.date || '',
-	        statusGroup: 'completed',
-	        path: s.path
-	      }));
+		      // 计数
+		      document.getElementById('snapshotCount').textContent = String(items.length);
 
-	      let items = snapshotItems.concat(taskItems);
+		      const getDateValue = (v) => {
+		        const t = Date.parse(v || '');
+		        return Number.isFinite(t) ? t : 0;
+		      };
 
-	      // 搜索/过滤
-	      items = items.filter(it => {
-	        if (search) {
-	          const title = (it.title || '').toLowerCase();
-	          const url = (it.url || '').toLowerCase();
-	          const stage = (it.stage || '').toLowerCase();
-	          if (!title.includes(search) && !url.includes(search) && !stage.includes(search)) return false;
-	        }
-	        if (filter === 'all') return true;
-	        if (filter === 'completed') return it.statusGroup === 'completed';
-	        if (filter === 'failed') return it.statusGroup === 'failed';
-	        if (filter === 'processing') return it.statusGroup === 'processing';
-	        return true;
-	      });
+		      if (sort === 'oldest') {
+		        items = items.slice().sort((a, b) => getDateValue(a.date) - getDateValue(b.date));
+		      } else if (sort === 'grouped') {
+		        items = items.slice().sort((a, b) => {
+		          const hostA = a.url ? new URL(a.url).hostname : '';
+		          const hostB = b.url ? new URL(b.url).hostname : '';
+		          return hostA.localeCompare(hostB);
+		        });
+		      } else {
+		        items = items.slice().sort((a, b) => getDateValue(b.date) - getDateValue(a.date));
+		      }
 
-	      // 计数（包含处理中的任务）
-	      document.getElementById('snapshotCount').textContent = String(items.length);
-
-	      const getDateValue = (v) => {
-	        const t = Date.parse(v || '');
-	        return Number.isFinite(t) ? t : 0;
-	      };
-
-	      if (sort === 'oldest') {
-	        items = items.slice().sort((a, b) => getDateValue(a.date) - getDateValue(b.date));
-	      } else if (sort === 'grouped') {
-	        items = items.slice().sort((a, b) => {
-	          const hostA = a.url ? new URL(a.url).hostname : '';
-	          const hostB = b.url ? new URL(b.url).hostname : '';
-	          return hostA.localeCompare(hostB);
-	        });
-	      } else {
-	        items = items.slice().sort((a, b) => getDateValue(b.date) - getDateValue(a.date));
-	      }
-
-	      renderHistoryList(items);
-	    }
+		      renderHistoryList(items);
+		    }
 
 	    function renderHistoryList(items) {
 	      const c = document.getElementById('historyList');
@@ -1291,34 +1272,35 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	        groups[it.statusGroup].push(it);
 	      });
 
-	      const renderItem = (it) => {
-	        libraryItemsByKey[it.key] = it;
-	        const statusText = it.statusGroup === 'processing' ? '处理中' : (it.statusGroup === 'failed' ? '失败' : '已完成');
-	        const statusClass = it.statusGroup === 'processing' ? 'processing' : (it.statusGroup === 'failed' ? 'failed' : 'completed');
-	        const metaLeft = it.date ? it.date : '';
-	        const subline = it.type === 'task'
-	          ? ('<div class="history-item-url">' + (it.url || '') + '</div>' +
-	             '<div class="task-progress" style="margin-top:4px;">' + (it.stage || '') + (it.progress ? (' ' + it.progress + '%') : '') + (it.error ? (' - ' + it.error) : '') + '</div>')
-	          : (it.url ? '<div class="history-item-url">' + it.url + '</div>' : '');
+		      const renderItem = (it) => {
+		        libraryItemsByKey[it.key] = it;
+		        const statusText = it.statusGroup === 'processing' ? '处理中' : (it.statusGroup === 'failed' ? '失败' : '已完成');
+		        const statusClass = it.statusGroup === 'processing' ? 'processing' : (it.statusGroup === 'failed' ? 'failed' : 'completed');
+		        const metaLeft = it.date ? it.date : '';
+		        const subline =
+		          (it.url ? '<div class="history-item-url">' + it.url + '</div>' : '') +
+		          (it.statusGroup === 'processing' ? '<div class="task-progress" style="margin-top:4px;">处理中...</div>' : '') +
+		          (it.statusGroup === 'failed' && it.error ? '<div class="task-progress" style="margin-top:4px;color:#ef4444;">' + it.error + '</div>' : '');
 
-	        const actions = it.type === 'snapshot'
-	          ? ('<button data-action="analyze">AI分析</button>' +
-	             '<button data-action="view">查看</button>' +
-	             '<button data-action="copy" data-id="' + it.id + '">复制ID</button>')
-	          : ((it.statusGroup === 'failed' ? '<button data-action="retryTask">重试</button>' : '') +
-	             '<button data-action="deleteTask">删除</button>');
+		        const actions =
+		          (it.statusGroup === 'failed'
+		            ? '<button data-action="retryDesign" title="重试导入"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M21 12a9 9 0 10-3.3 6.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>重试</span></button>'
+		            : '') +
+		          '<button data-action="viewDesign" title="查看详情"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg><span>查看</span></button>' +
+		          '<button data-action="copyMcp" title="复制 MCP URI"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>复制</span></button>' +
+		          '<button data-action="deleteDesign" title="删除记录"><svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>删除</span></button>';
 
-	        return (
-	          '<div class="history-item" data-key="' + it.key + '">' +
-	          '<div class="history-item-title">' + (it.title || '') + '</div>' +
-	          subline +
-	          '<div class="history-item-meta">' +
-	          '<span>' + metaLeft + '</span>' +
-	          '<span class="history-item-status ' + statusClass + '">' + statusText + '</span>' +
-	          '</div>' +
-	          '<div class="history-item-actions">' + actions + '</div>' +
-	          '</div>'
-	        );
+		        return (
+		          '<div class="history-item" data-key="' + it.key + '">' +
+		          '<div class="history-item-title">' + (it.title || '') + '</div>' +
+		          subline +
+		          '<div class="history-item-meta">' +
+		          '<span class="history-item-meta-left">' + metaLeft + '</span>' +
+		          '<span class="history-item-status ' + statusClass + '">' + statusText + '</span>' +
+		          '</div>' +
+		          '<div class="history-item-actions">' + actions + '</div>' +
+		          '</div>'
+		        );
 	      };
 
 	      const renderGroup = (key, title) => {
@@ -1364,20 +1346,19 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 	        const it = key ? libraryItemsByKey[key] : null;
 	        if (!it) return;
 
-	        if (action === 'analyze' && it.type === 'snapshot') vscode.postMessage({type:'analyzeSnapshot', path: it.path});
-	        else if (action === 'view' && it.type === 'snapshot') vscode.postMessage({type:'viewSnapshot', path: it.path});
-	        else if (action === 'copy') {
-	          const id = btn.dataset.id;
-	          navigator.clipboard.writeText(id);
-	          btn.textContent = '已复制';
-	          setTimeout(() => btn.textContent = '复制ID', 1500);
-	        } else if (action === 'retryTask' && it.type === 'task') {
-	          retryTask(it.id);
-	        } else if (action === 'deleteTask' && it.type === 'task') {
-	          deleteTask(it.id);
-	        }
-	      });
-	    }
+		        if (action === 'viewDesign' && it.type === 'design') {
+		          vscode.postMessage({type:'viewDesign', designId: it.id});
+		        } else if (action === 'copyMcp' && it.type === 'design') {
+		          vscode.postMessage({type:'copyDesignMcpUri', designId: it.id});
+		          btn.textContent = '已复制';
+		          setTimeout(() => btn.textContent = '复制MCP', 1500);
+		        } else if (action === 'retryDesign' && it.type === 'design') {
+		          vscode.postMessage({type:'extract', url: it.url});
+		        } else if (action === 'deleteDesign' && it.type === 'design') {
+		          deleteDesign(it.id);
+		        }
+		      });
+		    }
 
     // 设置
     function saveConfig() {
@@ -1416,19 +1397,18 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     }
 
     // 消息处理
-    window.addEventListener('message', e => {
-      const msg = e.data;
-      if (msg.type === 'updateModels') {
-        models = msg.models || [];
-        selectedModelId = msg.selectedModelId || '';
-        renderModels();
-      }
-      if (msg.type === 'updateSnapshots') renderSnapshots(msg.snapshots || []);
-      if (msg.type === 'updateConfig') updateConfig(msg.config);
-      if (msg.type === 'extracting') setExtracting(msg.status);
-      if (msg.type === 'serverStatus') updateServerStatus(msg.connected, msg.url);
-      if (msg.type === 'updateTasks') renderTasks(msg.tasks || []);
-    });
+	    window.addEventListener('message', e => {
+	      const msg = e.data;
+	      if (msg.type === 'updateModels') {
+	        models = msg.models || [];
+	        selectedModelId = msg.selectedModelId || '';
+	        renderModels();
+	      }
+	      if (msg.type === 'updateDesigns') renderDesigns(msg.items || []);
+	      if (msg.type === 'updateConfig') updateConfig(msg.config);
+	      if (msg.type === 'extracting') setExtracting(msg.status);
+	      if (msg.type === 'serverStatus') updateServerStatus(msg.connected, msg.url);
+	    });
 
     vscode.postMessage({type:'loadData'});
   </script>

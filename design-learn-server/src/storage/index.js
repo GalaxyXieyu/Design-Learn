@@ -72,11 +72,13 @@ function normalizeDesign(input) {
     description: input.description || '',
     thumbnail: input.thumbnail || '',
     stats: {
+      ...stats,
       components: stats.components ?? 0,
       versions: stats.versions ?? 0,
       lastAnalyzedAt: stats.lastAnalyzedAt ?? null,
     },
     metadata: {
+      ...metadata,
       extractedFrom: metadata.extractedFrom || 'unknown',
       extractorVersion: metadata.extractorVersion || '',
       tags: Array.isArray(metadata.tags) ? metadata.tags : [],
@@ -211,7 +213,17 @@ async function updateDesign(db, dataDir, designId, patch) {
     return null;
   }
 
-  const updated = normalizeDesign({ ...existing, ...patch, id: designId, createdAt: existing.createdAt });
+  const merged = { ...existing, ...patch, id: designId, createdAt: existing.createdAt };
+  if (patch && typeof patch === 'object') {
+    if (patch.metadata && typeof patch.metadata === 'object') {
+      merged.metadata = { ...(existing.metadata || {}), ...(patch.metadata || {}) };
+    }
+    if (patch.stats && typeof patch.stats === 'object') {
+      merged.stats = { ...(existing.stats || {}), ...(patch.stats || {}) };
+    }
+  }
+
+  const updated = normalizeDesign(merged);
   updated.updatedAt = new Date().toISOString();
 
   await writeJson(getDesignMetaPath(dataDir, designId), updated);
