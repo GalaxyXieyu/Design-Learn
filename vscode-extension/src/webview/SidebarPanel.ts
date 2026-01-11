@@ -218,11 +218,33 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       }
 
       const baseUrlObj = new URL(normalizedBaseUrl);
-      for (const route of routes) {
+      const orderedRoutes = routes.slice();
+      const basePath = baseUrlObj.pathname || '/';
+      const basePathTrimmed = basePath !== '/' ? basePath.replace(/\/$/, '') : basePath;
+      let baseIndex = orderedRoutes.indexOf(basePath);
+      if (baseIndex === -1 && basePathTrimmed !== basePath) {
+        baseIndex = orderedRoutes.indexOf(basePathTrimmed);
+      }
+      if (baseIndex > 0) {
+        const [baseRoute] = orderedRoutes.splice(baseIndex, 1);
+        orderedRoutes.unshift(baseRoute);
+      }
+
+      let designId: string | null = null;
+      for (let i = 0; i < orderedRoutes.length; i++) {
+        const route = orderedRoutes[i];
         const fullUrl = `${baseUrlObj.origin}${route}`;
-        const result = await this._serverRequest('POST', `${serverUrl}/api/import/url`, { url: fullUrl, options: { useAI: !!useAI } });
-        if (useAI && result?.job?.id && result?.designId) {
-          this._pendingAiJobs.set(result.job.id, { designId: result.designId });
+        const requestUseAI = useAI && i === orderedRoutes.length - 1;
+        const payload: Record<string, any> = { url: fullUrl, options: { useAI: !!requestUseAI } };
+        if (designId) {
+          payload.designId = designId;
+        }
+        const importResult = await this._serverRequest('POST', `${serverUrl}/api/import/url`, payload);
+        if (!designId && importResult?.designId) {
+          designId = importResult.designId;
+        }
+        if (requestUseAI && importResult?.job?.id && importResult?.designId) {
+          this._pendingAiJobs.set(importResult.job.id, { designId: importResult.designId });
         }
       }
 
@@ -407,10 +429,11 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
       const result = await this._serverRequest(
         'GET',
-        `${serverUrl}/api/snapshots?designId=${encodeURIComponent(designId)}&limit=1`,
+        `${serverUrl}/api/snapshots?designId=${encodeURIComponent(designId)}&limit=20`,
         null
       );
-      const snapshot = Array.isArray(result.items) ? result.items[0] : null;
+      const snapshots = Array.isArray(result.items) ? result.items : [];
+      const snapshot = snapshots[0] || null;
       if (!snapshot || !snapshot.versionId) return;
 
       const existing = await this._serverRequest(
@@ -433,7 +456,10 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       }
 
       const analyzer = new AIAnalyzer();
-      const analysis = await analyzer.analyze(this._toAnalyzerSnapshot(snapshot));
+      const analyzerSnapshots = snapshots.map((item: any) => this._toAnalyzerSnapshot(item));
+      const analysis = analyzerSnapshots.length > 1
+        ? await analyzer.analyzeBatch(analyzerSnapshots)
+        : await analyzer.analyze(analyzerSnapshots[0]);
 
       if (analysis?.markdown) {
         await this._serverRequest(

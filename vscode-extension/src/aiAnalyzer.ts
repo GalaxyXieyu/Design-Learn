@@ -18,6 +18,9 @@ export class AIAnalyzer {
         temperature?: number;
         maxTokens?: number;
     } | null = null;
+    private readonly DEFAULT_MAX_INPUT_TOKENS = 128000;
+    private readonly OUTPUT_TOKEN_RESERVE = 8000;
+    private readonly SYSTEM_PROMPT_RESERVE = 3000;
 
     /**
      * 加载配置
@@ -50,6 +53,16 @@ export class AIAnalyzer {
     }
 
     /**
+     * 估算文本的 token 数量
+     */
+    private estimateTokens(text: string): number {
+        if (!text) return 0;
+        const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+        const otherChars = text.length - chineseChars;
+        return Math.ceil(chineseChars / 1.5) + Math.ceil(otherChars / 4);
+    }
+
+    /**
      * 分析快照
      */
     async analyze(snapshot: Snapshot): Promise<AnalysisResult> {
@@ -64,6 +77,40 @@ export class AIAnalyzer {
 
         const response = await this.callAI(systemPrompt, userPrompt);
         const markdown = this.wrapMarkdownReport(snapshot, response);
+
+        return {
+            analysis: { raw: true, content: response },
+            markdown,
+            format: 'markdown'
+        };
+    }
+
+    /**
+     * 批量分析多个快照
+     */
+    async analyzeBatch(snapshots: Snapshot[]): Promise<AnalysisResult> {
+        this.loadConfig();
+
+        if (!this.config) {
+            throw new Error('AI 配置未加载');
+        }
+        if (!snapshots.length) {
+            throw new Error('snapshot_required');
+        }
+
+        const systemPrompt = this.getSystemPrompt();
+        const maxInputTokens = this.DEFAULT_MAX_INPUT_TOKENS;
+        const systemPromptTokens = this.estimateTokens(systemPrompt);
+        const availableTokens = maxInputTokens - this.OUTPUT_TOKEN_RESERVE - this.SYSTEM_PROMPT_RESERVE - systemPromptTokens;
+        const { selectedSnapshots, htmlLimit, cssLimit } = this.calculateBatchLimits(snapshots, availableTokens);
+        const userPrompt = this.buildBatchPrompt(selectedSnapshots, htmlLimit, cssLimit);
+
+        const response = await this.callAI(systemPrompt, userPrompt);
+        const markdown = this.wrapBatchMarkdownReport(
+            selectedSnapshots,
+            response,
+            snapshots.length !== selectedSnapshots.length ? snapshots.length : null
+        );
 
         return {
             analysis: { raw: true, content: response },
@@ -121,6 +168,51 @@ export class AIAnalyzer {
 13. 约定与最佳实践（Do & Don't）
 
 请确保输出内容详尽、专业、可直接用于团队开发参考。`;
+    }
+
+    private calculateBatchLimits(snapshots: Snapshot[], availableTokens: number) {
+        const FIXED_OVERHEAD_PER_PAGE = 200;
+        const BATCH_FIXED_OVERHEAD = 1000;
+        const DEFAULT_HTML_LIMIT = 5000;
+        const DEFAULT_CSS_LIMIT = 8000;
+        const MIN_HTML_LIMIT = 1500;
+        const MIN_CSS_LIMIT = 2000;
+
+        let selectedSnapshots = [...snapshots];
+        let htmlLimit = DEFAULT_HTML_LIMIT;
+        let cssLimit = DEFAULT_CSS_LIMIT;
+
+        const estimateConfigTokens = (count: number, html: number, css: number) => {
+            const perPageTokens =
+                FIXED_OVERHEAD_PER_PAGE +
+                this.estimateTokens('x'.repeat(html)) +
+                this.estimateTokens('x'.repeat(css));
+            return BATCH_FIXED_OVERHEAD + count * perPageTokens;
+        };
+
+        let estimatedTokens = estimateConfigTokens(selectedSnapshots.length, htmlLimit, cssLimit);
+        if (estimatedTokens <= availableTokens) {
+            return { selectedSnapshots, htmlLimit, cssLimit };
+        }
+
+        while (estimatedTokens > availableTokens && (htmlLimit > MIN_HTML_LIMIT || cssLimit > MIN_CSS_LIMIT)) {
+            htmlLimit = Math.max(MIN_HTML_LIMIT, Math.floor(htmlLimit * 0.8));
+            cssLimit = Math.max(MIN_CSS_LIMIT, Math.floor(cssLimit * 0.8));
+            estimatedTokens = estimateConfigTokens(selectedSnapshots.length, htmlLimit, cssLimit);
+        }
+
+        while (estimatedTokens > availableTokens && selectedSnapshots.length > 1) {
+            selectedSnapshots = selectedSnapshots.slice(0, selectedSnapshots.length - 1);
+            estimatedTokens = estimateConfigTokens(selectedSnapshots.length, htmlLimit, cssLimit);
+        }
+
+        while (estimatedTokens > availableTokens && (htmlLimit > 500 || cssLimit > 500)) {
+            htmlLimit = Math.max(500, Math.floor(htmlLimit * 0.7));
+            cssLimit = Math.max(500, Math.floor(cssLimit * 0.7));
+            estimatedTokens = estimateConfigTokens(selectedSnapshots.length, htmlLimit, cssLimit);
+        }
+
+        return { selectedSnapshots, htmlLimit, cssLimit };
     }
 
     /**
@@ -198,6 +290,70 @@ export class AIAnalyzer {
         return sections.join('\n');
     }
 
+    private buildBatchPrompt(snapshots: Snapshot[], htmlLimit = 5000, cssLimit = 8000): string {
+        const sections: string[] = [];
+
+        sections.push(`## 批量分析任务\n现在有 ${snapshots.length} 个同一网站的不同页面快照，请综合分析它们的统一设计系统。`);
+        sections.push('');
+        sections.push('## 请分析以下内容：');
+        sections.push('');
+        sections.push(`### 1. 统一配色系统
+- 跨页面一致的主色调、辅助色、中性色
+- 明暗主题的颜色映射
+- 品牌色使用规范
+
+### 2. 统一字体系统
+- 字体族（主字体、等宽字体）
+- 标题层级规范
+- 正文样式规范
+
+### 3. 统一布局系统
+- 容器宽度和内边距
+- 栅格系统
+- 间距规范
+
+### 4. 通用组件风格
+- 导航栏、按钮、卡片、表单等
+- 每个组件提供示例代码片段
+
+### 5. 无障碍与对比度
+- 文本与背景对比度
+- 焦点状态样式
+- WCAG 标准符合度
+
+### 6. 设计一致性建议
+- 跨页面的设计差异
+- 统一改进建议`);
+        sections.push('');
+        sections.push('## 输出格式要求\n请以 Markdown 格式输出统一的设计系统文档，包含具体的代码示例和组件代码片段。');
+        sections.push('');
+        sections.push('---');
+        sections.push('');
+        sections.push('## 页面快照数据');
+
+        snapshots.forEach((snapshot, index) => {
+            const vp = snapshot.metadata?.viewport
+                ? `${snapshot.metadata.viewport.width}x${snapshot.metadata.viewport.height}`
+                : 'unknown';
+            sections.push('');
+            sections.push(`### 页面 ${index + 1}: ${snapshot.title}`);
+            sections.push(`- URL: ${snapshot.url}`);
+            sections.push(`- 视口: ${vp}`);
+            sections.push('');
+            sections.push('#### HTML');
+            sections.push('```html');
+            sections.push(snapshot.html.substring(0, htmlLimit));
+            sections.push('```');
+            sections.push('');
+            sections.push('#### CSS');
+            sections.push('```css');
+            sections.push(snapshot.css.substring(0, cssLimit));
+            sections.push('```');
+        });
+
+        return sections.join('\n');
+    }
+
     /**
      * 包装 Markdown 报告
      */
@@ -209,6 +365,38 @@ export class AIAnalyzer {
         lines.push(`> **页面 URL**: ${snapshot.url}`);
         lines.push(`> **采集时间**: ${new Date(snapshot.extractedAt).toLocaleString('zh-CN')}`);
         lines.push(`> **视口尺寸**: ${snapshot.metadata.viewport.width} x ${snapshot.metadata.viewport.height}`);
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+        lines.push(content);
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+        lines.push(`*本报告由 Design-Learn VSCode 插件自动生成*`);
+        lines.push(`*生成时间: ${new Date().toLocaleString('zh-CN')}*`);
+        return lines.join('\n');
+    }
+
+    private wrapBatchMarkdownReport(
+        snapshots: Snapshot[],
+        content: string,
+        originalCount: number | null = null
+    ): string {
+        const lines: string[] = [];
+        lines.push('# 批量设计风格分析报告');
+        lines.push('');
+        lines.push(`> **分析时间**: ${new Date().toLocaleString('zh-CN')}`);
+        if (originalCount && originalCount > snapshots.length) {
+            lines.push(`> **页面数量**: ${snapshots.length}（原始 ${originalCount} 个，因 token 限制自动调整）`);
+        } else {
+            lines.push(`> **页面数量**: ${snapshots.length}`);
+        }
+        lines.push('');
+        lines.push('## 分析页面列表');
+        lines.push('');
+        snapshots.forEach((snapshot, index) => {
+            lines.push(`${index + 1}. [${snapshot.title}](${snapshot.url})`);
+        });
         lines.push('');
         lines.push('---');
         lines.push('');
@@ -278,4 +466,3 @@ export class AIAnalyzer {
         return content;
     }
 }
-

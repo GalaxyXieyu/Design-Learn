@@ -1,0 +1,28 @@
+{
+  "id": "fb04f346-3867-4281-ab42-7858ae5632e7",
+  "name": "www.trae.ai",
+  "url": "https://www.trae.ai/download",
+  "source": "script",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 1,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "playwright",
+    "processingStatus": "completed",
+    "processingStartedAt": "2026-01-11T02:15:58.429Z",
+    "processingError": null,
+    "tags": [],
+    "extractorVersion": "",
+    "processingJobId": "925cce12-9525-4de1-8f55-7da92a8e95d1",
+    "processingUpdatedAt": "2026-01-11T02:15:59.955Z",
+    "lastImportAt": "2026-01-11T02:15:59.955Z",
+    "lastImportVersionId": "08f7d004-1596-48a5-8e66-d8a204635510"
+  },
+  "createdAt": "2026-01-11T02:15:58.429Z",
+  "updatedAt": "2026-01-11T02:15:59.956Z"
+}

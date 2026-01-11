@@ -303,11 +303,20 @@ async function handleImportUrl(req, res) {
       return sendJson(res, 400, { error: 'invalid_url' });
     }
 
-    const existing = storage.listDesigns().find((item) => item.url === rawUrl);
+    const requestedDesignId = body.designId || null;
+    let requestedDesign = null;
+    if (requestedDesignId) {
+      requestedDesign = await storage.getDesign(requestedDesignId);
+      if (!requestedDesign) {
+        return sendJson(res, 404, { error: 'design_not_found' });
+      }
+    }
+
+    const existing = requestedDesign ? null : storage.listDesigns().find((item) => item.url === rawUrl);
     const now = new Date().toISOString();
     const useAI = !!body?.options?.useAI;
 
-    let designId = existing?.id || null;
+    let designId = requestedDesign?.id || existing?.id || null;
     if (!designId) {
       let name = rawUrl;
       try {
