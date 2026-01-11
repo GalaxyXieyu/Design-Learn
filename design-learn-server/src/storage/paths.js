@@ -24,7 +24,7 @@ function resolveDataDir(override) {
     return expandHome(candidate);
   }
 
-  return path.join(process.cwd(), 'data');
+  return path.join(os.homedir(), '.design-learn', 'data');
 }
 
 function getDesignDir(dataDir, designId) {

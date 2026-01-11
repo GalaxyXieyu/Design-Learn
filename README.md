@@ -238,11 +238,20 @@ Design-Learn/
 │   ├── options/                  # 设置页面
 │   └── icons/                    # 图标文件
 │
-├── design-learn-server/          # 本地服务
-├── vscode-extension/             # VSCode 扩展
-├── scripts/                      # 提取与验证脚本
-└── docs/                         # 项目文档
+├── design-learn-server/          # 本地服务（HTTP/MCP/WS + SQLite/文件存储）
+├── vscode-extension/             # VSCode 扩展（本地快照管理 + 启停服务）
+├── scripts/                      # 批处理/验证脚本（Node）
+├── data/                         # 服务端数据（当从仓库根目录启动 server）
+├── .designlearn/                 # VSCode 扩展本地数据（工作区内）
+├── CLAUDE.md                     # 代码助手协作约定
+└── uipro.md                      # UI UX Pro Max 整合方案（规划文档）
 ```
+
+## 📂 数据目录说明（避免重复落盘）
+
+- **服务端数据**：默认落在 `~/.design-learn/data`（MCP/HTTP 启动一致）
+  - 如需落在项目内，可设置 `DESIGN_LEARN_DATA_DIR=./data` 或 `DATA_DIR=./data`
+- **VSCode 扩展数据**：默认在工作区根目录 `.designlearn/`（与服务端数据相互独立）
 
 ## 🎨 功能展示
 

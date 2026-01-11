@@ -3,8 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-3000}"
-DATA_DIR="${DESIGN_LEARN_DATA_DIR:-$ROOT_DIR/data}"
+DATA_DIR="${DESIGN_LEARN_DATA_DIR:-$HOME/.design-learn/data}"
 VERIFY_URL="${VERIFY_URL:-}"
+
+export DESIGN_LEARN_DATA_DIR="${DATA_DIR}"
 
 node "$ROOT_DIR/design-learn-server/src/server.js" &
 SERVER_PID=$!
