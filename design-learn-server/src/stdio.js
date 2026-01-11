@@ -49,7 +49,10 @@ async function ensurePlaywright() {
   }
 }
 
-const defaultDataDir = path.resolve(__dirname, '..', 'data');
+// 数据目录优先级：环境变量 > 用户目录下的 .design-learn
+// 这样 npx 用户也能正常使用，数据统一存放在 ~/.design-learn/data
+const os = require('os');
+const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
 const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
 const storage = createStorage({ dataDir });
 

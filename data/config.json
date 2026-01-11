@@ -1,0 +1,30 @@
+{
+  "model": {
+    "name": "",
+    "version": "",
+    "provider": ""
+  },
+  "aiModels": [
+    {
+      "id": "minimax-m2.1",
+      "name": "MiniMax-M2.1",
+      "modelId": "MiniMax-M2.1",
+      "apiKey": "sk-cp-IBTzPqQyader3SkUb4nXjc_9MXVLJu0bAcTLw8MLA1pzJy8UDSzjNNzNosTRpl6zGSqG2Km-b65f_zrashdUzBYLWxtkGogkIk8VqQ79O3u2Nbv3Bxm3t58",
+      "baseUrl": "https://api.minimaxi.com/v1",
+      "isDefault": true,
+      "temperature": 0.7,
+      "maxTokens": 4000,
+      "maxInputTokens": 128000
+    }
+  ],
+  "selectedModelId": "minimax-m2.1",
+  "templates": {
+    "styleguide": "",
+    "components": ""
+  },
+  "extractOptions": {
+    "includeRules": true,
+    "includeComponents": true
+  },
+  "updatedAt": "2026-01-11T07:39:28.605Z"
+}

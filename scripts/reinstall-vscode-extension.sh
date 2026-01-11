@@ -45,28 +45,24 @@ echo ""
 # 4. 打包新的 .vsix
 echo "4️⃣  打包新的 .vsix..."
 if command -v vsce &> /dev/null; then
-  vsce package --skip-license --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix" 2>&1 | grep -E "(DONE|ERROR|Packaged)" || true
+  vsce package --out "design-learn-$VERSION.vsix"
 else
-  npx vsce package --skip-license --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix" 2>&1 | grep -E "(DONE|ERROR|Packaged)" || true
+  npx vsce package --out "design-learn-$VERSION.vsix"
 fi
 echo "✅ 打包完成"
 echo ""
 
-# 检测使用 Cursor 还是 VSCode
+# 强制使用 Cursor
 if command -v cursor &> /dev/null; then
   CLI_CMD="cursor"
   APP_NAME="Cursor"
   VSCODE_EXT_DIR="$HOME/.cursor/extensions"
-elif command -v code &> /dev/null; then
-  CLI_CMD="code"
-  APP_NAME="Visual Studio Code"
-  VSCODE_EXT_DIR="$HOME/.vscode/extensions"
 else
-  echo "❌ 未找到 code 或 cursor 命令"
+  echo "❌ 未找到 cursor 命令，请先安装 Cursor 并确保命令可用"
   exit 1
 fi
 
-echo "检测到: $APP_NAME"
+echo "使用: $APP_NAME"
 echo "扩展目录: $VSCODE_EXT_DIR"
 echo ""
 

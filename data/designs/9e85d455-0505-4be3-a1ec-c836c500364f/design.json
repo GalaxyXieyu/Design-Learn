@@ -1,0 +1,21 @@
+{
+  "id": "9e85d455-0505-4be3-a1ec-c836c500364f",
+  "name": "ai.heywhale.com",
+  "url": "https://ai.heywhale.com/",
+  "source": "browser",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 10,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "browser-extension",
+    "extractorVersion": "1.0",
+    "tags": []
+  },
+  "createdAt": "2026-01-11T08:49:46.182Z",
+  "updatedAt": "2026-01-11T08:50:08.041Z"
+}

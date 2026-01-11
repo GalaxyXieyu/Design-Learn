@@ -2,6 +2,8 @@ const http = require('http');
 const https = require('https');
 const crypto = require('crypto');
 const { URL } = require('url');
+const os = require('os');
+const path = require('path');
 
 const DEFAULT_PORT = Number(process.env.PORT || process.env.DESIGN_LEARN_PORT || 3100);
 const WS_CLOSE_DELAY_MS = 500;
@@ -14,7 +16,12 @@ const { loadPlaywright } = require('./playwrightSupport');
 const { getConfigPath } = require('./storage/paths');
 const { readJson, writeJson } = require('./storage/fileStore');
 
-const storage = createStorage({ dataDir: process.env.DESIGN_LEARN_DATA_DIR });
+// 数据目录优先级：环境变量 > 用户目录下的 ~/.design-learn/data
+// 与 stdio.js 保持一致，确保 MCP/HTTP/Chrome/VSCode 使用同一数据源
+const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
+const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
+
+const storage = createStorage({ dataDir });
 const extractionPipeline = createExtractionPipeline({ storage });
 const previewPipeline = createPreviewPipeline({ storage });
 
@@ -139,6 +146,8 @@ const DEFAULT_CONFIG = {
     version: '',
     provider: '',
   },
+  aiModels: [],
+  selectedModelId: '',
   templates: {
     styleguide: '',
     components: '',
@@ -181,11 +190,15 @@ function normalizeConfig(input) {
   const model = input?.model || {};
   const templates = input?.templates || {};
   const extractOptions = input?.extractOptions || {};
+  const aiModels = Array.isArray(input?.aiModels) ? input.aiModels : [];
+  const selectedModelId = typeof input?.selectedModelId === 'string' ? input.selectedModelId : '';
   return {
     model: {
       ...DEFAULT_CONFIG.model,
       ...model,
     },
+    aiModels,
+    selectedModelId,
     templates: {
       ...DEFAULT_CONFIG.templates,
       ...templates,

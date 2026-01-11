@@ -180,6 +180,7 @@ function normalizeBrowserPayload(payload = {}) {
     source: payload.source || payload.extractedFrom || 'browser-extension',
     version: payload.version || payload.extractorVersion || '',
     designId: payload.designId || null,
+    mergeByDomain: payload.mergeByDomain ?? true,
   };
 }
 
@@ -217,6 +218,7 @@ async function importFromUrl(storage, payload = {}, report) {
     source: 'playwright',
     version: payload.extractorVersion || snapshot.metadata?.extractorVersion || '',
     designId: payload.designId || null,
+    mergeByDomain: payload.mergeByDomain ?? true,
   };
 
   report(75, 'storing_design');
@@ -225,16 +227,26 @@ async function importFromUrl(storage, payload = {}, report) {
   return result;
 }
 
+function extractDomain(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
+
 async function storeImport(storage, normalized, report) {
-  const { website, snapshot, analysis, source, version, designId } = normalized;
+  const { website, snapshot, analysis, source, version, designId, mergeByDomain } = normalized;
   const url = website.url || snapshot.url || '';
   const title = website.title || snapshot.title || url || 'Untitled';
+  const domain = extractDomain(url);
 
   let design = null;
   if (designId) {
     design = await storage.getDesign(designId);
   }
 
+  // 先按完全相同 URL 查找
   if (!design && url) {
     const existing = storage.listDesigns().find((item) => item.url === url);
     if (existing) {
@@ -242,9 +254,17 @@ async function storeImport(storage, normalized, report) {
     }
   }
 
+  // 如果启用域名合并，按域名查找现有 design
+  if (!design && mergeByDomain && domain) {
+    const existing = storage.listDesigns().find((item) => extractDomain(item.url) === domain);
+    if (existing) {
+      design = existing;
+    }
+  }
+
   if (!design) {
     design = await storage.createDesign({
-      name: title,
+      name: mergeByDomain && domain ? domain : title,
       url,
       source: source === 'playwright' ? 'script' : 'browser',
       metadata: {

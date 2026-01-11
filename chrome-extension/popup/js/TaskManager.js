@@ -314,7 +314,7 @@ class TaskManager {
           </div>
           <div style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
             <span style="opacity: 0.7;">${task.url}</span>
-            ${task.stage ? `<span style="background: ${task.status === 'failed' ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.05)'}; padding: 1px 5px; border-radius: 3px; font-size: 10px; color: ${task.status === 'failed' ? '#ef4444' : 'var(--text-primary)'};">${task.stage}</span>` : ''}
+            ${task.stage ? `<span style="background: ${task.status === 'failed' ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.05)'}; padding: 1px 5px; border-radius: 3px; font-size: 10px; color: ${task.status === 'failed' ? '#ef4444' : 'var(--text-primary)'};">${task.error || task.stage}</span>` : ''}
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:6px; font-size: 11px; font-weight: 600; color: var(--text-secondary); flex-shrink: 0;">

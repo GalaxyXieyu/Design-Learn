@@ -34,32 +34,52 @@ class AIAnalyzer {
    * 加载配置
    */
   async loadConfig() {
+    let aiModels = [];
+
+    // 优先从服务端获取模型配置
+    try {
+      const serverUrl = await this.detectServerUrl();
+      if (serverUrl) {
+        const response = await fetch(`${serverUrl}/api/config`);
+        if (response.ok) {
+          const config = await response.json();
+          if (Array.isArray(config.aiModels) && config.aiModels.length) {
+            aiModels = config.aiModels;
+          }
+        }
+      }
+    } catch {}
+
+    // 回退到本地存储
+    if (!aiModels.length) {
+      const result = await chrome.storage.local.get(['aiModels', 'sg_aiModels']);
+      aiModels = result.sg_aiModels || result.aiModels || [];
+    }
+
+    // 加载其他本地配置
     const result = await chrome.storage.local.get([
-      'aiModels', 'sg_aiModels', 
       'generateConfig', 'sg_generateConfig',
       'promptTemplates', 'sg_promptTemplates',
       'currentTemplateId', 'sg_currentTemplateId'
     ]);
-    console.log('[AIAnalyzer] Storage 原始数据:', JSON.stringify(result, null, 2));
-    
-    const aiModels = result.sg_aiModels || result.aiModels || [];
+
     console.log('[AIAnalyzer] 找到的 AI 模型列表:', aiModels.length, '个');
-    
+
     const defaultModel = aiModels.find(m => m.isDefault) || aiModels[0] || null;
     console.log('[AIAnalyzer] 默认模型:', defaultModel ? `${defaultModel.name} (${defaultModel.modelId})` : '未配置');
-    
+
     // 加载提示词模板
     const templates = result.sg_promptTemplates || result.promptTemplates || [];
     const currentTemplateId = result.sg_currentTemplateId || result.currentTemplateId;
     const currentTemplate = templates.find(t => t.id === currentTemplateId) || templates[0] || null;
     console.log('[AIAnalyzer] 当前模板:', currentTemplate ? currentTemplate.name : '使用默认');
-    
+
     this.config = {
       ai: defaultModel || {},
       generate: result.sg_generateConfig || result.generateConfig || {},
       template: currentTemplate
     };
-    
+
     // 检查关键配置
     if (!this.config.ai.apiKey) {
       console.error('[AIAnalyzer] 警告: apiKey 未配置');
@@ -70,8 +90,19 @@ class AIAnalyzer {
     if (!this.config.ai.modelId) {
       console.error('[AIAnalyzer] 警告: modelId 未配置');
     }
-    
+
     return this.config;
+  }
+
+  async detectServerUrl() {
+    const candidates = ['http://localhost:3100', 'http://127.0.0.1:3100'];
+    for (const url of candidates) {
+      try {
+        const response = await fetch(`${url}/api/health`, { method: 'GET' });
+        if (response.ok) return url;
+      } catch {}
+    }
+    return null;
   }
   
   /**

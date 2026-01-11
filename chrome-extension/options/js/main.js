@@ -249,7 +249,7 @@ class OptionsApp {
     const syncConfigResult = await this.storage.getConfig(['syncConfig']);
     const syncConfig = syncConfigResult.syncConfig || {
       serverUrl: '',
-      reportOnly: true,
+      reportOnly: false,
       autoDetect: true
     };
     const serverUrl = document.getElementById('serverUrl');
@@ -450,17 +450,72 @@ class OptionsApp {
   }
 
   /**
-   * 加载历史记录
+   * 加载历史记录（从服务器 API 获取）
    */
   async loadHistory() {
-    this.history = await this.storage.getAllSnapshots();
-    this.displayHistory(this.history);
+    const serverUrl = await this.detectServerUrl();
+    if (!serverUrl) {
+      this.history = [];
+      this.displayHistory(this.history);
+      Notification.error('无法连接服务器，请确保 Design-Learn 服务已启动');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${serverUrl}/api/designs?limit=200`);
+      if (!response.ok) throw new Error('获取设计列表失败');
+
+      const data = await response.json();
+      // 获取每个 design 的快照详情
+      this.history = await Promise.all(data.items.map(async (design) => {
+        try {
+          const snapRes = await fetch(`${serverUrl}/api/snapshots?designId=${design.id}&limit=1`);
+          if (snapRes.ok) {
+            const snapData = await snapRes.json();
+            const snap = snapData.items?.[0] || {};
+            let markdown = '';
+            if (snap.versionId) {
+              try {
+                const verRes = await fetch(`${serverUrl}/api/versions/${snap.versionId}`);
+                if (verRes.ok) {
+                  const ver = await verRes.json();
+                  markdown = ver.styleguideMarkdown || '';
+                }
+              } catch {}
+            }
+            return {
+              id: design.id,
+              title: design.name || design.title || snap.title,
+              url: design.url,
+              extractedAt: design.createdAt,
+              html: snap.html || '',
+              css: snap.css || '',
+              markdown
+            };
+          }
+        } catch {}
+        return {
+          id: design.id,
+          title: design.name,
+          url: design.url,
+          extractedAt: design.createdAt,
+          html: '',
+          css: '',
+          markdown: ''
+        };
+      }));
+      this.displayHistory(this.history);
+    } catch (err) {
+      this.history = [];
+      this.displayHistory(this.history);
+      Notification.error('加载历史记录失败: ' + err.message);
+    }
   }
 
   /**
    * 显示历史记录
    */
-  displayHistory(items) {
+  displayHistory(items, groupByDomain = false) {
     const list = document.getElementById('historyList');
     if (!list) return;
 
@@ -477,8 +532,56 @@ class OptionsApp {
       return;
     }
 
+    if (groupByDomain) {
+      // 按域名分组
+      const groups = {};
+      items.forEach(item => {
+        try {
+          const host = new URL(item.url).hostname;
+          if (!groups[host]) groups[host] = [];
+          groups[host].push(item);
+        } catch {
+          if (!groups['其他']) groups['其他'] = [];
+          groups['其他'].push(item);
+        }
+      });
+
+      list.innerHTML = Object.keys(groups).sort().map(domain => {
+        const domainItems = groups[domain];
+        return `
+          <div class="domain-group">
+            <div class="domain-header" data-action="toggleDomain" data-domain="${domain}">
+              <span class="domain-name">${domain}</span>
+              <span class="domain-count">${domainItems.length} 个页面</span>
+              <svg class="domain-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="domain-items">
+              ${domainItems.map(item => this.createHistoryItem(item, true)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      this.bindHistoryItemEvents(list);
+      this.bindDomainToggleEvents(list);
+      return;
+    }
+
     list.innerHTML = items.map(item => this.createHistoryItem(item)).join('');
     this.bindHistoryItemEvents(list);
+  }
+
+  /**
+   * 绑定域名折叠事件
+   */
+  bindDomainToggleEvents(container) {
+    container.querySelectorAll('[data-action="toggleDomain"]').forEach(header => {
+      header.addEventListener('click', () => {
+        const group = header.closest('.domain-group');
+        group.classList.toggle('collapsed');
+      });
+    });
   }
 
   /**
@@ -512,9 +615,28 @@ class OptionsApp {
   /**
    * 创建历史记录项
    */
-  createHistoryItem(item) {
+  createHistoryItem(item, compact = false) {
     const date = new Date(item.extractedAt);
     const hasMarkdown = item.markdown !== undefined;
+
+    if (compact) {
+      // 紧凑模式：只显示路径和基本操作
+      const path = new URL(item.url).pathname || '/';
+      return `
+        <div class="history-item compact">
+          <div class="history-header">
+            <div>
+              <div class="history-title">${path}</div>
+              <div class="history-url" style="font-size:11px;">${item.title}</div>
+            </div>
+            <div class="history-actions">
+              <button class="action-btn" data-action="viewHtml" data-id="${item.id}">HTML</button>
+              ${hasMarkdown ? `<button class="action-btn primary" data-action="viewMarkdown" data-id="${item.id}">分析</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="history-item">
@@ -543,8 +665,8 @@ class OptionsApp {
         </div>
         <div class="history-meta">
           <span>提取时间: ${date.toLocaleString('zh-CN')}</span>
-          <span>HTML: ${(item.html.length / 1024).toFixed(2)} KB</span>
-          <span>CSS: ${(item.css.length / 1024).toFixed(2)} KB</span>
+          <span>HTML: ${((item.html?.length || 0) / 1024).toFixed(2)} KB</span>
+          <span>CSS: ${((item.css?.length || 0) / 1024).toFixed(2)} KB</span>
           ${hasMarkdown ? `<span>✓ 已生成分析</span>` : ''}
         </div>
       </div>
@@ -575,7 +697,7 @@ class OptionsApp {
       );
     }
 
-    this.displayHistory(filtered);
+    this.displayHistory(filtered, filterType === 'grouped');
   }
 
   /**
@@ -657,12 +779,53 @@ class OptionsApp {
     window.open(url, '_blank');
   }
 
-  viewMarkdown(id) {
+  async viewMarkdown(id) {
     const item = this.history.find(h => h.id === id);
-    if (!item || !item.markdown) return;
-    const blob = new Blob([item.markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    if (!item) return;
+
+    const serverUrl = await this.detectServerUrl();
+    if (!serverUrl) {
+      if (item.markdown) {
+        const blob = new Blob([item.markdown], { type: 'text/markdown; charset=utf-8' });
+        window.open(URL.createObjectURL(blob), '_blank');
+      }
+      return;
+    }
+
+    try {
+      // 获取该 design 下所有 snapshots
+      const snapRes = await fetch(`${serverUrl}/api/snapshots?designId=${id}&limit=100`);
+      if (!snapRes.ok) throw new Error('获取快照失败');
+      const snapData = await snapRes.json();
+      const snapshots = snapData.items || [];
+
+      // 获取所有 version 的 styleguide
+      const markdowns = [];
+      for (const snap of snapshots) {
+        if (!snap.versionId) continue;
+        try {
+          const verRes = await fetch(`${serverUrl}/api/versions/${snap.versionId}`);
+          if (verRes.ok) {
+            const ver = await verRes.json();
+            if (ver.styleguideMarkdown) {
+              const path = snap.url ? new URL(snap.url).pathname : '/';
+              markdowns.push(`## ${path}\n\n${ver.styleguideMarkdown}`);
+            }
+          }
+        } catch {}
+      }
+
+      if (markdowns.length === 0) {
+        Notification.warning('暂无分析内容');
+        return;
+      }
+
+      const combined = `# ${item.title || item.url}\n\n${markdowns.join('\n\n---\n\n')}`;
+      const blob = new Blob([combined], { type: 'text/markdown; charset=utf-8' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch (err) {
+      Notification.error('加载分析失败: ' + err.message);
+    }
   }
 
   async generateMarkdown(id) {

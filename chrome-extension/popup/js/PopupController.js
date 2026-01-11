@@ -71,12 +71,38 @@ class PopupController {
    * 加载配置
    */
   async loadConfig() {
-    const result = await chrome.storage.local.get(['aiModels', 'sg_aiModels', 'generateConfig', 'sg_generateConfig']);
-    const aiModels = result.sg_aiModels || result.aiModels || [];
-    
+    // 优先从服务端获取模型配置
+    const syncConfig = await this.getSyncConfig();
+    const serverResult = await this.resolveSyncStatus(syncConfig);
+
+    let aiModels = [];
+    let selectedModelId = '';
+
+    if (serverResult.connected) {
+      try {
+        const response = await fetch(`${serverResult.url}/api/config`);
+        if (response.ok) {
+          const config = await response.json();
+          aiModels = Array.isArray(config.aiModels) ? config.aiModels : [];
+          selectedModelId = config.selectedModelId || '';
+        }
+      } catch {
+        // 服务端获取失败，回退到本地存储
+      }
+    }
+
+    // 回退到本地存储
+    if (!aiModels.length) {
+      const result = await chrome.storage.local.get(['aiModels', 'sg_aiModels']);
+      aiModels = result.sg_aiModels || result.aiModels || [];
+    }
+
     // 获取默认模型
-    const defaultModel = aiModels.find(m => m.isDefault) || aiModels[0] || null;
-    
+    const defaultModel = (selectedModelId && aiModels.find(m => m.id === selectedModelId))
+      || aiModels.find(m => m.isDefault)
+      || aiModels[0]
+      || null;
+
     this.displayModelSelector(defaultModel, aiModels);
   }
 
@@ -283,9 +309,10 @@ class PopupController {
       }
     } else {
       // 显示模型卡片
-      const modelInitial = defaultModel.name.substring(0, 2).toUpperCase();
-      const provider = defaultModel.baseUrl.includes('openai') ? 'OpenAI' : 
-                      defaultModel.baseUrl.includes('anthropic') ? 'Anthropic' : '自定义';
+      const modelInitial = (defaultModel.name || 'AI').substring(0, 2).toUpperCase();
+      const baseUrl = defaultModel.baseUrl || '';
+      const provider = baseUrl.includes('openai') ? 'OpenAI' :
+                      baseUrl.includes('anthropic') ? 'Anthropic' : '自定义';
       
       container.innerHTML = `
         <div class="model-card">
@@ -530,7 +557,17 @@ class PopupController {
         this.showNotification('error', '无法获取当前标签页信息');
         return;
       }
-      
+
+      // 先注入 content script（如果尚未注入）
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: this.currentTab.id },
+          files: ['content/route-scanner.js']
+        });
+      } catch (e) {
+        // 可能已注入或无权限，继续尝试
+      }
+
       const response = await chrome.tabs.sendMessage(this.currentTab.id, {
         action: 'scanRoutes'
       });

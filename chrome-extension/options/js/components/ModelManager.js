@@ -23,8 +23,36 @@ export class ModelManager {
    * 加载模型配置
    */
   async loadModels() {
+    // 优先从服务端获取
+    try {
+      const serverUrl = await this.detectServerUrl();
+      if (serverUrl) {
+        const response = await fetch(`${serverUrl}/api/config`);
+        if (response.ok) {
+          const config = await response.json();
+          if (Array.isArray(config.aiModels) && config.aiModels.length) {
+            this.models = config.aiModels;
+            return;
+          }
+        }
+      }
+    } catch {
+      // 服务端不可用，回退到本地存储
+    }
+
     const { aiModels } = await this.storage.getConfig(['aiModels']);
     this.models = aiModels || [];
+  }
+
+  async detectServerUrl() {
+    const candidates = ['http://localhost:3100', 'http://127.0.0.1:3100'];
+    for (const url of candidates) {
+      try {
+        const response = await fetch(`${url}/api/health`, { method: 'GET' });
+        if (response.ok) return url;
+      } catch {}
+    }
+    return null;
   }
 
   /**
@@ -32,6 +60,17 @@ export class ModelManager {
    */
   async saveModels() {
     await this.storage.setConfig({ aiModels: this.models });
+    // 同步到服务端
+    try {
+      const serverUrl = await this.detectServerUrl();
+      if (serverUrl) {
+        await fetch(`${serverUrl}/api/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aiModels: this.models })
+        });
+      }
+    } catch {}
   }
 
   /**
@@ -98,6 +137,9 @@ export class ModelManager {
    */
   createModelCard(model) {
     const isDefault = model.isDefault || false;
+    const temperature = model.temperature ?? 0.7;
+    const maxTokens = model.maxTokens ?? 4000;
+    const maxInputTokens = model.maxInputTokens ?? 128000;
     return `
       <div class="model-card-item ${isDefault ? 'default' : ''}" data-id="${model.id}">
         <div class="model-card-header">
@@ -117,31 +159,31 @@ export class ModelManager {
             </button>
           </div>
         </div>
-        
-        <div class="model-card-name">${model.name}</div>
-        
+
+        <div class="model-card-name">${model.name || '未命名'}</div>
+
         <div class="model-card-info">
           <div class="model-card-info-item">
             <span class="label">模型 ID</span>
-            <span class="value">${model.modelId}</span>
+            <span class="value">${model.modelId || '-'}</span>
           </div>
           <div class="model-card-info-item">
             <span class="label">Temperature</span>
-            <span class="value">${model.temperature}</span>
+            <span class="value">${temperature}</span>
           </div>
           <div class="model-card-info-item">
             <span class="label">Max Tokens</span>
-            <span class="value">${model.maxTokens}</span>
+            <span class="value">${maxTokens}</span>
           </div>
           <div class="model-card-info-item">
             <span class="label">输入上限</span>
-            <span class="value">${model.maxInputTokens ? (model.maxInputTokens / 1000).toFixed(0) + 'K' : '128K'}</span>
+            <span class="value">${(maxInputTokens / 1000).toFixed(0)}K</span>
           </div>
         </div>
-        
+
         <div class="model-card-footer">
           ${!isDefault ? `<button class="set-default-btn" data-id="${model.id}">设为默认</button>` : ''}
-          <button class="test-model-btn" data-id="${model.id}">测试连接</button>
+          ${model.baseUrl ? `<button class="test-model-btn" data-id="${model.id}">测试连接</button>` : ''}
         </div>
       </div>
     `;
@@ -344,30 +386,33 @@ export class ModelManager {
    */
   async testModelConnection(modelData) {
     try {
-      // 这里应该调用实际的 API 测试
-      // 目前模拟测试，实际项目中需要替换为真实的 API 调用
-      
-      // 模拟 API 请求
-      const response = await fetch(modelData.baseUrl + '/models', {
-        method: 'GET',
+      // 发送简单的 chat completion 请求测试连接
+      const response = await fetch(modelData.baseUrl + '/chat/completions', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${modelData.apiKey}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          model: modelData.modelId,
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 5
+        })
       });
 
       if (response.ok) {
         return { success: true };
       } else {
-        return { 
-          success: false, 
-          error: `HTTP ${response.status}: ${response.statusText}` 
+        const data = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          error: data.error?.message || `HTTP ${response.status}`
         };
       }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.message || '网络连接失败' 
+      return {
+        success: false,
+        error: error.message || '网络连接失败'
       };
     }
   }
