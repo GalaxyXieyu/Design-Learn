@@ -55,6 +55,7 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
 | `list_uipro_stacks` | 列出可用 stack | 无 |
 | `search_uipro` | 搜索 UIPro（BM25） | `query`, `domain?`, `limit?` |
 | `search_uipro_stack` | 搜索 stack 指南（BM25） | `query`, `stack`, `limit?` |
+| `search_library` | 聚合搜索（designs + UIPro） | `query`, `limit?` |
 
 实现位置（两套 MCP 传输保持一致）：
 
@@ -71,12 +72,14 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
 2. `search_uipro(query, domain?)`：补充 UI 风格/配色/排版/UX guidelines（默认基础数据兜底）
 3. 需要技术栈约束时用 `search_uipro_stack(query, stack)`
 
+也可以用 `search_library(query, limit?)` 一次拿到 designs + uipro 两类结果（保持旧工具不受影响）。
+
 这样工具入口、参数习惯、返回结构都一致，但数据来源有边界、不会互相污染。
 
 ## 六、后续增强（P1/P2）
 
 - 同步脚本：从 GitHub Release 下载 zip，把 `.shared/ui-ux-pro-max/data/` 同步到 `${DESIGN_LEARN_DATA_DIR}/uipro/`
-- 聚合搜索工具（可选）：新增 `search_library` 一次返回 designs + uipro（保持旧工具不破坏）
+- 聚合搜索工具：已提供 `search_library`，后续可优化排序/去重策略
 - SQLite/FTS5（可选）：当数据量变大或需要复杂过滤时再引入（需要完善 schema 迁移逻辑）
 
 ---

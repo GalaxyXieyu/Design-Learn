@@ -23,6 +23,14 @@ const tools = {
       limit: z.number().min(1).max(100).optional(),
     },
   },
+  search_library: {
+    title: 'Search Library',
+    description: 'Search both local designs and the built-in UI/UX Pro dataset by query.',
+    inputSchema: {
+      query: z.string().min(1),
+      limit: z.number().min(1).max(100).optional(),
+    },
+  },
   get_styleguide: {
     title: 'Get Styleguide',
     description: 'Fetch styleguide markdown by design ID (latest version).',
@@ -95,6 +103,19 @@ const prompts = {
 };
 
 function createToolHandlers(storage, uipro) {
+  function matchDesigns(query) {
+    const needle = query.toLowerCase();
+    const designs = storage.listDesigns();
+    return designs.filter((design) => {
+      const tags = Array.isArray(design.metadata?.tags) ? design.metadata.tags.join(' ') : '';
+      const haystack = [design.name, design.url, design.description, design.category, tags]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }
+
   return {
     list_designs: async ({ limit }) => {
       const designs = storage.listDesigns();
@@ -105,17 +126,26 @@ function createToolHandlers(storage, uipro) {
       };
     },
     search_designs: async ({ query, limit }) => {
-      const needle = query.toLowerCase();
-      const designs = storage.listDesigns();
-      const matches = designs.filter((design) => {
-        const tags = Array.isArray(design.metadata?.tags) ? design.metadata.tags.join(' ') : '';
-        const haystack = [design.name, design.url, design.description, design.category, tags]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return haystack.includes(needle);
-      });
+      const matches = matchDesigns(query);
       const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    search_library: async ({ query, limit }) => {
+      const matches = matchDesigns(query);
+      const designs = typeof limit === 'number' ? matches.slice(0, limit) : matches;
+      let uiproResult;
+      try {
+        uiproResult = uipro.search({ query, limit });
+      } catch {
+        uiproResult = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      const data = { designs, uipro: uiproResult };
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
         structuredContent: data,

@@ -73,7 +73,13 @@ async function main() {
     const toolNames = new Set(tools.tools.map((t) => t.name));
 
     console.log(`[mcp] tools: ${tools.tools.length}`);
-    for (const name of ['list_uipro_domains', 'list_uipro_stacks', 'search_uipro', 'search_uipro_stack']) {
+    for (const name of [
+      'list_uipro_domains',
+      'list_uipro_stacks',
+      'search_uipro',
+      'search_uipro_stack',
+      'search_library',
+    ]) {
       console.log(`[mcp] has ${name}: ${toolNames.has(name)}`);
     }
 
@@ -94,6 +100,29 @@ async function main() {
 
     console.log('[mcp] search_uipro parse_ok:', Boolean(parsed && typeof parsed === 'object'));
     console.log('[mcp] search_uipro contains Glassmorphism:', /Glassmorphism/i.test(text));
+
+    if (toolNames.has('search_library')) {
+      const libraryResult = await client.request(
+        {
+          method: 'tools/call',
+          params: { name: 'search_library', arguments: { query: 'glassmorphism', limit: 3 } },
+        },
+        CallToolResultSchema
+      );
+      const libraryText = libraryResult.content?.[0]?.text || '';
+      let libraryParsed;
+      try {
+        libraryParsed = JSON.parse(libraryText);
+      } catch {
+        libraryParsed = null;
+      }
+
+      const designsOk = Boolean(libraryParsed && Array.isArray(libraryParsed.designs));
+      const uiproOk = Boolean(libraryParsed && libraryParsed.uipro && typeof libraryParsed.uipro === 'object');
+      console.log('[mcp] search_library designs_ok:', designsOk);
+      console.log('[mcp] search_library uipro_ok:', uiproOk);
+      console.log('[mcp] search_library uipro contains Glassmorphism:', /Glassmorphism/i.test(libraryText));
+    }
   } finally {
     try {
       await transport.close();
@@ -112,4 +141,3 @@ main().catch((error) => {
   console.error('[mcp] stdio verify failed:', error);
   process.exit(1);
 });
-
