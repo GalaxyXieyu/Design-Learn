@@ -7,6 +7,7 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { z } = require('zod');
 
 const { createStorage } = require('./storage');
+const { createUipro } = require('./uipro');
 
 const serverRoot = path.resolve(__dirname, '..');
 const autoInstallPlaywright = process.env.DESIGN_LEARN_AUTO_INSTALL_PLAYWRIGHT !== '0';
@@ -55,6 +56,7 @@ const os = require('os');
 const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
 const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
 const storage = createStorage({ dataDir });
+const uipro = createUipro({ dataDir });
 
 const server = new McpServer(
   {
@@ -139,6 +141,86 @@ server.tool(
   }
 );
 
+server.tool('list_uipro_domains', 'List available domains from the built-in UI/UX Pro Max dataset.', {}, async () => {
+  const data = uipro.domains;
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    structuredContent: data,
+  };
+});
+
+server.tool('list_uipro_stacks', 'List available stacks from the built-in UI/UX Pro Max dataset.', {}, async () => {
+  const data = uipro.stacks;
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    structuredContent: data,
+  };
+});
+
+server.tool(
+  'search_uipro',
+  'Search UI/UX Pro Max dataset (BM25) by query and optional domain.',
+  {
+    query: z.string(),
+    domain: z
+      .enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons'])
+      .optional(),
+    limit: z.number().min(1).max(20).optional(),
+  },
+  async ({ query, domain, limit }) => {
+    let data;
+    try {
+      data = uipro.search({ query, domain, limit });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.tool(
+  'search_uipro_stack',
+  'Search stack-specific UI/UX Pro Max guidelines (BM25).',
+  {
+    query: z.string(),
+    stack: z.enum([
+      'html-tailwind',
+      'react',
+      'nextjs',
+      'vue',
+      'nuxtjs',
+      'nuxt-ui',
+      'svelte',
+      'swiftui',
+      'react-native',
+      'flutter',
+      'shadcn',
+    ]),
+    limit: z.number().min(1).max(20).optional(),
+  },
+  async ({ query, stack, limit }) => {
+    let data;
+    try {
+      data = uipro.searchStack({ query, stack, limit });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
 // Resources
 server.resource(
   'server-info',
@@ -178,13 +260,16 @@ server.prompt(
 
 async function main() {
   await ensurePlaywright();
-  // 同时启动 HTTP 服务（给 Chrome/VSCode 插件用）
-  const httpServer = spawn('node', [path.join(__dirname, 'server.js')], {
-    stdio: 'ignore',
-    detached: true,
-    env: { ...process.env, DESIGN_LEARN_DATA_DIR: dataDir },
-  });
-  httpServer.unref();
+  const startHttpServer = process.env.DESIGN_LEARN_STDIO_START_HTTP_SERVER !== '0';
+  if (startHttpServer) {
+    // 同时启动 HTTP 服务（给 Chrome/VSCode 插件用）
+    const httpServer = spawn('node', [path.join(__dirname, 'server.js')], {
+      stdio: 'ignore',
+      detached: true,
+      env: { ...process.env, DESIGN_LEARN_DATA_DIR: dataDir },
+    });
+    httpServer.unref();
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

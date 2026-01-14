@@ -5,6 +5,7 @@ const { isInitializeRequest } = require('@modelcontextprotocol/sdk/types.js');
 const { z } = require('zod');
 
 const { createStorage } = require('../storage');
+const { createUipro } = require('../uipro');
 
 const tools = {
   list_designs: {
@@ -29,6 +30,58 @@ const tools = {
       designId: z.string(),
     },
   },
+  list_uipro_domains: {
+    title: 'List UI/UX Pro Domains',
+    description: 'List available domains from the built-in UI/UX Pro Max dataset.',
+    inputSchema: {},
+  },
+  list_uipro_stacks: {
+    title: 'List UI/UX Pro Stacks',
+    description: 'List available stacks from the built-in UI/UX Pro Max dataset.',
+    inputSchema: {},
+  },
+  search_uipro: {
+    title: 'Search UI/UX Pro',
+    description: 'Search UI/UX Pro Max dataset (BM25) by query and optional domain.',
+    inputSchema: {
+      query: z.string(),
+      domain: z
+        .enum([
+          'style',
+          'prompt',
+          'color',
+          'chart',
+          'landing',
+          'product',
+          'ux',
+          'typography',
+          'icons',
+        ])
+        .optional(),
+      limit: z.number().min(1).max(20).optional(),
+    },
+  },
+  search_uipro_stack: {
+    title: 'Search UI/UX Pro Stack',
+    description: 'Search stack-specific UI/UX Pro Max guidelines (BM25).',
+    inputSchema: {
+      query: z.string(),
+      stack: z.enum([
+        'html-tailwind',
+        'react',
+        'nextjs',
+        'vue',
+        'nuxtjs',
+        'nuxt-ui',
+        'svelte',
+        'swiftui',
+        'react-native',
+        'flutter',
+        'shadcn',
+      ]),
+      limit: z.number().min(1).max(20).optional(),
+    },
+  },
 };
 
 const prompts = {
@@ -41,7 +94,7 @@ const prompts = {
   },
 };
 
-function createToolHandlers(storage) {
+function createToolHandlers(storage, uipro) {
   return {
     list_designs: async ({ limit }) => {
       const designs = storage.listDesigns();
@@ -93,10 +146,54 @@ function createToolHandlers(storage) {
         structuredContent: { designId, versionId: latest.id, markdown },
       };
     },
+    list_uipro_domains: async () => {
+      const data = uipro.domains;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    list_uipro_stacks: async () => {
+      const data = uipro.stacks;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    search_uipro: async ({ query, domain, limit }) => {
+      let data;
+      try {
+        data = uipro.search({ query, domain, limit });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    search_uipro_stack: async ({ query, stack, limit }) => {
+      let data;
+      try {
+        data = uipro.searchStack({ query, stack, limit });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
   };
 }
 
-function createMcpServer({ name, version, storage }) {
+function createMcpServer({ name, version, storage, uipro }) {
   const server = new McpServer(
     {
       name,
@@ -111,7 +208,7 @@ function createMcpServer({ name, version, storage }) {
     }
   );
 
-  const handlers = createToolHandlers(storage);
+  const handlers = createToolHandlers(storage, uipro);
   Object.entries(tools).forEach(([toolName, schema]) => {
     server.registerTool(toolName, schema, handlers[toolName]);
   });
@@ -179,7 +276,8 @@ function createMcpHandler(options = {}) {
   const serverName = options.serverName || 'design-learn';
   const serverVersion = options.serverVersion || '0.1.0';
   const authToken = options.authToken || null;
-  const server = createMcpServer({ name: serverName, version: serverVersion, storage });
+  const uipro = createUipro({ dataDir: storage.dataDir });
+  const server = createMcpServer({ name: serverName, version: serverVersion, storage, uipro });
   const transports = new Map();
 
   function verifyAuth(req, res) {
