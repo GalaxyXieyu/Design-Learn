@@ -83,7 +83,7 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
   - 示例（GitHub Release）：`DESIGN_LEARN_DATA_DIR=./data node design-learn-server/scripts/sync-uipro-release.js --repo <owner/name> --tag latest`
   - 示例（离线 zip）：`DESIGN_LEARN_DATA_DIR=./data node design-learn-server/scripts/sync-uipro-release.js --source ./uipro.zip`
 - 聚合搜索工具：已提供 `search_library`，后续可优化排序/去重策略
-- SQLite/FTS5（可选）：当数据量变大或需要复杂过滤时再引入（需要完善 schema 迁移逻辑）
+- SQLite/FTS5（可选）：当数据量变大或需要复杂过滤时再引入（RFC：`docs/uipro-sqlite-fts5.md`）
 
 ---
 
