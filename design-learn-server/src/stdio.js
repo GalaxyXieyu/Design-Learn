@@ -95,6 +95,7 @@ server.tool(
     const data = typeof limit === 'number' ? designs.slice(0, limit) : designs;
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: { designs: data },
     };
   }
 );
@@ -111,6 +112,7 @@ server.tool(
     const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: { designs: data },
     };
   }
 );
@@ -176,7 +178,7 @@ server.tool('list_uipro_domains', 'List available domains from the built-in UI/U
   const data = uipro.domains;
   return {
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    structuredContent: data,
+    structuredContent: { domains: data },
   };
 });
 
@@ -184,7 +186,7 @@ server.tool('list_uipro_stacks', 'List available stacks from the built-in UI/UX 
   const data = uipro.stacks;
   return {
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    structuredContent: data,
+    structuredContent: { stacks: data },
   };
 });
 

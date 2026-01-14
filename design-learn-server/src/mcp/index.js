@@ -122,7 +122,7 @@ function createToolHandlers(storage, uipro) {
       const data = typeof limit === 'number' ? designs.slice(0, limit) : designs;
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
+        structuredContent: { designs: data },
       };
     },
     search_designs: async ({ query, limit }) => {
@@ -130,7 +130,7 @@ function createToolHandlers(storage, uipro) {
       const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
+        structuredContent: { designs: data },
       };
     },
     search_library: async ({ query, limit }) => {
@@ -180,14 +180,14 @@ function createToolHandlers(storage, uipro) {
       const data = uipro.domains;
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
+        structuredContent: { domains: data },
       };
     },
     list_uipro_stacks: async () => {
       const data = uipro.stacks;
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-        structuredContent: data,
+        structuredContent: { stacks: data },
       };
     },
     search_uipro: async ({ query, domain, limit }) => {

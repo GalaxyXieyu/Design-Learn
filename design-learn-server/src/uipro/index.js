@@ -48,7 +48,43 @@ function createUipro(options = {}) {
 
   function loadCsvIndex({ file, searchColumns }) {
     const filePath = path.join(dataDir, file);
-    const { records } = parseCsvFile(filePath);
+    let parsed;
+    try {
+      parsed = parseCsvFile(filePath);
+    } catch {
+      return {
+        error: 'uipro_data_unavailable',
+        reason: 'csv_read_failed',
+        file,
+      };
+    }
+
+    const { headers, records } = parsed || {};
+    if (!Array.isArray(headers) || headers.length === 0) {
+      return {
+        error: 'invalid_csv',
+        reason: 'missing_headers',
+        file,
+      };
+    }
+    if (!Array.isArray(records) || records.length === 0) {
+      return {
+        error: 'invalid_csv',
+        reason: 'empty_records',
+        file,
+      };
+    }
+
+    const missingColumns = (searchColumns || []).filter((column) => !headers.includes(column));
+    if (missingColumns.length > 0) {
+      return {
+        error: 'invalid_csv',
+        reason: 'missing_required_columns',
+        file,
+        missingColumns,
+      };
+    }
+
     const documents = records.map((row) =>
       searchColumns.map((column) => row[column] || '').join(' ')
     );
@@ -100,6 +136,18 @@ function createUipro(options = {}) {
         availableDomains: AVAILABLE_DOMAINS,
       };
     }
+    if (entry.error) {
+      const errorResult = {
+        error: entry.error,
+        reason: entry.reason,
+        domain: resolvedDomain,
+        file: entry.file,
+      };
+      if (Array.isArray(entry.missingColumns) && entry.missingColumns.length > 0) {
+        errorResult.missingColumns = entry.missingColumns;
+      }
+      return errorResult;
+    }
 
     const maxResults = normalizeLimit(limit, 5);
     const scored = entry.bm25.score(query);
@@ -143,6 +191,18 @@ function createUipro(options = {}) {
     const entry = getStackIndex(stack);
     if (!entry) {
       return { error: `unknown_stack:${stack}`, availableStacks: AVAILABLE_STACKS };
+    }
+    if (entry.error) {
+      const errorResult = {
+        error: entry.error,
+        reason: entry.reason,
+        stack,
+        file: entry.file,
+      };
+      if (Array.isArray(entry.missingColumns) && entry.missingColumns.length > 0) {
+        errorResult.missingColumns = entry.missingColumns;
+      }
+      return errorResult;
     }
 
     const maxResults = normalizeLimit(limit, 5);
@@ -189,4 +249,3 @@ function createUipro(options = {}) {
 module.exports = {
   createUipro,
 };
-
