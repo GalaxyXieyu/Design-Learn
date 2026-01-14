@@ -12,6 +12,7 @@ const { createMcpHandler } = require('./mcp');
 const { createStorage } = require('./storage');
 const { createExtractionPipeline } = require('./pipeline');
 const { createPreviewPipeline } = require('./preview');
+const { createUipro } = require('./uipro');
 const { loadPlaywright } = require('./playwrightSupport');
 const { getConfigPath } = require('./storage/paths');
 const { readJson, writeJson } = require('./storage/fileStore');
@@ -22,6 +23,7 @@ const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
 const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
 
 const storage = createStorage({ dataDir });
+const uipro = createUipro({ dataDir });
 const extractionPipeline = createExtractionPipeline({ storage });
 const previewPipeline = createPreviewPipeline({ storage });
 
@@ -81,6 +83,7 @@ const mcpHandler = createMcpHandler({
   serverName: process.env.MCP_SERVER_NAME,
   serverVersion: process.env.MCP_SERVER_VERSION,
   authToken: process.env.MCP_AUTH_TOKEN,
+  uipro,
 });
 
 const routes = [
@@ -126,6 +129,10 @@ function handleRoot(req, res) {
       config: '/api/config',
       previews: '/api/previews',
       tasks: '/api/tasks',
+      uiproDomains: '/api/uipro/domains',
+      uiproStacks: '/api/uipro/stacks',
+      uiproSearch: '/api/uipro/search',
+      uiproSearchStack: '/api/uipro/search-stack',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -138,6 +145,60 @@ function handleHealth(req, res) {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
+}
+
+function handleUiproDomains(res) {
+  sendJson(res, 200, {
+    source: 'ui-ux-pro-max',
+    domains: uipro.domains,
+  });
+}
+
+function handleUiproStacks(res) {
+  sendJson(res, 200, {
+    source: 'ui-ux-pro-max',
+    stacks: uipro.stacks,
+  });
+}
+
+function handleUiproSearch(res, url) {
+  const query = url.searchParams.get('query') || url.searchParams.get('q') || '';
+  const domain = url.searchParams.get('domain') || undefined;
+  const limitRaw = url.searchParams.get('limit');
+  const limitParsed = limitRaw ? Number(limitRaw) : undefined;
+  const limit = Number.isFinite(limitParsed) ? limitParsed : 10;
+
+  let data;
+  try {
+    data = uipro.search({ query, domain, limit });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
+}
+
+function handleUiproSearchStack(res, url) {
+  const query = url.searchParams.get('query') || url.searchParams.get('q') || '';
+  const stack = url.searchParams.get('stack') || undefined;
+  const limitRaw = url.searchParams.get('limit');
+  const limitParsed = limitRaw ? Number(limitRaw) : undefined;
+  const limit = Number.isFinite(limitParsed) ? limitParsed : 10;
+
+  let data;
+  try {
+    data = uipro.searchStack({ query, stack, limit });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
 }
 
 const DEFAULT_CONFIG = {
@@ -978,6 +1039,34 @@ async function handleRequest(req, res) {
   if (pathname === '/api/snapshots') {
     if (req.method === 'GET') {
       return handleSnapshotsList(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/domains') {
+    if (req.method === 'GET') {
+      return handleUiproDomains(res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/stacks') {
+    if (req.method === 'GET') {
+      return handleUiproStacks(res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/search') {
+    if (req.method === 'GET') {
+      return handleUiproSearch(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/search-stack') {
+    if (req.method === 'GET') {
+      return handleUiproSearchStack(res, url);
     }
     return sendMethodNotAllowed(res);
   }

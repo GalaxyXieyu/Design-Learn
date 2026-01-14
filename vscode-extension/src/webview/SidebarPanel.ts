@@ -9,6 +9,7 @@ import { ModelService } from './services/modelService';
 import { PollingService } from './services/pollingService';
 import { ServerClient } from './services/serverClient';
 import { SnapshotService } from './services/snapshotService';
+import { UIProService } from './services/uiproService';
 
 export class SidebarPanel implements vscode.WebviewViewProvider {
   public static readonly viewType = 'designLearnSidebar';
@@ -22,6 +23,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     snapshotService: SnapshotService;
     modelService: ModelService;
     configService: ConfigService;
+    uiproService: UIProService;
   };
 
   constructor(extensionUri: vscode.Uri) {
@@ -69,6 +71,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
     const snapshotService = new SnapshotService(postMessage);
     const modelService = new ModelService(postMessage, serverClient);
     const configService = new ConfigService(postMessage);
+    const uiproService = new UIProService(serverClient, postMessage);
 
     this._services = {
       serverClient,
@@ -78,6 +81,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       snapshotService,
       modelService,
       configService,
+      uiproService,
     };
 
     const router = new MessageRouter({
@@ -90,6 +94,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
           modelService.loadModels();
           void designService.loadDesigns();
           configService.loadConfig();
+          void uiproService.loadMeta();
           void serverClient.checkServerStatus((connected, url) => {
             postMessage({ type: 'serverStatus', connected, url });
           });
@@ -122,6 +127,26 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       viewDesignHtml: (message) => designService.viewDesignHtml(message.designId),
       loadDesignSnapshots: (message) => designService.loadDesignSnapshots(message.designId),
       deleteDesign: (message) => designService.deleteDesign(message.designId),
+      loadUiproMeta: () => uiproService.loadMeta(),
+      searchUipro: (message) => uiproService.search(message.query || '', { domain: message.domain, limit: message.limit }),
+      searchUiproStack: (message) =>
+        uiproService.searchStack(message.query || '', message.stack || '', { limit: message.limit }),
+      openExternal: async (message) => {
+        const raw = typeof message?.url === 'string' ? message.url : '';
+        if (!raw) return;
+        try {
+          const parsed = vscode.Uri.parse(raw);
+          if (parsed.scheme !== 'http' && parsed.scheme !== 'https') return;
+          await vscode.env.openExternal(parsed);
+        } catch {
+          // ignore
+        }
+      },
+      copyText: async (message) => {
+        const text = typeof message?.text === 'string' ? message.text : '';
+        if (!text) return;
+        await vscode.env.clipboard.writeText(text);
+      },
       saveConfig: (message) => configService.saveConfig(message.config),
       startDesignPolling: () => pollingService.start(),
       stopDesignPolling: () => pollingService.stop(),
@@ -147,6 +172,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       'state/store.js',
       'ui/models.js',
       'ui/historyList.js',
+      'ui/uipro.js',
       'ui/settings.js',
       'ui/serverModal.js',
       'handlers/events.js',

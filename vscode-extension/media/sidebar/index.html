@@ -92,6 +92,30 @@
       </div>
       <div id="historyList" class="history-list"></div>
     </div>
+
+    <!-- UIPro 知识库 -->
+    <div class="uipro-section">
+      <div class="history-header">
+        <span class="history-title">
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4.5A2.5 2.5 0 016.5 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 22V2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          UIPro 知识库
+          <span class="panel-badge" id="uiproResultCount">0</span>
+        </span>
+      </div>
+      <div class="uipro-toolbar">
+        <input type="text" id="uiproQuery" class="history-search" placeholder="搜索 UIPro（回车）">
+        <div class="uipro-controls">
+          <select id="uiproMode" class="history-select">
+            <option value="domain">Domain</option>
+            <option value="stack">Stack</option>
+          </select>
+          <select id="uiproDomain" class="history-select"></select>
+          <select id="uiproStack" class="history-select uipro-hidden"></select>
+          <button id="uiproSearchBtn" class="uipro-btn" type="button">搜索</button>
+        </div>
+      </div>
+      <div id="uiproResults" class="uipro-results"></div>
+    </div>
   </div>
 
   <!-- 服务器配置模态框 -->

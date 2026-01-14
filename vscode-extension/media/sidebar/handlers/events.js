@@ -25,6 +25,43 @@
       }, true);
     }
 
+    const uiproQuery = getEl('uiproQuery');
+    const uiproMode = getEl('uiproMode');
+    const uiproDomain = getEl('uiproDomain');
+    const uiproStack = getEl('uiproStack');
+    const uiproSearchBtn = getEl('uiproSearchBtn');
+    const uiproResults = getEl('uiproResults');
+
+    if (uiproMode && app.ui.setUiproMode) {
+      uiproMode.addEventListener('change', () => app.ui.setUiproMode(uiproMode.value));
+    }
+
+    if (uiproDomain) {
+      uiproDomain.addEventListener('change', () => {
+        app.state.uipro.domain = uiproDomain.value || 'auto';
+      });
+    }
+
+    if (uiproStack) {
+      uiproStack.addEventListener('change', () => {
+        app.state.uipro.stack = uiproStack.value || '';
+      });
+    }
+
+    if (uiproSearchBtn && app.ui.uiproSearch) {
+      uiproSearchBtn.addEventListener('click', () => app.ui.uiproSearch());
+    }
+
+    if (uiproQuery && app.ui.uiproSearch) {
+      uiproQuery.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') app.ui.uiproSearch();
+      });
+    }
+
+    if (uiproResults && app.ui.handleUiproResultsClick) {
+      uiproResults.addEventListener('click', app.ui.handleUiproResultsClick);
+    }
+
     const analyzeBtn = getEl('analyzeBtn');
     if (analyzeBtn) {
       analyzeBtn.addEventListener('click', () => {

@@ -306,7 +306,7 @@ function createMcpHandler(options = {}) {
   const serverName = options.serverName || 'design-learn';
   const serverVersion = options.serverVersion || '0.1.0';
   const authToken = options.authToken || null;
-  const uipro = createUipro({ dataDir: storage.dataDir });
+  const uipro = options.uipro || createUipro({ dataDir: storage.dataDir });
   const server = createMcpServer({ name: serverName, version: serverVersion, storage, uipro });
   const transports = new Map();
 

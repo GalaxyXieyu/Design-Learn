@@ -43,6 +43,15 @@
       if (msg.type === 'designSnapshots') {
         app.ui.updateRouteList(msg.designId, msg.snapshots || []);
       }
+      if (msg.type === 'uiproMeta' && app.ui.updateUiproMeta) {
+        app.ui.updateUiproMeta(msg.domains || [], msg.stacks || []);
+      }
+      if (msg.type === 'uiproSearchResult' && app.ui.renderUiproSearchResult) {
+        app.ui.renderUiproSearchResult(msg.result);
+      }
+      if (msg.type === 'uiproSearchStackResult' && app.ui.renderUiproSearchStackResult) {
+        app.ui.renderUiproSearchStackResult(msg.result);
+      }
     });
   }
 

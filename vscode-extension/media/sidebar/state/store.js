@@ -9,7 +9,18 @@
     allDesigns: [],
     libraryItemsByKey: {},
     libraryGroupCollapsed: { processing: false, failed: false, completed: false },
-    batchTask: null
+    batchTask: null,
+    uipro: {
+      domains: [],
+      stacks: [],
+      mode: 'domain',
+      domain: 'auto',
+      stack: 'react',
+      query: '',
+      lastResult: null,
+      lastStackResult: null,
+      itemsByKey: {},
+    },
   };
 
   const routesByBaseUrl = new Map();

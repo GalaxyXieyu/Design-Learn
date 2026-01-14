@@ -231,3 +231,21 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .modal-icon-btn { width: 24px; height: 24px; border: none; border-radius: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .modal-icon-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
 .modal-icon-btn.delete:hover { background: #ef4444; color: white; }
+
+/* UIPro */
+.uipro-section { margin-top: 16px; }
+.uipro-toolbar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.uipro-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: center; }
+.uipro-btn { height: 30px; border: none; border-radius: 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); font-size: 11px; cursor: pointer; }
+.uipro-btn:hover { background: var(--vscode-button-hoverBackground); }
+.uipro-hidden { display: none !important; }
+.uipro-results { max-height: 240px; overflow-y: auto; }
+.uipro-empty { padding: 10px; text-align: center; color: var(--vscode-descriptionForeground); background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 10px; }
+.uipro-item { padding: 10px; border-radius: 10px; margin-bottom: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
+.uipro-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.uipro-item-meta { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+.uipro-item-summary { font-size: 10px; color: var(--vscode-descriptionForeground); line-height: 1.4; margin-bottom: 6px; }
+.uipro-item-summary div { margin-bottom: 2px; }
+.uipro-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.uipro-action { border: none; border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.uipro-action:hover { background: var(--vscode-button-secondaryHoverBackground); }
