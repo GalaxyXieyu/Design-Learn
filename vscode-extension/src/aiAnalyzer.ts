@@ -414,55 +414,106 @@ export class AIAnalyzer {
      */
     private async callAI(systemPrompt: string, userPrompt: string): Promise<string> {
         if (!this.config) {
-            throw new Error('AI 配置未加载');
+            throw new Error('AI 配置未加载，请在设置中配置 AI 模型（运行命令：Design-Learn: 配置 AI 模型）');
         }
 
         const endpoint = `${this.config.baseUrl}/chat/completions`;
+        const modelName = this.config.modelId || 'unknown';
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
-            },
-            body: JSON.stringify({
-                model: this.config.modelId,
-                messages: [
-                    {
-                        role: 'system',
-                        content: systemPrompt
-                    },
-                    {
-                        role: 'user',
-                        content: userPrompt
+        // 验证配置
+        if (!this.config.apiKey) {
+            throw new Error(`[AI 配置错误] API Key 未设置。请检查 VSCode 设置: designLearn.aiModels`);
+        }
+        if (!this.config.baseUrl) {
+            throw new Error(`[AI 配置错误] BaseURL 未设置。请检查 VSCode 设置: designLearn.aiModels`);
+        }
+        if (!this.config.modelId) {
+            throw new Error(`[AI 配置错误] Model ID 未设置。请检查 VSCode 设置: designLearn.selectedModel`);
+        }
+
+        let fetchError: string | null = null;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.config.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: this.config.modelId,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: userPrompt
+                        }
+                    ],
+                    max_tokens: this.config.maxTokens,
+                    temperature: this.config.temperature
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = 'AI 请求失败';
+                let errorDetails = '';
+
+                try {
+                    const errorData = JSON.parse(errorText) as { error?: { message?: string; type?: string }; message?: string; type?: string };
+                    errorMsg = errorData.error?.message || errorData.message || errorMsg;
+                    errorDetails = errorData.error?.type || errorData.type || '';
+                } catch {
+                    if (errorText) {
+                        errorMsg = errorText.substring(0, 500);
                     }
-                ],
-                max_tokens: this.config.maxTokens,
-                temperature: this.config.temperature
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMsg = 'AI 请求失败';
-            try {
-                const errorData = JSON.parse(errorText) as { error?: { message?: string }; message?: string };
-                errorMsg = errorData.error?.message || errorData.message || errorMsg;
-            } catch {
-                if (errorText) {
-                    errorMsg = errorText;
                 }
-            }
-            throw new Error(errorMsg);
-        }
 
-        const data = await response.json() as {
-            choices?: Array<{ message?: { content?: string } }>;
-        };
-        const content = data?.choices?.[0]?.message?.content;
-        if (!content) {
-            throw new Error('AI 响应为空');
+                // 构建详细错误信息
+                const detailedError = [
+                    `[AI API 错误]`,
+                    `状态码: ${response.status} ${response.statusText}`,
+                    `模型: ${modelName}`,
+                    `Endpoint: ${endpoint}`,
+                    errorDetails ? `错误类型: ${errorDetails}` : '',
+                    `错误信息: ${errorMsg}`
+                ].filter(Boolean).join('\n');
+
+                throw new Error(detailedError);
+            }
+
+            const data = await response.json() as {
+                choices?: Array<{ message?: { content?: string } }>;
+            };
+            const content = data?.choices?.[0]?.message?.content;
+            if (!content) {
+                throw new Error(`[AI 响应错误] 模型返回内容为空。请尝试更换模型或调整 maxTokens 设置。`);
+            }
+            return content;
+        } catch (err: any) {
+            // 区分网络错误和 API 错误
+            if (err.message.includes('Failed to fetch') || err.message.includes('fetch failed') || err.message.includes('network')) {
+                fetchError = [
+                    `[AI 网络错误] 无法连接到 AI 服务`,
+                    ``,
+                    `可能的原因:`,
+                    `1. 网络连接问题，请检查网络`,
+                    `2. VPN/代理阻断，请确保 VPN 正常工作`,
+                    `3. AI 服务地址 ${this.config.baseUrl} 无法访问`,
+                    `4. BaseURL 配置错误（当前: ${this.config.baseUrl}）`,
+                    `5. CORS 限制，请确认 AI 服务支持跨域请求`,
+                    ``,
+                    `建议:`,
+                    `- 手动测试: curl -X POST "${endpoint}" -H "Authorization: Bearer YOUR_KEY"`,
+                    `- 检查 AI 模型配置是否正确`,
+                    `- 尝试使用其他网络环境`
+                ].join('\n');
+                throw new Error(fetchError);
+            }
+            throw err;
         }
-        return content;
     }
 }
