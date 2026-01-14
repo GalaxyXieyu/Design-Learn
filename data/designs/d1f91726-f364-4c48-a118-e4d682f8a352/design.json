@@ -1,0 +1,32 @@
+{
+  "id": "d1f91726-f364-4c48-a118-e4d682f8a352",
+  "name": "www.trae.ai",
+  "url": "https://www.trae.ai/",
+  "source": "script",
+  "category": "",
+  "description": "",
+  "thumbnail": "",
+  "stats": {
+    "components": 0,
+    "versions": 1,
+    "lastAnalyzedAt": null
+  },
+  "metadata": {
+    "extractedFrom": "playwright",
+    "processingStatus": "analyzing",
+    "processingStartedAt": "2026-01-14T12:33:24.561Z",
+    "processingError": null,
+    "aiRequested": true,
+    "aiCompleted": false,
+    "tags": [],
+    "extractorVersion": "",
+    "processingJobId": "ff640e31-5202-473c-983f-2285904af870",
+    "processingUpdatedAt": "2026-01-14T12:33:28.244Z",
+    "processingMessage": "ai_analyzing",
+    "processingProgress": 90,
+    "lastImportAt": "2026-01-14T12:33:28.244Z",
+    "lastImportVersionId": "aaabce43-a9e8-457c-b29c-008963a68a5e"
+  },
+  "createdAt": "2026-01-14T12:33:24.562Z",
+  "updatedAt": "2026-01-14T12:33:28.843Z"
+}

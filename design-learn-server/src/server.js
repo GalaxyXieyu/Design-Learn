@@ -133,6 +133,10 @@ function handleRoot(req, res) {
       uiproStacks: '/api/uipro/stacks',
       uiproSearch: '/api/uipro/search',
       uiproSearchStack: '/api/uipro/search-stack',
+      uiproBrowse: '/api/uipro/browse',
+      uiproSuggest: '/api/uipro/suggest',
+      uiproBrowseStack: '/api/uipro/browse-stack',
+      uiproSuggestStack: '/api/uipro/suggest-stack',
       mcp: '/mcp',
       ws: '/ws',
     },
@@ -191,6 +195,76 @@ function handleUiproSearchStack(res, url) {
   let data;
   try {
     data = uipro.searchStack({ query, stack, limit });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
+}
+
+function handleUiproBrowse(res, url) {
+  const domain = url.searchParams.get('domain') || undefined;
+  const { limit, offset } = parseLimitOffset(url);
+
+  let data;
+  try {
+    data = uipro.browse({ domain, limit, offset });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
+}
+
+function handleUiproSuggest(res, url) {
+  const domain = url.searchParams.get('domain') || undefined;
+  const limitRaw = Number(url.searchParams.get('limit'));
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20;
+
+  let data;
+  try {
+    data = uipro.suggest({ domain, limit });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
+}
+
+function handleUiproBrowseStack(res, url) {
+  const stack = url.searchParams.get('stack') || undefined;
+  const { limit, offset } = parseLimitOffset(url);
+
+  let data;
+  try {
+    data = uipro.browseStack({ stack, limit, offset });
+  } catch {
+    data = {
+      error: 'uipro_data_unavailable',
+      hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+    };
+  }
+
+  sendJson(res, 200, data);
+}
+
+function handleUiproSuggestStack(res, url) {
+  const stack = url.searchParams.get('stack') || undefined;
+  const limitRaw = Number(url.searchParams.get('limit'));
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20;
+
+  let data;
+  try {
+    data = uipro.suggestStack({ stack, limit });
   } catch {
     data = {
       error: 'uipro_data_unavailable',
@@ -1067,6 +1141,34 @@ async function handleRequest(req, res) {
   if (pathname === '/api/uipro/search-stack') {
     if (req.method === 'GET') {
       return handleUiproSearchStack(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/browse') {
+    if (req.method === 'GET') {
+      return handleUiproBrowse(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/suggest') {
+    if (req.method === 'GET') {
+      return handleUiproSuggest(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/browse-stack') {
+    if (req.method === 'GET') {
+      return handleUiproBrowseStack(res, url);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname === '/api/uipro/suggest-stack') {
+    if (req.method === 'GET') {
+      return handleUiproSuggestStack(res, url);
     }
     return sendMethodNotAllowed(res);
   }

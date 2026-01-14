@@ -25,10 +25,20 @@ const tools = {
   },
   search_library: {
     title: 'Search Library',
-    description: 'Search both local designs and the built-in UI/UX Pro dataset by query.',
+    description:
+      'One-shot smart search across local templates (captured designs) + built-in UIPro guidelines. Use this when the user asks for a style/pattern/component/UX guideline or "a template like X". Domain is auto-detected unless specified; provide stack only when the user requests a specific tech stack (e.g. html-tailwind/react).',
     inputSchema: {
       query: z.string().min(1),
-      limit: z.number().min(1).max(100).optional(),
+      sources: z.array(z.enum(['designs', 'uipro', 'uipro_stack'])).optional(),
+      domain: z
+        .union([
+          z.literal('auto'),
+          z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+        ])
+        .optional(),
+      stack: z.string().min(1).optional(),
+      limit: z.number().min(1).max(50).optional(),
+      designLimit: z.number().min(1).max(100).optional(),
     },
   },
   get_styleguide: {
@@ -54,16 +64,9 @@ const tools = {
     inputSchema: {
       query: z.string(),
       domain: z
-        .enum([
-          'style',
-          'prompt',
-          'color',
-          'chart',
-          'landing',
-          'product',
-          'ux',
-          'typography',
-          'icons',
+        .union([
+          z.literal('auto'),
+          z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
         ])
         .optional(),
       limit: z.number().min(1).max(20).optional(),
@@ -74,20 +77,52 @@ const tools = {
     description: 'Search stack-specific UI/UX Pro Max guidelines (BM25).',
     inputSchema: {
       query: z.string(),
-      stack: z.enum([
-        'html-tailwind',
-        'react',
-        'nextjs',
-        'vue',
-        'nuxtjs',
-        'nuxt-ui',
-        'svelte',
-        'swiftui',
-        'react-native',
-        'flutter',
-        'shadcn',
-      ]),
+      stack: z.string().min(1),
       limit: z.number().min(1).max(20).optional(),
+    },
+  },
+  browse_uipro: {
+    title: 'Browse UI/UX Pro',
+    description: 'Browse UIPro entries without a query (useful to explore what can be searched).',
+    inputSchema: {
+      domain: z
+        .union([
+          z.literal('auto'),
+          z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+        ])
+        .optional(),
+      limit: z.number().min(1).max(50).optional(),
+      offset: z.number().min(0).max(100000).optional(),
+    },
+  },
+  suggest_uipro: {
+    title: 'Suggest UI/UX Pro Keywords',
+    description: 'Suggest common keywords for a UIPro domain to help you pick what to search.',
+    inputSchema: {
+      domain: z
+        .union([
+          z.literal('auto'),
+          z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+        ])
+        .optional(),
+      limit: z.number().min(1).max(50).optional(),
+    },
+  },
+  browse_uipro_stack: {
+    title: 'Browse UI/UX Pro Stack',
+    description: 'Browse stack-specific UIPro guidelines without a query.',
+    inputSchema: {
+      stack: z.string().min(1),
+      limit: z.number().min(1).max(50).optional(),
+      offset: z.number().min(0).max(100000).optional(),
+    },
+  },
+  suggest_uipro_stack: {
+    title: 'Suggest UI/UX Pro Stack Keywords',
+    description: 'Suggest common keywords for a UIPro stack (html-tailwind/react/...).',
+    inputSchema: {
+      stack: z.string().min(1),
+      limit: z.number().min(1).max(50).optional(),
     },
   },
 };
@@ -133,19 +168,69 @@ function createToolHandlers(storage, uipro) {
         structuredContent: { designs: data },
       };
     },
-    search_library: async ({ query, limit }) => {
-      const matches = matchDesigns(query);
-      const designs = typeof limit === 'number' ? matches.slice(0, limit) : matches;
-      let uiproResult;
-      try {
-        uiproResult = uipro.search({ query, limit });
-      } catch {
-        uiproResult = {
-          error: 'uipro_data_unavailable',
-          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
-        };
+    search_library: async ({ query, sources, domain, stack, limit, designLimit }) => {
+      const effectiveSources = Array.isArray(sources) && sources.length > 0 ? sources : ['designs', 'uipro'];
+      const designs =
+        effectiveSources.includes('designs')
+          ? (() => {
+              const matches = matchDesigns(query);
+              const max = typeof designLimit === 'number' ? designLimit : typeof limit === 'number' ? limit : undefined;
+              return typeof max === 'number' ? matches.slice(0, max) : matches;
+            })()
+          : [];
+
+      const resolvedDomain = domain === 'auto' ? undefined : domain;
+      const maxUipro = typeof limit === 'number' ? limit : 10;
+
+      let uiproResult = null;
+      if (effectiveSources.includes('uipro')) {
+        try {
+          uiproResult = uipro.search({ query, domain: resolvedDomain, limit: maxUipro });
+        } catch {
+          uiproResult = {
+            error: 'uipro_data_unavailable',
+            hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+          };
+        }
       }
-      const data = { designs, uipro: uiproResult };
+
+      let uiproStackResult = null;
+      if (effectiveSources.includes('uipro_stack') && typeof stack === 'string' && stack.trim()) {
+        try {
+          uiproStackResult = uipro.searchStack({ query, stack: stack.trim(), limit: maxUipro });
+        } catch {
+          uiproStackResult = {
+            error: 'uipro_data_unavailable',
+            hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+          };
+        }
+      }
+
+      const items = [];
+      for (const d of designs) {
+        items.push({
+          source: 'design',
+          id: d.id,
+          name: d.name,
+          url: d.url,
+          updatedAt: d.updatedAt || d.createdAt || null,
+        });
+      }
+      if (uiproResult && !uiproResult.error && Array.isArray(uiproResult.results)) {
+        uiproResult.results.forEach((row) => items.push({ source: 'uipro', domain: uiproResult.domain, row }));
+      }
+      if (uiproStackResult && !uiproStackResult.error && Array.isArray(uiproStackResult.results)) {
+        uiproStackResult.results.forEach((row) => items.push({ source: 'uipro_stack', stack: uiproStackResult.stack, row }));
+      }
+
+      const data = {
+        query,
+        sources: effectiveSources,
+        designs,
+        uipro: uiproResult,
+        uiproStack: uiproStackResult,
+        items,
+      };
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
         structuredContent: data,
@@ -193,7 +278,7 @@ function createToolHandlers(storage, uipro) {
     search_uipro: async ({ query, domain, limit }) => {
       let data;
       try {
-        data = uipro.search({ query, domain, limit });
+        data = uipro.search({ query, domain: domain === 'auto' ? undefined : domain, limit });
       } catch {
         data = {
           error: 'uipro_data_unavailable',
@@ -209,6 +294,66 @@ function createToolHandlers(storage, uipro) {
       let data;
       try {
         data = uipro.searchStack({ query, stack, limit });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    browse_uipro: async ({ domain, limit, offset }) => {
+      let data;
+      try {
+        data = uipro.browse({ domain: domain === 'auto' ? undefined : domain, limit, offset });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    suggest_uipro: async ({ domain, limit }) => {
+      let data;
+      try {
+        data = uipro.suggest({ domain: domain === 'auto' ? undefined : domain, limit });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    browse_uipro_stack: async ({ stack, limit, offset }) => {
+      let data;
+      try {
+        data = uipro.browseStack({ stack, limit, offset });
+      } catch {
+        data = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+    suggest_uipro_stack: async ({ stack, limit }) => {
+      let data;
+      try {
+        data = uipro.suggestStack({ stack, limit });
       } catch {
         data = {
           error: 'uipro_data_unavailable',

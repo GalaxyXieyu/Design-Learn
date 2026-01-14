@@ -119,24 +119,76 @@ server.tool(
 
 server.tool(
   'search_library',
-  'Search both local designs and the built-in UI/UX Pro dataset by query.',
+  'One-shot smart search across local templates (captured designs) + built-in UIPro guidelines. Use this when the user asks for a style/pattern/component/UX guideline or "a template like X". Domain is auto-detected unless specified; provide stack only when the user requests a specific tech stack (e.g. html-tailwind/react).',
   {
     query: z.string().min(1),
-    limit: z.number().min(1).max(100).optional(),
+    sources: z.array(z.enum(['designs', 'uipro', 'uipro_stack'])).optional(),
+    domain: z
+      .union([
+        z.literal('auto'),
+        z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+      ])
+      .optional(),
+    stack: z.string().min(1).optional(),
+    limit: z.number().min(1).max(50).optional(),
+    designLimit: z.number().min(1).max(100).optional(),
   },
-  async ({ query, limit }) => {
-    const matches = matchDesigns(query);
-    const designs = typeof limit === 'number' ? matches.slice(0, limit) : matches;
-    let uiproResult;
-    try {
-      uiproResult = uipro.search({ query, limit });
-    } catch {
-      uiproResult = {
-        error: 'uipro_data_unavailable',
-        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
-      };
+  async ({ query, sources, domain, stack, limit, designLimit }) => {
+    const effectiveSources = Array.isArray(sources) && sources.length > 0 ? sources : ['designs', 'uipro'];
+    const designs =
+      effectiveSources.includes('designs')
+        ? (() => {
+            const matches = matchDesigns(query);
+            const max = typeof designLimit === 'number' ? designLimit : typeof limit === 'number' ? limit : undefined;
+            return typeof max === 'number' ? matches.slice(0, max) : matches;
+          })()
+        : [];
+
+    const resolvedDomain = domain === 'auto' ? undefined : domain;
+    const maxUipro = typeof limit === 'number' ? limit : 10;
+
+    let uiproResult = null;
+    if (effectiveSources.includes('uipro')) {
+      try {
+        uiproResult = uipro.search({ query, domain: resolvedDomain, limit: maxUipro });
+      } catch {
+        uiproResult = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
     }
-    const data = { designs, uipro: uiproResult };
+
+    let uiproStackResult = null;
+    if (effectiveSources.includes('uipro_stack') && typeof stack === 'string' && stack.trim()) {
+      try {
+        uiproStackResult = uipro.searchStack({ query, stack: stack.trim(), limit: maxUipro });
+      } catch {
+        uiproStackResult = {
+          error: 'uipro_data_unavailable',
+          hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+        };
+      }
+    }
+
+    const items = [];
+    for (const d of designs) {
+      items.push({
+        source: 'design',
+        id: d.id,
+        name: d.name,
+        url: d.url,
+        updatedAt: d.updatedAt || d.createdAt || null,
+      });
+    }
+    if (uiproResult && !uiproResult.error && Array.isArray(uiproResult.results)) {
+      uiproResult.results.forEach((row) => items.push({ source: 'uipro', domain: uiproResult.domain, row }));
+    }
+    if (uiproStackResult && !uiproStackResult.error && Array.isArray(uiproStackResult.results)) {
+      uiproStackResult.results.forEach((row) => items.push({ source: 'uipro_stack', stack: uiproStackResult.stack, row }));
+    }
+
+    const data = { query, sources: effectiveSources, designs, uipro: uiproResult, uiproStack: uiproStackResult, items };
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
       structuredContent: data,
@@ -196,14 +248,17 @@ server.tool(
   {
     query: z.string(),
     domain: z
-      .enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons'])
+      .union([
+        z.literal('auto'),
+        z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+      ])
       .optional(),
     limit: z.number().min(1).max(20).optional(),
   },
   async ({ query, domain, limit }) => {
     let data;
     try {
-      data = uipro.search({ query, domain, limit });
+      data = uipro.search({ query, domain: domain === 'auto' ? undefined : domain, limit });
     } catch {
       data = {
         error: 'uipro_data_unavailable',
@@ -222,25 +277,121 @@ server.tool(
   'Search stack-specific UI/UX Pro Max guidelines (BM25).',
   {
     query: z.string(),
-    stack: z.enum([
-      'html-tailwind',
-      'react',
-      'nextjs',
-      'vue',
-      'nuxtjs',
-      'nuxt-ui',
-      'svelte',
-      'swiftui',
-      'react-native',
-      'flutter',
-      'shadcn',
-    ]),
+    stack: z.string().min(1),
     limit: z.number().min(1).max(20).optional(),
   },
   async ({ query, stack, limit }) => {
     let data;
     try {
       data = uipro.searchStack({ query, stack, limit });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.tool(
+  'browse_uipro',
+  'Browse UIPro entries without a query (useful to explore what can be searched).',
+  {
+    domain: z
+      .union([
+        z.literal('auto'),
+        z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+      ])
+      .optional(),
+    limit: z.number().min(1).max(50).optional(),
+    offset: z.number().min(0).max(100000).optional(),
+  },
+  async ({ domain, limit, offset }) => {
+    let data;
+    try {
+      data = uipro.browse({ domain: domain === 'auto' ? undefined : domain, limit, offset });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.tool(
+  'suggest_uipro',
+  'Suggest common keywords for a UIPro domain to help you pick what to search.',
+  {
+    domain: z
+      .union([
+        z.literal('auto'),
+        z.enum(['style', 'prompt', 'color', 'chart', 'landing', 'product', 'ux', 'typography', 'icons']),
+      ])
+      .optional(),
+    limit: z.number().min(1).max(50).optional(),
+  },
+  async ({ domain, limit }) => {
+    let data;
+    try {
+      data = uipro.suggest({ domain: domain === 'auto' ? undefined : domain, limit });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.tool(
+  'browse_uipro_stack',
+  'Browse stack-specific UIPro guidelines without a query.',
+  {
+    stack: z.string().min(1),
+    limit: z.number().min(1).max(50).optional(),
+    offset: z.number().min(0).max(100000).optional(),
+  },
+  async ({ stack, limit, offset }) => {
+    let data;
+    try {
+      data = uipro.browseStack({ stack, limit, offset });
+    } catch {
+      data = {
+        error: 'uipro_data_unavailable',
+        hint: 'Check DESIGN_LEARN_UIPRO_DATA_DIR or built-in dataset integrity.',
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.tool(
+  'suggest_uipro_stack',
+  'Suggest common keywords for a UIPro stack (html-tailwind/react/...).',
+  {
+    stack: z.string().min(1),
+    limit: z.number().min(1).max(50).optional(),
+  },
+  async ({ stack, limit }) => {
+    let data;
+    try {
+      data = uipro.suggestStack({ stack, limit });
     } catch {
       data = {
         error: 'uipro_data_unavailable',

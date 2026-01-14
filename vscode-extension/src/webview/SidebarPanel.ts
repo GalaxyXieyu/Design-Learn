@@ -15,6 +15,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
   public static readonly viewType = 'designLearnSidebar';
   private _view?: vscode.WebviewView;
   private readonly _extensionUri: vscode.Uri;
+  private readonly _cacheBuster: string;
   private _services?: {
     serverClient: ServerClient;
     pollingService: PollingService;
@@ -28,6 +29,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
   constructor(extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
+    this._cacheBuster = Date.now().toString(36);
   }
 
   public refresh() {
@@ -131,6 +133,11 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       searchUipro: (message) => uiproService.search(message.query || '', { domain: message.domain, limit: message.limit }),
       searchUiproStack: (message) =>
         uiproService.searchStack(message.query || '', message.stack || '', { limit: message.limit }),
+      browseUipro: (message) => uiproService.browse({ domain: message.domain, limit: message.limit, offset: message.offset }),
+      suggestUipro: (message) => uiproService.suggest({ domain: message.domain, limit: message.limit }),
+      browseUiproStack: (message) =>
+        uiproService.browseStack(message.stack || '', { limit: message.limit, offset: message.offset }),
+      suggestUiproStack: (message) => uiproService.suggestStack(message.stack || '', { limit: message.limit }),
       openExternal: async (message) => {
         const raw = typeof message?.url === 'string' ? message.url : '';
         if (!raw) return;
@@ -163,7 +170,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const mediaPath = vscode.Uri.joinPath(this._extensionUri, 'media', 'sidebar');
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, 'styles.css'));
+    const styleUri = webview
+      .asWebviewUri(vscode.Uri.joinPath(mediaPath, 'styles.css'))
+      .with({ query: `v=${this._cacheBuster}` });
     const htmlPath = vscode.Uri.joinPath(mediaPath, 'index.html').fsPath;
     const scriptFiles = [
       'utils/url.js',
@@ -172,7 +181,6 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       'state/store.js',
       'ui/models.js',
       'ui/historyList.js',
-      'ui/uipro.js',
       'ui/settings.js',
       'ui/serverModal.js',
       'handlers/events.js',
@@ -182,7 +190,9 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
 
     const scripts = scriptFiles
       .map((file) => {
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, file));
+        const scriptUri = webview
+          .asWebviewUri(vscode.Uri.joinPath(mediaPath, file))
+          .with({ query: `v=${this._cacheBuster}` });
         return `<script src="${scriptUri}"></script>`;
       })
       .join('\n');

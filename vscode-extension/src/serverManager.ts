@@ -28,10 +28,21 @@ export class ServerManager implements vscode.Disposable {
       return;
     }
 
-    const { entry, cwd, port, nodePath } = serverConfig;
+    const { entry, cwd, port, nodePath, dataDir } = serverConfig;
     const env = { ...process.env };
     if (port) {
       env.PORT = String(port);
+    }
+    // 默认优先使用工作区 data/（若存在），避免“模板库为空”（数据落在 ~/.design-learn/data）
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspaceRoot = workspaceFolder?.uri.fsPath;
+    const defaultWorkspaceDataDir = workspaceRoot ? path.join(workspaceRoot, 'data') : '';
+    const resolvedDataDir =
+      typeof dataDir === 'string' && dataDir.trim()
+        ? dataDir.replace('${workspaceFolder}', workspaceRoot || '').trim()
+        : (defaultWorkspaceDataDir && fs.existsSync(defaultWorkspaceDataDir) ? defaultWorkspaceDataDir : '');
+    if (resolvedDataDir) {
+      env.DESIGN_LEARN_DATA_DIR = resolvedDataDir;
     }
 
     const preferredNode =
@@ -148,7 +159,7 @@ export class ServerManager implements vscode.Disposable {
       : '$(debug-stop) Design-Learn Server: Stopped';
   }
 
-  private getServerConfig(): { entry: string; cwd: string; port?: number; nodePath?: string } | null {
+  private getServerConfig(): { entry: string; cwd: string; port?: number; nodePath?: string; dataDir?: string } | null {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
       vscode.window.showWarningMessage('请先打开一个工作区以启动 Design-Learn 服务。');
@@ -173,7 +184,8 @@ export class ServerManager implements vscode.Disposable {
       entry,
       cwd: fs.existsSync(cwd) ? cwd : path.dirname(entry),
       port: serverConfig.port,
-      nodePath: serverConfig.nodePath
+      nodePath: serverConfig.nodePath,
+      dataDir: serverConfig.dataDir
     };
   }
 }

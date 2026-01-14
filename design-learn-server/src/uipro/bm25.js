@@ -16,8 +16,33 @@ class BM25 {
   tokenize(text) {
     const normalized = String(text ?? '')
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ');
-    return normalized.split(/\s+/).filter((word) => word.length > 2);
+      // 保留 Unicode 字母/数字 + 空白，避免中文被直接清空
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .trim();
+
+    if (!normalized) return [];
+
+    const tokens = [];
+    for (const raw of normalized.split(/\s+/)) {
+      if (!raw) continue;
+
+      // CJK 词：拆成 2-gram，提升“按钮/表单”等短词的可用性
+      if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(raw)) {
+        if (raw.length === 1) {
+          tokens.push(raw);
+          continue;
+        }
+        for (let i = 0; i < raw.length - 1; i += 1) {
+          tokens.push(raw.slice(i, i + 2));
+        }
+        continue;
+      }
+
+      // 英文/数字：允许 2 字符（如 ui/ux/cta）
+      if (raw.length >= 2) tokens.push(raw);
+    }
+
+    return tokens;
   }
 
   fit(documents) {
@@ -94,4 +119,3 @@ class BM25 {
 module.exports = {
   BM25,
 };
-

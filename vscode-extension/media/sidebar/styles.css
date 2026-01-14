@@ -43,14 +43,22 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .history-section { margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .history-header { display: flex; align-items: center; margin-bottom: 8px; }
 .history-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-.history-toolbar { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "search search" "filter sort"; gap: 6px; margin-bottom: 8px; align-items: center; }
+.history-toolbar { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .history-search { grid-area: search; width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 8px; color: var(--vscode-input-foreground); font-size: 11px; }
 #historyFilter { grid-area: filter; }
 #historySort { grid-area: sort; }
 .history-select { width: 100%; min-width: 0; height: 30px; padding: 0 8px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 8px; color: var(--vscode-dropdown-foreground); font-size: 11px; }
-@media (min-width: 420px) {
-  .history-toolbar { grid-template-columns: 1fr 120px 120px; grid-template-areas: "search filter sort"; }
-}
+/* 模板库（整合 UIPro） */
+.library-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+.library-row .history-search { flex: 1; min-width: 60px; width: auto; }
+.library-btn { height: 30px; border: none; border-radius: 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); font-size: 11px; cursor: pointer; padding: 0 12px; flex-shrink: 0; font-weight: 500; }
+.library-btn:hover { background: var(--vscode-button-hoverBackground); }
+.library-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.library-controls .history-select { width: auto; flex: 1 1 120px; min-width: 0; }
+.library-hidden { display: none !important; }
+.library-suggest { display: flex; gap: 6px; flex-wrap: wrap; }
+.library-chip { border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); color: var(--vscode-foreground); border-radius: 999px; padding: 3px 8px; font-size: 10px; cursor: pointer; }
+.library-chip:hover { background: var(--vscode-button-secondaryHoverBackground); }
 .history-list { flex: 1; overflow-y: auto; }
 .history-item { padding: 10px; border-radius: 10px; margin-bottom: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); cursor: pointer; }
 .history-item:hover { background: var(--vscode-list-hoverBackground); }
@@ -231,21 +239,3 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .modal-icon-btn { width: 24px; height: 24px; border: none; border-radius: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .modal-icon-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
 .modal-icon-btn.delete:hover { background: #ef4444; color: white; }
-
-/* UIPro */
-.uipro-section { margin-top: 16px; }
-.uipro-toolbar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.uipro-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: center; }
-.uipro-btn { height: 30px; border: none; border-radius: 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); font-size: 11px; cursor: pointer; }
-.uipro-btn:hover { background: var(--vscode-button-hoverBackground); }
-.uipro-hidden { display: none !important; }
-.uipro-results { max-height: 240px; overflow-y: auto; }
-.uipro-empty { padding: 10px; text-align: center; color: var(--vscode-descriptionForeground); background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 10px; }
-.uipro-item { padding: 10px; border-radius: 10px; margin-bottom: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
-.uipro-item-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.uipro-item-meta { font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
-.uipro-item-summary { font-size: 10px; color: var(--vscode-descriptionForeground); line-height: 1.4; margin-bottom: 6px; }
-.uipro-item-summary div { margin-bottom: 2px; }
-.uipro-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.uipro-action { border: none; border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-.uipro-action:hover { background: var(--vscode-button-secondaryHoverBackground); }

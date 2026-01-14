@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="zh-CN" class="cc--elegant-black">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Design-Learn：一键提取网页设计语言（颜色/字体/间距/组件），生成设计规范，并通过 MCP 让 AI 生成风格一致的前端界面。"
+    />
+    <meta name="color-scheme" content="dark" />
+    <title>Design-Learn — 让 AI 写出好看的前端界面</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        color-scheme: dark;
+
+        --Primary: #fe2c55;
+        --Negative: #ff4c3a;
+        --NegativeAlt: #fe3824;
+
+        --BGPrimary: #0b0c0f;
+        --BGSecondary: #10121a;
+        --BGInput2: #161826;
+        --BGGlass: rgba(255, 255, 255, 0.03);
+
+        --TextPrimary: rgba(255, 255, 255, 0.92);
+        --TextSecondary: rgba(255, 255, 255, 0.72);
+        --TextQuaternary: rgba(255, 255, 255, 0.55);
+
+        --LineSecondary2: rgba(255, 255, 255, 0.12);
+        --LineInput: rgba(255, 255, 255, 0.18);
+
+        --Shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+        --Radius: 4px;
+        --Container: 1120px;
+        --G: 4px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      [id] {
+        scroll-margin-top: 92px;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Inter 18pt", -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        letter-spacing: 0.1px;
+        color: var(--TextPrimary);
+        background: radial-gradient(1200px 700px at 18% 6%, rgba(254, 44, 85, 0.12), transparent 55%),
+          radial-gradient(900px 520px at 86% 10%, rgba(255, 76, 58, 0.09), transparent 55%),
+          radial-gradient(900px 520px at 70% 92%, rgba(180, 120, 255, 0.08), transparent 62%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 32%), var(--BGPrimary);
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.08;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      code,
+      pre {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+      }
+
+      .container {
+        width: min(var(--Container), calc(100% - 8 * var(--G)));
+        margin-inline: auto;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(14px);
+        background: rgba(11, 12, 15, 0.55);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .topbar .container {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: calc(4 * var(--G));
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(2 * var(--G));
+        min-width: 180px;
+      }
+
+      .brand__dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 99px;
+        background: var(--Primary);
+        box-shadow: 0 0 0 4px rgba(254, 44, 85, 0.12);
+      }
+
+      .brand__name {
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+
+      .nav {
+        display: flex;
+        gap: calc(4 * var(--G));
+        align-items: center;
+        color: var(--TextSecondary);
+        font-size: 14px;
+      }
+
+      .nav a {
+        padding: calc(2 * var(--G)) calc(3 * var(--G));
+        border-radius: var(--Radius);
+      }
+
+      .nav a:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .actions {
+        display: flex;
+        gap: calc(2 * var(--G));
+        align-items: center;
+      }
+
+      .btn {
+        border: 1px solid var(--LineSecondary2);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--TextPrimary);
+        border-radius: var(--Radius);
+        padding: calc(3 * var(--G)) calc(4 * var(--G));
+        font-size: 14px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: calc(2 * var(--G));
+        transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+        user-select: none;
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid rgba(254, 44, 85, 0.55);
+        outline-offset: 2px;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .btn--primary {
+        border-color: rgba(254, 44, 85, 0.38);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+          var(--Primary);
+        color: #fff;
+      }
+
+      .btn--primary:hover {
+        border-color: rgba(254, 44, 85, 0.52);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0)) , var(--Primary);
+      }
+
+      .hero {
+        padding: calc(18 * var(--G)) 0 calc(12 * var(--G));
+      }
+
+      .hero__grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: calc(8 * var(--G));
+        align-items: start;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(2 * var(--G));
+        color: var(--TextSecondary);
+        font-size: 13px;
+        padding: calc(2 * var(--G)) calc(3 * var(--G));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .kicker__pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: var(--Primary);
+        box-shadow: 0 0 0 6px rgba(254, 44, 85, 0.12);
+      }
+
+      h1 {
+        margin: calc(6 * var(--G)) 0 calc(4 * var(--G));
+        font-size: 44px;
+        line-height: 1.08;
+        letter-spacing: -0.8px;
+      }
+
+      .lead {
+        margin: 0;
+        color: var(--TextSecondary);
+        max-width: 62ch;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(2 * var(--G));
+        margin-top: calc(6 * var(--G));
+      }
+
+      .badge {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
+        color: rgba(255, 255, 255, 0.82);
+        border-radius: 999px;
+        padding: calc(2 * var(--G)) calc(3 * var(--G));
+        font-size: 12px;
+      }
+
+      .cta {
+        display: flex;
+        gap: calc(3 * var(--G));
+        margin-top: calc(7 * var(--G));
+        flex-wrap: wrap;
+      }
+
+      .panel {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+        border-radius: var(--Radius);
+        box-shadow: var(--Shadow);
+        overflow: hidden;
+      }
+
+      .terminal__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(3 * var(--G)) calc(4 * var(--G));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .terminal__dots {
+        display: flex;
+        gap: calc(1.5 * var(--G));
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      .dot--red {
+        background: rgba(255, 76, 58, 0.85);
+      }
+
+      .dot--yellow {
+        background: rgba(255, 196, 64, 0.85);
+      }
+
+      .dot--green {
+        background: rgba(50, 215, 75, 0.85);
+      }
+
+      .terminal__title {
+        font-size: 12px;
+        color: var(--TextQuaternary);
+      }
+
+      .terminal pre {
+        margin: 0;
+        padding: calc(5 * var(--G));
+        background: rgba(0, 0, 0, 0.35);
+        border-top: 1px solid rgba(0, 0, 0, 0.18);
+        overflow: auto;
+      }
+
+      .terminal code {
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .section {
+        padding: calc(12 * var(--G)) 0;
+      }
+
+      .section__head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: calc(6 * var(--G));
+        margin-bottom: calc(6 * var(--G));
+      }
+
+      .section h2 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.2;
+        letter-spacing: -0.3px;
+      }
+
+      .section p {
+        margin: calc(3 * var(--G)) 0 0;
+        color: var(--TextSecondary);
+        max-width: 86ch;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: calc(6 * var(--G));
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: calc(5 * var(--G));
+      }
+
+      .card {
+        border: 1px solid var(--LineSecondary2);
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: var(--Radius);
+        padding: calc(6 * var(--G));
+        overflow: hidden;
+        position: relative;
+      }
+
+      .card::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: var(--Radius);
+        pointer-events: none;
+        background: radial-gradient(560px 220px at 20% 0%, rgba(254, 44, 85, 0.12), transparent 60%);
+        opacity: 0.35;
+      }
+
+      .card > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .card h3 {
+        margin: 0 0 calc(3 * var(--G));
+        font-size: 16px;
+        letter-spacing: 0.1px;
+      }
+
+      .muted {
+        color: var(--TextQuaternary);
+      }
+
+      ul {
+        margin: calc(3 * var(--G)) 0 0;
+        padding-left: 18px;
+        color: var(--TextSecondary);
+      }
+
+      li {
+        margin: calc(2 * var(--G)) 0;
+      }
+
+      .codeblock {
+        margin-top: calc(4 * var(--G));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--Radius);
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.25);
+      }
+
+      .codeblock__bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(3 * var(--G)) calc(4 * var(--G));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .codeblock__label {
+        font-size: 12px;
+        color: var(--TextQuaternary);
+      }
+
+      .copy {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.03);
+        color: rgba(255, 255, 255, 0.86);
+        border-radius: var(--Radius);
+        padding: calc(2 * var(--G)) calc(3 * var(--G));
+        font-size: 12px;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      }
+
+      .copy:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .copy:focus-visible {
+        outline: 2px solid rgba(254, 44, 85, 0.55);
+        outline-offset: 2px;
+      }
+
+      pre {
+        margin: 0;
+        padding: calc(5 * var(--G));
+        overflow: auto;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(6 * var(--G));
+        align-items: start;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--Radius);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      th,
+      td {
+        padding: calc(4 * var(--G));
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--TextSecondary);
+        font-size: 14px;
+      }
+
+      th {
+        color: rgba(255, 255, 255, 0.86);
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .tagline {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(2 * var(--G));
+        padding: calc(2 * var(--G)) calc(3 * var(--G));
+        border: 1px solid rgba(254, 44, 85, 0.28);
+        color: rgba(255, 255, 255, 0.88);
+        border-radius: 999px;
+        background: rgba(254, 44, 85, 0.08);
+        font-size: 12px;
+      }
+
+      details {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: var(--Radius);
+        padding: calc(4 * var(--G));
+      }
+
+      details + details {
+        margin-top: calc(3 * var(--G));
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      footer {
+        padding: calc(10 * var(--G)) 0 calc(12 * var(--G));
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--TextQuaternary);
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: calc(6 * var(--G));
+        transform: translateX(-50%);
+        background: rgba(16, 18, 26, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: calc(3 * var(--G)) calc(4 * var(--G));
+        border-radius: var(--Radius);
+        box-shadow: var(--Shadow);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 13px;
+        z-index: 80;
+        backdrop-filter: blur(12px);
+      }
+
+      @media (max-width: 980px) {
+        .hero__grid {
+          grid-template-columns: 1fr;
+        }
+        .nav {
+          display: none;
+        }
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+        .split {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: 36px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="#top" aria-label="Design-Learn">
+          <span class="brand__dot" aria-hidden="true"></span>
+          <span class="brand__name">Design-Learn</span>
+        </a>
+
+        <nav class="nav" aria-label="Sections">
+          <a href="#why">为什么</a>
+          <a href="#features">能力</a>
+          <a href="#arch">架构</a>
+          <a href="#quick-start">Quick Start</a>
+          <a href="#mcp">MCP</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="actions">
+          <a class="btn" href="README.md">README.md</a>
+          <a class="btn btn--primary" href="#quick-start">开始使用</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container">
+          <span class="kicker">
+            <span class="kicker__pulse" aria-hidden="true"></span>
+            Web 设计提取 × AI 设计规范 × MCP 可查询
+          </span>
+          <h1>让 AI 写出好看的前端界面</h1>
+          <p class="lead">
+            Design-Learn 是一套 Web 设计提取与分析系统：一键捕获优秀网站的设计语言（HTML/CSS/资产/设计 token），自动生成设计规范文档，并通过 MCP
+            让 AI（Claude Code 等）可查询、可复用，从而稳定产出风格一致的 UI。
+          </p>
+
+          <div class="badges" aria-label="Highlights">
+            <span class="badge">Chrome Extension</span>
+            <span class="badge">VSCode Extension</span>
+            <span class="badge">Node.js + SQLite</span>
+            <span class="badge">MCP (SSE / stdio)</span>
+            <span class="badge">UI/UX Pro Max (内置知识库)</span>
+          </div>
+
+          <div class="cta">
+            <a class="btn btn--primary" href="#quick-start">Quick Start</a>
+            <a class="btn" href="#mcp">查看 MCP 工具</a>
+            <a class="btn" href="#arch">系统架构</a>
+          </div>
+
+          <div style="margin-top: calc(8 * var(--G))" class="hero__grid">
+            <div class="card">
+              <h3>Vibe Coding 的核心痛点</h3>
+              <p class="muted" style="margin: 0">
+                用 AI 写代码很爽，但让 AI 写出“好看、稳定、可复用”的界面很难控制：
+              </p>
+              <ul>
+                <li>风格不一致：每次生成都不一样</li>
+                <li>缺乏设计感：看起来像“AI 味”</li>
+                <li>难以复用：优秀网站的设计语言无法迁移</li>
+              </ul>
+            </div>
+
+            <div class="panel">
+              <div class="terminal__header">
+                <div class="terminal__dots" aria-hidden="true">
+                  <span class="dot dot--red"></span>
+                  <span class="dot dot--yellow"></span>
+                  <span class="dot dot--green"></span>
+                </div>
+                <span class="terminal__title">Claude Code / MCP</span>
+              </div>
+              <pre><code>&gt; 用 stripe.com 的设计风格写一个定价页面
+# AI 会查询你提取的设计库与 styleguide
+# 输出风格一致的页面结构、组件与样式</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="why">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>解决什么问题？</h2>
+              <p>把优秀网页的设计语言结构化，再交给 AI 复用，让 UI 质量变得“可控”。</p>
+            </div>
+            <span class="tagline">Design → Spec → Code</span>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>Design-Learn 的解决方案</h3>
+              <ul>
+                <li><strong>一键提取</strong>：采集 HTML/CSS/图片/字体，并提取颜色、排版、间距、圆角、阴影等要素</li>
+                <li><strong>AI 分析</strong>：生成可读、可复用的设计规范文档（styleguide）</li>
+                <li><strong>MCP 集成</strong>：让智能体按需查询设计库与规范，生成风格一致的代码</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>数据如何沉淀？</h3>
+              <p class="muted" style="margin: 0">
+                既能快速检索，也能保存大体量内容。SQLite 做元数据与索引，文件系统保存快照与大对象。
+              </p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">Storage</span>
+                  <button class="copy" type="button" data-copy-target="#storage-tree">Copy</button>
+                </div>
+                <pre id="storage-tree"><code>data/
+├── database.sqlite        # 元数据与索引
+└── designs/               # 设计资源（JSON/快照/组件代码/styleguide）</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>核心能力</h2>
+              <p>从采集到分析再到生成，形成可组合、可迭代的闭环。</p>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="card">
+              <h3>一键提取页面设计</h3>
+              <ul>
+                <li>完整快照：HTML + CSS + 图片 + 字体</li>
+                <li>设计 token：颜色、字体、间距、圆角、阴影</li>
+                <li>元数据：视口尺寸、元素统计等</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>AI 智能分析（styleguide）</h3>
+              <ul>
+                <li>色彩系统：主色/辅助色/语义色/渐变</li>
+                <li>字体排版：字号层级、行高、字重、字族</li>
+                <li>组件规范：按钮、卡片、表单等规则描述</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>MCP 可查询设计库</h3>
+              <ul>
+                <li>按关键词/URL 搜索本地采集 designs</li>
+                <li>获取最新 styleguide markdown</li>
+                <li>聚合搜索：本地 designs + 内置 UI/UX Pro 知识库</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style="margin-top: calc(6 * var(--G))" class="codeblock">
+            <div class="codeblock__bar">
+              <span class="codeblock__label">Extraction Result (example)</span>
+              <button class="copy" type="button" data-copy-target="#extract-example">Copy</button>
+            </div>
+            <pre id="extract-example"><code>{
+  "url": "https://stripe.com",
+  "css": "/* 所有样式 */",
+  "assets": {
+    "images": ["logo.svg", "hero.png"],
+    "fonts": ["Inter", "SF Pro"]
+  },
+  "designTokens": {
+    "colors": ["#635BFF", "#0A2540", "#425466"],
+    "typography": { "fontFamily": "Inter", "sizes": [14, 16, 24, 48] },
+    "spacing": [4, 8, 16, 24, 32, 48]
+  }
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="arch">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>系统架构</h2>
+              <p>多端协同：Chrome/VSCode/AI 客户端共享同一个本地服务与数据层。</p>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="codeblock">
+              <div class="codeblock__bar">
+                <span class="codeblock__label">Multi-Client Single-Server</span>
+                <button class="copy" type="button" data-copy-target="#arch-diagram">Copy</button>
+              </div>
+              <pre id="arch-diagram"><code>Chrome Extension ──┐
+                   ├──&gt; HTTP API (port 3100)
+VSCode Extension ──┤    - /api/health
+                   │    - /api/import/*
+Claude Code ───────┘    - /mcp (SSE/stdio)
+                        - /api/designs
+                        - /api/snapshots
+
+                   Design-Learn Server
+                   (SQLite + File Storage)</code></pre>
+            </div>
+
+            <div class="card">
+              <h3>关键路径</h3>
+              <ul>
+                <li><strong>Browser Extraction</strong>：插件采集页面快照 → `/api/import/browser`</li>
+                <li><strong>Pipeline</strong>：处理入库 → SQLite + 文件存储</li>
+                <li><strong>MCP Access</strong>：智能体调用工具 → 查询 designs / styleguide / UIPro</li>
+                <li><strong>VSCode UI</strong>：管理服务生命周期与资源浏览</li>
+              </ul>
+              <p class="muted" style="margin-top: calc(4 * var(--G))">
+                Playwright 为可选依赖：用于 `/api/import/url` 的服务端抓取（缺失会优雅失败）。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quick-start">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>Quick Start</h2>
+              <p>推荐路径：先用 Chrome 插件提取，再按需开启本地服务与 MCP。</p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>1) 安装 Chrome 插件</h3>
+              <ul>
+                <li>打开：<code>chrome://extensions/</code></li>
+                <li>开启“开发者模式”</li>
+                <li>加载已解压的扩展程序 → 选择 <code>chrome-extension/</code></li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>2) 启动本地服务（可选）</h3>
+              <p class="muted" style="margin: 0">服务提供 REST API + MCP（SSE/stdio），默认端口 <code>3100</code>。</p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">Server</span>
+                  <button class="copy" type="button" data-copy-target="#server-start">Copy</button>
+                </div>
+                <pre id="server-start"><code>cd design-learn-server
+npm install
+node src/server.js</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: calc(6 * var(--G))" class="grid-2">
+            <div class="card">
+              <h3>3) 配置 MCP（Claude Code）</h3>
+              <p class="muted" style="margin: 0">使用 stdio 模式对接 MCP（适合本地集成）。</p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">MCP stdio</span>
+                  <button class="copy" type="button" data-copy-target="#mcp-setup">Copy</button>
+                </div>
+                <pre id="mcp-setup"><code>claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
+claude mcp list</code></pre>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>4) 验证服务健康</h3>
+              <p class="muted" style="margin: 0">如果端口冲突或 MCP 连接失败，先确认服务可用。</p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">Health</span>
+                  <button class="copy" type="button" data-copy-target="#health-check">Copy</button>
+                </div>
+                <pre id="health-check"><code>curl http://localhost:3100/api/health
+./scripts/verify-backend.sh</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: calc(6 * var(--G))" class="grid-2">
+            <div class="card">
+              <h3>5) VSCode 扩展（可选）</h3>
+              <p class="muted" style="margin: 0">推荐使用 Extension Development Host 调试（不需要频繁打包安装）。</p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">VSCode Extension</span>
+                  <button class="copy" type="button" data-copy-target="#vscode-setup">Copy</button>
+                </div>
+                <pre id="vscode-setup"><code>cd vscode-extension
+npm install
+npm run compile
+# 在 VSCode 中打开该目录，按 F5 启动 Extension Development Host</code></pre>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>6) URL 导入（Playwright 可选）</h3>
+              <p class="muted" style="margin: 0">用于服务端抓取与入库；未安装 Playwright 会返回 <code>playwright_not_installed</code>。</p>
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">Import URL</span>
+                  <button class="copy" type="button" data-copy-target="#url-import">Copy</button>
+                </div>
+                <pre id="url-import"><code>curl -X POST http://localhost:3100/api/import/url \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com"}'</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="mcp">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>MCP 工具与资源</h2>
+              <p>工具以 “可组合” 为核心：本地采集库 + 内置 UI/UX Pro 知识库，一次或多次调用均可。</p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>Tools</h3>
+              <table aria-label="MCP Tools">
+                <thead>
+                  <tr>
+                    <th style="width: 38%">工具名</th>
+                    <th>用途</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>list_designs</code></td>
+                    <td>列出本地已采集 designs（可选 <code>limit</code>）</td>
+                  </tr>
+                  <tr>
+                    <td><code>search_designs</code></td>
+                    <td>按关键词/URL/标签搜索本地 designs（可选 <code>limit</code>）</td>
+                  </tr>
+                  <tr>
+                    <td><code>get_styleguide</code></td>
+                    <td>获取 design 最新版本的 styleguide markdown</td>
+                  </tr>
+                  <tr>
+                    <td><code>search_library</code></td>
+                    <td>聚合搜索：本地 designs + UI/UX Pro（BM25）</td>
+                  </tr>
+                  <tr>
+                    <td><code>list_uipro_domains</code></td>
+                    <td>列出 UI/UX Pro 的 domain</td>
+                  </tr>
+                  <tr>
+                    <td><code>list_uipro_stacks</code></td>
+                    <td>列出 UI/UX Pro 的 stack</td>
+                  </tr>
+                  <tr>
+                    <td><code>search_uipro</code></td>
+                    <td>搜索 UI/UX Pro（BM25），支持 <code>domain?</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>search_uipro_stack</code></td>
+                    <td>搜索某个 stack 的指南（BM25），必须传 <code>stack</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <h3>Resources & Prompts</h3>
+              <ul>
+                <li><strong>Resource</strong>：<code>design-learn://info</code>（服务元信息）</li>
+                <li><strong>Resource</strong>：<code>design://{designId}</code>（design 元数据）</li>
+                <li><strong>Prompt</strong>：<code>analyze_design</code>（生成 “设计特征摘要/风险点” 的提示）</li>
+              </ul>
+
+              <div class="codeblock">
+                <div class="codeblock__bar">
+                  <span class="codeblock__label">Example</span>
+                  <button class="copy" type="button" data-copy-target="#mcp-example">Copy</button>
+                </div>
+                <pre id="mcp-example"><code># 组合调用建议（AI 侧）
+1) search_designs(query)  # 优先命中你的采集库
+2) search_uipro(query)    # 用内置知识库补齐设计/UX guideline
+3) get_styleguide(designId) # 需要更完整规范时再取</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="uipro">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>内置知识库：UI/UX Pro Max</h2>
+              <p>除了你采集的网站设计库，Design-Learn 还内置一份可搜索的 UI/UX guideline 数据（CSV + Node BM25）。</p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>Domain（9 类）</h3>
+              <p class="muted" style="margin: 0">用于从不同角度补齐风格描述、配色、排版与 UX 细节。</p>
+              <div class="badges" style="margin-top: calc(4 * var(--G))">
+                <span class="badge">style</span>
+                <span class="badge">prompt</span>
+                <span class="badge">color</span>
+                <span class="badge">chart</span>
+                <span class="badge">landing</span>
+                <span class="badge">product</span>
+                <span class="badge">ux</span>
+                <span class="badge">typography</span>
+                <span class="badge">icons</span>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Stack（11 类）</h3>
+              <p class="muted" style="margin: 0">当你需要“技术栈约束 + 风格约束”同时成立时，用 stack 指南更稳。</p>
+              <div class="badges" style="margin-top: calc(4 * var(--G))">
+                <span class="badge">html-tailwind</span>
+                <span class="badge">react</span>
+                <span class="badge">nextjs</span>
+                <span class="badge">vue</span>
+                <span class="badge">nuxtjs</span>
+                <span class="badge">nuxt-ui</span>
+                <span class="badge">svelte</span>
+                <span class="badge">swiftui</span>
+                <span class="badge">react-native</span>
+                <span class="badge">flutter</span>
+                <span class="badge">shadcn</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="structure">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>项目结构</h2>
+              <p>三个独立组件 + 一套共享数据格式：可单独使用，也可组合成完整工作流。</p>
+            </div>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock__bar">
+              <span class="codeblock__label">Repository</span>
+              <button class="copy" type="button" data-copy-target="#repo-tree">Copy</button>
+            </div>
+            <pre id="repo-tree"><code>Design-Learn/
+├── chrome-extension/      # Chrome 插件（零依赖）
+├── vscode-extension/      # VSCode 扩展
+├── design-learn-server/   # 后端服务（Node.js + SQLite）
+├── data/                  # 服务端数据目录（默认）
+├── docs/                  # 设计文档与实现记录
+└── scripts/               # 工具脚本</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="stack">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>技术栈</h2>
+              <p>偏向本地可控与零依赖：插件零构建、服务单进程、数据本地化。</p>
+            </div>
+          </div>
+
+          <table aria-label="Tech Stack">
+            <thead>
+              <tr>
+                <th style="width: 28%">组件</th>
+                <th>技术</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Chrome 插件</td>
+                <td>Manifest V3、纯 JavaScript、IndexedDB、Service Worker</td>
+              </tr>
+              <tr>
+                <td>本地服务</td>
+                <td>Node.js、SQLite（better-sqlite3）、REST API、MCP（SSE / stdio）</td>
+              </tr>
+              <tr>
+                <td>VSCode 插件</td>
+                <td>TypeScript、Webview</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="faq">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <h2>FAQ</h2>
+              <p>遇到问题先看这几条，基本能覆盖 80% 的卡点。</p>
+            </div>
+          </div>
+
+          <details>
+            <summary>插件未显示 / 无法加载？</summary>
+            <div class="muted" style="margin-top: calc(3 * var(--G))">
+              确认选择的是 <code>chrome-extension/</code> 根目录，并已开启浏览器的“开发者模式”。Edge/Brave 也同理。
+            </div>
+          </details>
+
+          <details>
+            <summary>AI 调用失败？</summary>
+            <div class="muted" style="margin-top: calc(3 * var(--G))">
+              检查插件内的 <code>API Key</code>、<code>Base URL</code>、<code>Model</code> 配置；若调用链路依赖代理或网关，也需要确认可达性与权限。
+            </div>
+          </details>
+
+          <details>
+            <summary>better-sqlite3 报错？</summary>
+            <div class="muted" style="margin-top: calc(3 * var(--G))">
+              在 <code>design-learn-server/</code> 目录执行 <code>npm rebuild better-sqlite3</code> 重新编译原生模块。
+            </div>
+          </details>
+
+          <details>
+            <summary>MCP 连接失败？</summary>
+            <div class="muted" style="margin-top: calc(3 * var(--G))">
+              先确认服务已启动并可访问：<code>curl http://localhost:3100/api/health</code>。如果端口被占用，可通过环境变量 <code>PORT</code>
+              覆盖。
+            </div>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <div style="display: flex; flex-wrap: wrap; gap: calc(4 * var(--G)); justify-content: space-between">
+          <div>
+            <div style="font-weight: 500; color: rgba(255, 255, 255, 0.86)">Design-Learn</div>
+            <div style="margin-top: calc(2 * var(--G))">把优秀设计“喂”给 AI，让它照着写。</div>
+          </div>
+          <div class="muted">HTML README · <span id="year"></span></div>
+        </div>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script>
+      (function () {
+        const year = document.getElementById("year");
+        if (year) year.textContent = String(new Date().getFullYear());
+
+        const toast = document.getElementById("toast");
+        let toastTimer = null;
+
+        function showToast(message) {
+          if (!toast) return;
+          toast.textContent = message;
+          toast.hidden = false;
+          if (toastTimer) window.clearTimeout(toastTimer);
+          toastTimer = window.setTimeout(() => {
+            toast.hidden = true;
+          }, 1400);
+        }
+
+        async function copyText(text) {
+          const value = String(text || "").trimEnd();
+          if (!value) return false;
+
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(value);
+              return true;
+            }
+          } catch {
+            // Fallback below.
+          }
+
+          try {
+            const el = document.createElement("textarea");
+            el.value = value;
+            el.setAttribute("readonly", "");
+            el.style.position = "fixed";
+            el.style.top = "-1000px";
+            el.style.opacity = "0";
+            document.body.appendChild(el);
+            el.select();
+            const ok = document.execCommand("copy");
+            document.body.removeChild(el);
+            return ok;
+          } catch {
+            return false;
+          }
+        }
+
+        document.addEventListener("click", async (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          const btn = target.closest("button[data-copy-target]");
+          if (!btn) return;
+
+          const selector = btn.getAttribute("data-copy-target");
+          if (!selector) return;
+          const node = document.querySelector(selector);
+          if (!node) return;
+
+          const text = node.textContent || "";
+          const ok = await copyText(text);
+          showToast(ok ? "已复制到剪贴板" : "复制失败（浏览器限制）");
+        });
+      })();
+    </script>
+  </body>
+</html>

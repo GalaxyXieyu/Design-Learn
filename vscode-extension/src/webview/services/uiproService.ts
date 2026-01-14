@@ -68,5 +68,78 @@ export class UIProService {
       });
     }
   }
-}
 
+  public async browse(options: { domain?: string; limit?: number; offset?: number } = {}) {
+    const params = new URLSearchParams();
+    if (options.domain) params.set('domain', options.domain);
+    if (typeof options.limit === 'number') params.set('limit', String(options.limit));
+    if (typeof options.offset === 'number') params.set('offset', String(options.offset));
+
+    try {
+      const result = await this._serverClient.requestToServer('GET', `/api/uipro/browse?${params.toString()}`, null);
+      this._postMessage({ type: 'uiproBrowseResult', result });
+    } catch (err: any) {
+      this._postMessage({
+        type: 'uiproBrowseResult',
+        result: { error: 'server_unavailable', message: err?.message || 'unknown_error' },
+      });
+    }
+  }
+
+  public async suggest(options: { domain?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (options.domain) params.set('domain', options.domain);
+    if (typeof options.limit === 'number') params.set('limit', String(options.limit));
+
+    try {
+      const result = await this._serverClient.requestToServer('GET', `/api/uipro/suggest?${params.toString()}`, null);
+      this._postMessage({ type: 'uiproSuggestResult', result });
+    } catch (err: any) {
+      this._postMessage({
+        type: 'uiproSuggestResult',
+        result: { error: 'server_unavailable', message: err?.message || 'unknown_error' },
+      });
+    }
+  }
+
+  public async browseStack(stack: string, options: { limit?: number; offset?: number } = {}) {
+    const params = new URLSearchParams();
+    params.set('stack', stack || '');
+    if (typeof options.limit === 'number') params.set('limit', String(options.limit));
+    if (typeof options.offset === 'number') params.set('offset', String(options.offset));
+
+    try {
+      const result = await this._serverClient.requestToServer(
+        'GET',
+        `/api/uipro/browse-stack?${params.toString()}`,
+        null
+      );
+      this._postMessage({ type: 'uiproBrowseStackResult', result });
+    } catch (err: any) {
+      this._postMessage({
+        type: 'uiproBrowseStackResult',
+        result: { error: 'server_unavailable', message: err?.message || 'unknown_error' },
+      });
+    }
+  }
+
+  public async suggestStack(stack: string, options: { limit?: number } = {}) {
+    const params = new URLSearchParams();
+    params.set('stack', stack || '');
+    if (typeof options.limit === 'number') params.set('limit', String(options.limit));
+
+    try {
+      const result = await this._serverClient.requestToServer(
+        'GET',
+        `/api/uipro/suggest-stack?${params.toString()}`,
+        null
+      );
+      this._postMessage({ type: 'uiproSuggestStackResult', result });
+    } catch (err: any) {
+      this._postMessage({
+        type: 'uiproSuggestStackResult',
+        result: { error: 'server_unavailable', message: err?.message || 'unknown_error' },
+      });
+    }
+  }
+}

@@ -43,14 +43,26 @@
       if (msg.type === 'designSnapshots') {
         app.ui.updateRouteList(msg.designId, msg.snapshots || []);
       }
-      if (msg.type === 'uiproMeta' && app.ui.updateUiproMeta) {
-        app.ui.updateUiproMeta(msg.domains || [], msg.stacks || []);
+      if (msg.type === 'uiproMeta' && app.ui.updateLibraryUiproMeta) {
+        app.ui.updateLibraryUiproMeta(msg.domains || [], msg.stacks || []);
       }
-      if (msg.type === 'uiproSearchResult' && app.ui.renderUiproSearchResult) {
-        app.ui.renderUiproSearchResult(msg.result);
+      if (msg.type === 'uiproSearchResult' && app.ui.renderLibraryUiproResult) {
+        app.ui.renderLibraryUiproResult(msg.result);
       }
-      if (msg.type === 'uiproSearchStackResult' && app.ui.renderUiproSearchStackResult) {
-        app.ui.renderUiproSearchStackResult(msg.result);
+      if (msg.type === 'uiproSearchStackResult' && app.ui.renderLibraryUiproStackResult) {
+        app.ui.renderLibraryUiproStackResult(msg.result);
+      }
+      if (msg.type === 'uiproBrowseResult' && app.ui.renderLibraryUiproBrowseResult) {
+        app.ui.renderLibraryUiproBrowseResult(msg.result);
+      }
+      if (msg.type === 'uiproBrowseStackResult' && app.ui.renderLibraryUiproBrowseStackResult) {
+        app.ui.renderLibraryUiproBrowseStackResult(msg.result);
+      }
+      if (msg.type === 'uiproSuggestResult' && app.ui.updateLibrarySuggest) {
+        app.ui.updateLibrarySuggest(msg.result);
+      }
+      if (msg.type === 'uiproSuggestStackResult' && app.ui.updateLibrarySuggest) {
+        app.ui.updateLibrarySuggest(msg.result);
       }
     });
   }

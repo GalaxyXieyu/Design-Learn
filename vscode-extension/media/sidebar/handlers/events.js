@@ -8,11 +8,26 @@
 
   function initEvents() {
     const historySearch = getEl('historySearch');
-    const historyFilter = getEl('historyFilter');
-    const historySort = getEl('historySort');
-    if (historySearch) historySearch.addEventListener('input', app.ui.filterHistory);
-    if (historyFilter) historyFilter.addEventListener('change', app.ui.filterHistory);
-    if (historySort) historySort.addEventListener('change', app.ui.filterHistory);
+    const librarySource = getEl('librarySource');
+    const libraryDomain = getEl('libraryDomain');
+    const libraryStack = getEl('libraryStack');
+    const librarySearchBtn = getEl('librarySearchBtn');
+
+    if (historySearch) {
+      historySearch.addEventListener('input', () => {
+        if (app.ui.onLibraryQueryInput) app.ui.onLibraryQueryInput();
+        else app.ui.filterHistory();
+      });
+      historySearch.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && app.ui.librarySearch) app.ui.librarySearch();
+      });
+    }
+    if (librarySource) librarySource.addEventListener('change', () => app.ui.setLibrarySource && app.ui.setLibrarySource(librarySource.value));
+    // 初始化时同步控件状态（设置 grid 列数）
+    if (app.ui.syncLibraryControls) app.ui.syncLibraryControls();
+    if (libraryDomain) libraryDomain.addEventListener('change', () => app.ui.setLibraryDomain && app.ui.setLibraryDomain(libraryDomain.value));
+    if (libraryStack) libraryStack.addEventListener('change', () => app.ui.setLibraryStack && app.ui.setLibraryStack(libraryStack.value));
+    if (librarySearchBtn) librarySearchBtn.addEventListener('click', () => app.ui.librarySearch && app.ui.librarySearch());
 
     const historyList = getEl('historyList');
     if (historyList) {
@@ -25,42 +40,17 @@
       }, true);
     }
 
-    const uiproQuery = getEl('uiproQuery');
-    const uiproMode = getEl('uiproMode');
-    const uiproDomain = getEl('uiproDomain');
-    const uiproStack = getEl('uiproStack');
-    const uiproSearchBtn = getEl('uiproSearchBtn');
-    const uiproResults = getEl('uiproResults');
-
-    if (uiproMode && app.ui.setUiproMode) {
-      uiproMode.addEventListener('change', () => app.ui.setUiproMode(uiproMode.value));
-    }
-
-    if (uiproDomain) {
-      uiproDomain.addEventListener('change', () => {
-        app.state.uipro.domain = uiproDomain.value || 'auto';
+    const librarySuggest = getEl('librarySuggest');
+    if (librarySuggest) {
+      librarySuggest.addEventListener('click', (e) => {
+        if (app.ui.handleLibrarySuggestClick) app.ui.handleLibrarySuggestClick(e);
       });
     }
 
-    if (uiproStack) {
-      uiproStack.addEventListener('change', () => {
-        app.state.uipro.stack = uiproStack.value || '';
-      });
-    }
-
-    if (uiproSearchBtn && app.ui.uiproSearch) {
-      uiproSearchBtn.addEventListener('click', () => app.ui.uiproSearch());
-    }
-
-    if (uiproQuery && app.ui.uiproSearch) {
-      uiproQuery.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') app.ui.uiproSearch();
-      });
-    }
-
-    if (uiproResults && app.ui.handleUiproResultsClick) {
-      uiproResults.addEventListener('click', app.ui.handleUiproResultsClick);
-    }
+    // 排序按钮事件
+    document.addEventListener('click', (e) => {
+      if (app.ui.handleSortBtnClick) app.ui.handleSortBtnClick(e);
+    });
 
     const analyzeBtn = getEl('analyzeBtn');
     if (analyzeBtn) {
