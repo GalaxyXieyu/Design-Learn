@@ -1,13 +1,20 @@
 {
   "name": "design-learn-server",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
+  "private": false,
   "description": "Design-Learn server skeleton for REST/WS/MCP routes",
   "main": "src/server.js",
   "bin": {
     "design-learn-server": "src/cli.js",
-    "design-learn-mcp": "src/cli.js",
+    "design-learn-mcp": "src/stdio.js",
     "design-learn-stdio": "src/stdio.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "start": "node src/server.js",

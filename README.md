@@ -2,6 +2,13 @@
 
 > 让 AI 写出好看的前端界面
 
+
+
+## TODO（规划中）
+
+- 同步所有模板到本地（包含 `template/` 目录）
+- 在 VSCode 插件中可配置“抽取提示词”（用于提取/分析的提示词模板管理）
+
 ## 解决什么问题？
 
 **Vibe Coding 的痛点**：用 AI 写代码很爽，但让 AI 写出好看、稳定的前端界面很难控制。AI 生成的 UI 往往：
@@ -99,20 +106,26 @@ Claude Code ───────┘    - SQLite + 文件存储
 ---
 
 ## Quick Start
+## Cursor/Claude Code 快速配置（npx）
 
-### 1. 安装 Chrome 插件
+`~/.cursor/mcp.json` 示例：
+
+```json
+{
+  "mcpServers": {
+    "design-learn": {
+      "command": "npx",
+      "args": ["-y", "design-learn-server", "design-learn-mcp"]
+    }
+  }
+}
+```
+
+### 2. 安装 Chrome 插件
 
 ```
 chrome://extensions/ → 开发者模式 → 加载已解压的扩展程序 → 选择 chrome-extension/
 ```
-
-### 2. 提取页面
-
-1. 访问目标网站（如 https://stripe.com）
-2. 点击工具栏插件图标
-3. 点击"提取页面风格"
-4. 等待 2-5 秒，完成！
-
 ### 3. 配置 AI 分析（可选）
 
 1. 点击插件设置图标
@@ -120,18 +133,13 @@ chrome://extensions/ → 开发者模式 → 加载已解压的扩展程序 → 
 3. 选择或创建提示词模板
 4. 提取时自动生成设计分析报告
 
-### 4. 配置 MCP 集成（可选）
+### 4. 提取页面
 
-```bash
-# 安装服务端依赖
-cd design-learn-server && npm install
+1. 访问目标网站（如 https://stripe.com）
+2. 点击工具栏插件图标
+3. 点击"提取页面风格"
+4. 等待 2-5 秒，完成！
 
-# 添加到 Claude Code
-claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
-
-# 验证
-claude mcp list
-```
 
 ---
 
@@ -145,25 +153,6 @@ claude mcp list
 
 > Edge: `edge://extensions/` | Brave: `brave://extensions/`
 
-### 本地服务
-
-```bash
-cd design-learn-server
-npm install
-npm rebuild better-sqlite3  # 如需重建原生模块
-
-node src/server.js          # 默认端口 3100
-PORT=3200 node src/server.js # 自定义端口
-```
-
-### VSCode 插件
-
-```bash
-cd vscode-extension && npm install && npm run compile
-code --install-extension dist/design-learn-vscode-1.0.0.vsix
-```
-
----
 
 ## 项目结构
 

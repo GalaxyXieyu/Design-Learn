@@ -1,0 +1,33 @@
+name: Release VSCode Extension
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build VSIX
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run compile
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p ../dist
+          npx vsce package --out ../dist/design-learn-${VERSION}.vsix
+
+      - name: Upload VSIX to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/design-learn-*.vsix
+

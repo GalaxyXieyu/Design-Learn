@@ -14,6 +14,12 @@ node src/server.js
 npx design-learn-server --port 3000 --data-dir ./data
 ```
 
+## MCP stdio (npx)
+
+```bash
+npx design-learn-server design-learn-mcp
+```
+
 Optional flags:
 - `--auth-token <token>` for MCP auth
 - `--server-name <name>` / `--server-version <ver>`
