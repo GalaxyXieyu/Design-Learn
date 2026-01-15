@@ -19,9 +19,9 @@ const {
 const { ensureDir, writeJson, readJson, writeText, readText, removePath } = require('./fileStore');
 const { openDatabase } = require('./sqliteStore');
 
-function createStorage(options = {}) {
+async function createStorage(options = {}) {
   const dataDir = resolveDataDir(options.dataDir);
-  const db = openDatabase(getDatabasePath(dataDir));
+  const db = await openDatabase(getDatabasePath(dataDir));
 
   return {
     dataDir,

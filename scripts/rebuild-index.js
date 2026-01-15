@@ -3,7 +3,7 @@
 const { createStorage } = require('../design-learn-server/src/storage');
 
 async function main() {
-  const storage = createStorage({
+  const storage = await createStorage({
     dataDir: process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR,
   });
 

@@ -22,69 +22,64 @@ const { readJson, writeJson } = require('./storage/fileStore');
 const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
 const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
 
-const storage = createStorage({ dataDir });
-const uipro = createUipro({ dataDir });
-const extractionPipeline = createExtractionPipeline({ storage });
-const previewPipeline = createPreviewPipeline({ storage });
+let storage;
+let uipro;
+let extractionPipeline;
+let previewPipeline;
+let mcpHandler;
 
 // import job -> designId，用于将 pipeline 状态回写到 design metadata（便于 UI 与 MCP 立刻可见）
 const importJobDesignMap = new Map();
 
-extractionPipeline.onProgress((event) => {
-  const designId = importJobDesignMap.get(event.job.id);
-  if (!designId) {
-    return;
-  }
-
-  const now = new Date().toISOString();
-  void (async () => {
-    const design = await storage.getDesign(designId);
-    const meta = design?.metadata || {};
-    const aiRequested = !!meta.aiRequested;
-    const aiCompleted = meta.processingMessage === 'ai_completed' || meta.aiCompleted;
-
-    const metaPatch = {
-      processingStatus: event.event === 'failed' ? 'failed' : event.event === 'completed' ? 'completed' : 'processing',
-      processingJobId: event.job.id,
-      processingUpdatedAt: now,
-    };
-
-    if (event.event === 'failed') {
-      metaPatch.processingError = event.job.error?.message || 'unknown_error';
-      metaPatch.processingMessage = 'failed';
-      metaPatch.processingProgress = 100;
-    } else if (event.event === 'completed') {
-      metaPatch.processingError = null;
-      metaPatch.lastImportAt = now;
-      metaPatch.lastImportVersionId = event.job.result?.versionId || null;
-      if (aiRequested && !aiCompleted) {
-        metaPatch.processingStatus = 'analyzing';
-        metaPatch.processingMessage = 'ai_pending';
-        metaPatch.processingProgress = 80;
-      } else {
-        metaPatch.processingMessage = 'completed';
-        metaPatch.processingProgress = 100;
-      }
-    } else {
-      metaPatch.processingMessage = event.job.message || 'processing';
-      metaPatch.processingProgress = event.job.progress || 0;
+function registerPipelineHandlers() {
+  extractionPipeline.onProgress((event) => {
+    const designId = importJobDesignMap.get(event.job.id);
+    if (!designId) {
+      return;
     }
 
-    await storage.updateDesign(designId, { metadata: metaPatch });
-  })().catch(() => undefined);
+    const now = new Date().toISOString();
+    void (async () => {
+      const design = await storage.getDesign(designId);
+      const meta = design?.metadata || {};
+      const aiRequested = !!meta.aiRequested;
+      const aiCompleted = meta.processingMessage === 'ai_completed' || meta.aiCompleted;
 
-  if (event.event === 'failed' || event.event === 'completed') {
-    importJobDesignMap.delete(event.job.id);
-  }
-});
-const mcpHandler = createMcpHandler({
-  storage,
-  dataDir: process.env.DESIGN_LEARN_DATA_DIR,
-  serverName: process.env.MCP_SERVER_NAME,
-  serverVersion: process.env.MCP_SERVER_VERSION,
-  authToken: process.env.MCP_AUTH_TOKEN,
-  uipro,
-});
+      const metaPatch = {
+        processingStatus: event.event === 'failed' ? 'failed' : event.event === 'completed' ? 'completed' : 'processing',
+        processingJobId: event.job.id,
+        processingUpdatedAt: now,
+      };
+
+      if (event.event === 'failed') {
+        metaPatch.processingError = event.job.error?.message || 'unknown_error';
+        metaPatch.processingMessage = 'failed';
+        metaPatch.processingProgress = 100;
+      } else if (event.event === 'completed') {
+        metaPatch.processingError = null;
+        metaPatch.lastImportAt = now;
+        metaPatch.lastImportVersionId = event.job.result?.versionId || null;
+        if (aiRequested && !aiCompleted) {
+          metaPatch.processingStatus = 'analyzing';
+          metaPatch.processingMessage = 'ai_pending';
+          metaPatch.processingProgress = 80;
+        } else {
+          metaPatch.processingMessage = 'completed';
+          metaPatch.processingProgress = 100;
+        }
+      } else {
+        metaPatch.processingMessage = event.job.message || 'processing';
+        metaPatch.processingProgress = event.job.progress || 0;
+      }
+
+      await storage.updateDesign(designId, { metadata: metaPatch });
+    })().catch(() => undefined);
+
+    if (event.event === 'failed' || event.event === 'completed') {
+      importJobDesignMap.delete(event.job.id);
+    }
+  });
+}
 
 const routes = [
   {
@@ -1367,17 +1362,40 @@ server.on('clientError', (err, socket) => {
   socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
 });
 
-server.listen(DEFAULT_PORT, () => {
-  console.log(`[design-learn-server] listening on http://localhost:${DEFAULT_PORT}`);
-  console.log(`[design-learn-server] data dir: ${storage.dataDir}`);
+async function start() {
+  storage = await createStorage({ dataDir });
+  uipro = createUipro({ dataDir });
+  extractionPipeline = createExtractionPipeline({ storage });
+  previewPipeline = createPreviewPipeline({ storage });
+  registerPipelineHandlers();
+  mcpHandler = await createMcpHandler({
+    storage,
+    dataDir: process.env.DESIGN_LEARN_DATA_DIR,
+    serverName: process.env.MCP_SERVER_NAME,
+    serverVersion: process.env.MCP_SERVER_VERSION,
+    authToken: process.env.MCP_AUTH_TOKEN,
+    uipro,
+  });
+
+  server.listen(DEFAULT_PORT, () => {
+    console.log(`[design-learn-server] listening on http://localhost:${DEFAULT_PORT}`);
+    console.log(`[design-learn-server] data dir: ${storage.dataDir}`);
+  });
+}
+
+start().catch((error) => {
+  console.error('[design-learn-server] startup failed', error);
+  process.exit(1);
 });
 
 function shutdown(signal) {
   console.log(`[design-learn-server] received ${signal}, shutting down`);
-  mcpHandler.close().catch((error) => console.error('[mcp] close error', error));
-  extractionPipeline.close();
-  previewPipeline.close();
-  storage.close();
+  if (mcpHandler) {
+    mcpHandler.close().catch((error) => console.error('[mcp] close error', error));
+  }
+  extractionPipeline?.close();
+  previewPipeline?.close();
+  storage?.close();
   server.close(() => process.exit(0));
 }
 

@@ -111,7 +111,7 @@ COMPONENT_ID=$(ROOT_DIR="$ROOT_DIR" node - <<'NODE'
 const { createStorage } = require(process.env.ROOT_DIR + '/design-learn-server/src/storage');
 
 async function main() {
-  const storage = createStorage({
+  const storage = await createStorage({
     dataDir: process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR,
   });
   try {

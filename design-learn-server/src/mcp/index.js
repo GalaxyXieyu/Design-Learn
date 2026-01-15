@@ -445,8 +445,8 @@ function createMcpServer({ name, version, storage, uipro }) {
   return server;
 }
 
-function createMcpHandler(options = {}) {
-  const storage = options.storage || createStorage({ dataDir: options.dataDir });
+async function createMcpHandler(options = {}) {
+  const storage = options.storage || (await createStorage({ dataDir: options.dataDir }));
   const ownsStorage = !options.storage;
   const serverName = options.serverName || 'design-learn';
   const serverVersion = options.serverVersion || '0.1.0';

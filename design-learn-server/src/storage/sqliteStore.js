@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 
 const SCHEMA_VERSION = 2;
 
@@ -8,9 +8,118 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function openDatabase(dbPath) {
+function readDatabaseFile(dbPath) {
+  try {
+    return fs.readFileSync(dbPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function wrapDatabase(rawDb, dbPath) {
+  let closed = false;
+
+  function persist() {
+    if (closed) {
+      return;
+    }
+    const data = rawDb.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(dbPath, buffer);
+  }
+
+  function prepare(sql) {
+    const stmt = rawDb.prepare(sql);
+    const normalizeParams = (params) => (params.length === 1 && Array.isArray(params[0]) ? params[0] : params);
+    const finalize = () => {
+      try {
+        stmt.free();
+      } catch {
+        return;
+      }
+    };
+
+    return {
+      run: (...params) => {
+        const bound = normalizeParams(params);
+        stmt.run(bound);
+        const changes = typeof rawDb.getRowsModified === 'function' ? rawDb.getRowsModified() : 0;
+        finalize();
+        persist();
+        return { changes };
+      },
+      get: (...params) => {
+        const bound = normalizeParams(params);
+        stmt.bind(bound);
+        if (!stmt.step()) {
+          finalize();
+          return undefined;
+        }
+        const row = stmt.getAsObject();
+        finalize();
+        return row;
+      },
+      all: (...params) => {
+        const bound = normalizeParams(params);
+        const rows = [];
+        stmt.bind(bound);
+        while (stmt.step()) {
+          rows.push(stmt.getAsObject());
+        }
+        finalize();
+        return rows;
+      },
+    };
+  }
+
+  function exec(sql) {
+    rawDb.exec(sql);
+    persist();
+  }
+
+  function pragma(statement, options = {}) {
+    const trimmed = statement.trim();
+    if (trimmed.includes('=')) {
+      rawDb.exec(`PRAGMA ${statement}`);
+      persist();
+      return undefined;
+    }
+    const result = rawDb.exec(`PRAGMA ${statement}`);
+    if (options.simple) {
+      return result?.[0]?.values?.[0]?.[0] ?? 0;
+    }
+    return result;
+  }
+
+  function close() {
+    if (closed) {
+      return;
+    }
+    persist();
+    rawDb.close();
+    closed = true;
+  }
+
+  return {
+    prepare,
+    exec,
+    pragma,
+    close,
+  };
+}
+
+async function openDatabase(dbPath) {
   ensureDir(path.dirname(dbPath));
-  const db = new Database(dbPath);
+  const wasmPath = require.resolve('sql.js/dist/sql-wasm.wasm');
+  const SQL = await initSqlJs({
+    locateFile: () => wasmPath,
+  });
+  const fileBuffer = readDatabaseFile(dbPath);
+  const rawDb = fileBuffer ? new SQL.Database(fileBuffer) : new SQL.Database();
+  const db = wrapDatabase(rawDb, dbPath);
   db.pragma('journal_mode = WAL');
   migrate(db);
   return db;

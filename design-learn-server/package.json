@@ -1,6 +1,6 @@
 {
   "name": "design-learn-server",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "description": "Design-Learn server skeleton for REST/WS/MCP routes",
   "main": "src/server.js",
@@ -8,9 +8,6 @@
     "design-learn-server": "src/cli.js",
     "design-learn-mcp": "src/stdio.js",
     "design-learn-stdio": "src/stdio.js"
-  },
-  "engines": {
-    "node": ">=18 <23"
   },
   "files": [
     "src",
@@ -21,13 +18,12 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js",
-    "preinstall": "node src/check-node.js"
+    "dev": "node src/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "better-sqlite3": "^11.10.0",
     "playwright": "^1.57.0",
+    "sql.js": "^1.13.0",
     "zod": "^3.24.1"
   }
 }

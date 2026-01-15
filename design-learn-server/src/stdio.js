@@ -55,11 +55,12 @@ async function ensurePlaywright() {
 const os = require('os');
 const defaultDataDir = path.join(os.homedir(), '.design-learn', 'data');
 const dataDir = process.env.DESIGN_LEARN_DATA_DIR || process.env.DATA_DIR || defaultDataDir;
-const storage = createStorage({ dataDir });
+const storagePromise = createStorage({ dataDir });
 const uipro = createUipro({ dataDir });
 
-function matchDesigns(query) {
+async function matchDesigns(query) {
   const needle = query.toLowerCase();
+  const storage = await storagePromise;
   const designs = storage.listDesigns();
   return designs.filter((design) => {
     const tags = Array.isArray(design.metadata?.tags) ? design.metadata.tags.join(' ') : '';
@@ -91,6 +92,7 @@ server.tool(
   'List stored design resources',
   { limit: z.number().min(1).max(100).optional() },
   async ({ limit }) => {
+    const storage = await storagePromise;
     const designs = storage.listDesigns();
     const data = typeof limit === 'number' ? designs.slice(0, limit) : designs;
     return {
@@ -108,7 +110,7 @@ server.tool(
     limit: z.number().min(1).max(100).optional(),
   },
   async ({ query, limit }) => {
-    const matches = matchDesigns(query);
+    const matches = await matchDesigns(query);
     const data = typeof limit === 'number' ? matches.slice(0, limit) : matches;
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
@@ -135,14 +137,12 @@ server.tool(
   },
   async ({ query, sources, domain, stack, limit, designLimit }) => {
     const effectiveSources = Array.isArray(sources) && sources.length > 0 ? sources : ['designs', 'uipro'];
-    const designs =
-      effectiveSources.includes('designs')
-        ? (() => {
-            const matches = matchDesigns(query);
-            const max = typeof designLimit === 'number' ? designLimit : typeof limit === 'number' ? limit : undefined;
-            return typeof max === 'number' ? matches.slice(0, max) : matches;
-          })()
-        : [];
+    let designs = [];
+    if (effectiveSources.includes('designs')) {
+      const matches = await matchDesigns(query);
+      const max = typeof designLimit === 'number' ? designLimit : typeof limit === 'number' ? limit : undefined;
+      designs = typeof max === 'number' ? matches.slice(0, max) : matches;
+    }
 
     const resolvedDomain = domain === 'auto' ? undefined : domain;
     const maxUipro = typeof limit === 'number' ? limit : 10;
@@ -201,6 +201,7 @@ server.tool(
   'Get styleguide markdown by design ID (latest version).',
   { designId: z.string() },
   async ({ designId }) => {
+    const storage = await storagePromise;
     const versions = storage.listVersions(designId);
     if (!versions || versions.length === 0) {
       return {

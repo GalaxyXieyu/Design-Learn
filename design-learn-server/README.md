@@ -2,10 +2,6 @@
 
 A minimal single-process server entry that registers REST, WebSocket, and MCP (SSE) routes.
 
-## Node version
-
-Requires Node 18 or 20 (LTS). Node 22+ is not supported because `better-sqlite3` uses native bindings.
-
 ## Start
 
 ```bash
