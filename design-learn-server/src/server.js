@@ -16,6 +16,7 @@ const { createUipro } = require('./uipro');
 const { loadPlaywright } = require('./playwrightSupport');
 const { getConfigPath } = require('./storage/paths');
 const { readJson, writeJson } = require('./storage/fileStore');
+const { PROMPT_TEMPLATE_DEFAULT_TYPE, getPromptTemplateDefault } = require('./promptTemplates');
 
 // 数据目录优先级：环境变量 > 用户目录下的 ~/.design-learn/data
 // 与 stdio.js 保持一致，确保 MCP/HTTP/Chrome/VSCode 使用同一数据源
@@ -429,7 +430,29 @@ function normalizePromptTemplatePatch(body) {
   return patch;
 }
 
-function handlePromptTemplatesList(res, url) {
+async function ensurePromptTemplateDefault(type) {
+  const resolvedType = type || PROMPT_TEMPLATE_DEFAULT_TYPE;
+  if (!resolvedType) {
+    return;
+  }
+
+  const templates = storage.listPromptTemplates({ type: resolvedType });
+  if (!templates.length) {
+    const builtIn = getPromptTemplateDefault(resolvedType);
+    if (!builtIn) {
+      return;
+    }
+    await storage.createPromptTemplate({ ...builtIn, isDefault: true });
+    return;
+  }
+
+  const hasDefault = templates.some((template) => template.isDefault);
+  if (!hasDefault) {
+    await storage.setPromptTemplateDefault(templates[0].id);
+  }
+}
+
+async function handlePromptTemplatesList(res, url) {
   const type = url.searchParams.get('type') || undefined;
   const activeParam =
     url.searchParams.get('active') ??
@@ -455,6 +478,7 @@ function handlePromptTemplatesList(res, url) {
   }
   const { limit, offset } = pagination;
 
+  await ensurePromptTemplateDefault(type);
   const templates = storage.listPromptTemplates({ type, isActive, isDefault });
   const { items, total } = paginate(templates, limit, offset);
   return sendJson(res, 200, { items, limit, offset, total });
@@ -509,10 +533,11 @@ async function handlePromptTemplatePatch(req, res, templateId) {
 }
 
 async function handlePromptTemplateDelete(res, templateId) {
-  const success = await storage.deletePromptTemplate(templateId);
-  if (!success) {
+  const removed = await storage.deletePromptTemplate(templateId);
+  if (!removed) {
     return sendJson(res, 404, { error: 'prompt_template_not_found' });
   }
+  await ensurePromptTemplateDefault(removed.type);
   return sendNoContent(res);
 }
 

@@ -1036,10 +1036,11 @@ async function updatePromptTemplate(db, templateId, patch) {
 async function deletePromptTemplate(db, templateId) {
   const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
   if (!row) {
-    return false;
+    return null;
   }
+  const template = mapPromptTemplateRow(row);
   db.prepare('DELETE FROM prompt_templates WHERE id = ?').run(templateId);
-  return true;
+  return template;
 }
 
 async function setPromptTemplateActive(db, templateId) {
