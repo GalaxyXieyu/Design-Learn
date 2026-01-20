@@ -136,6 +136,9 @@
         case 'openModelConfig':
           app.ui.openModelConfig();
           break;
+        case 'openPromptTemplates':
+          if (app.ui.openPromptTemplateConfig) app.ui.openPromptTemplateConfig();
+          break;
         case 'openServerConfig':
           app.ui.openServerModal();
           app.ui.closeSettingsMenu();

@@ -17,6 +17,11 @@
     if (dropdown) dropdown.classList.remove('show');
   }
 
+  function openPromptTemplateConfig() {
+    closeSettingsMenu();
+    app.postMessage({ type: 'openSettingsPanel', section: 'promptTemplates' });
+  }
+
   function setMode(mode) {
     app.state.currentMode = mode;
     const currentBtn = getEl('modeCurrent');
@@ -76,6 +81,7 @@
 
   app.ui.toggleSettingsMenu = toggleSettingsMenu;
   app.ui.closeSettingsMenu = closeSettingsMenu;
+  app.ui.openPromptTemplateConfig = openPromptTemplateConfig;
   app.ui.setMode = setMode;
   app.ui.updateConfig = updateConfig;
   app.ui.saveConfig = saveConfig;

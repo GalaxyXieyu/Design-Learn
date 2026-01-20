@@ -154,6 +154,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
         if (!text) return;
         await vscode.env.clipboard.writeText(text);
       },
+      openSettingsPanel: () => vscode.commands.executeCommand('design-learn.openSettings'),
       saveConfig: (message) => configService.saveConfig(message.config),
       startDesignPolling: () => pollingService.start(),
       stopDesignPolling: () => pollingService.stop(),
