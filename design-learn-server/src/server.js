@@ -122,6 +122,7 @@ function handleRoot(req, res) {
       versions: '/api/versions/:id',
       snapshots: '/api/snapshots',
       config: '/api/config',
+      promptTemplates: '/api/prompt-templates',
       previews: '/api/previews',
       tasks: '/api/tasks',
       uiproDomains: '/api/uipro/domains',
@@ -357,6 +358,162 @@ async function handleConfigPut(req, res) {
   const config = normalizeConfig(body);
   await writeJson(getConfigPath(storage.dataDir), config);
   return sendJson(res, 200, config);
+}
+
+function parseOptionalBoolean(value) {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return null;
+}
+
+function parseLimitOffsetStrict(url) {
+  const limitRaw = url.searchParams.get('limit');
+  const offsetRaw = url.searchParams.get('offset');
+
+  if (limitRaw !== null && !Number.isFinite(Number(limitRaw))) {
+    return { error: 'invalid_limit' };
+  }
+  if (offsetRaw !== null && !Number.isFinite(Number(offsetRaw))) {
+    return { error: 'invalid_offset' };
+  }
+
+  return parseLimitOffset(url);
+}
+
+function normalizePromptTemplateInput(body) {
+  return {
+    name: body.name,
+    type: body.type,
+    content: body.content,
+    description: body.description,
+    isActive: body.isActive ?? body.active ?? body.is_active,
+    isDefault: body.isDefault ?? body.default ?? body.is_default,
+    metadata: body.metadata,
+  };
+}
+
+function normalizePromptTemplatePatch(body) {
+  const patch = {};
+  if (Object.prototype.hasOwnProperty.call(body, 'name')) {
+    patch.name = body.name;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'type')) {
+    patch.type = body.type;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'content')) {
+    patch.content = body.content;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'description')) {
+    patch.description = body.description;
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(body, 'isActive') ||
+    Object.prototype.hasOwnProperty.call(body, 'active') ||
+    Object.prototype.hasOwnProperty.call(body, 'is_active')
+  ) {
+    patch.isActive = body.isActive ?? body.active ?? body.is_active;
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(body, 'isDefault') ||
+    Object.prototype.hasOwnProperty.call(body, 'default') ||
+    Object.prototype.hasOwnProperty.call(body, 'is_default')
+  ) {
+    patch.isDefault = body.isDefault ?? body.default ?? body.is_default;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'metadata')) {
+    patch.metadata = body.metadata;
+  }
+  return patch;
+}
+
+function handlePromptTemplatesList(res, url) {
+  const type = url.searchParams.get('type') || undefined;
+  const activeParam =
+    url.searchParams.get('active') ??
+    url.searchParams.get('isActive') ??
+    url.searchParams.get('is_active');
+  const defaultParam =
+    url.searchParams.get('default') ??
+    url.searchParams.get('isDefault') ??
+    url.searchParams.get('is_default');
+
+  const isActive = parseOptionalBoolean(activeParam);
+  if (activeParam !== null && isActive === null) {
+    return sendJson(res, 400, { error: 'invalid_active' });
+  }
+  const isDefault = parseOptionalBoolean(defaultParam);
+  if (defaultParam !== null && isDefault === null) {
+    return sendJson(res, 400, { error: 'invalid_default' });
+  }
+
+  const pagination = parseLimitOffsetStrict(url);
+  if (pagination.error) {
+    return sendJson(res, 400, { error: pagination.error });
+  }
+  const { limit, offset } = pagination;
+
+  const templates = storage.listPromptTemplates({ type, isActive, isDefault });
+  const { items, total } = paginate(templates, limit, offset);
+  return sendJson(res, 200, { items, limit, offset, total });
+}
+
+async function handlePromptTemplateCreate(req, res) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return sendJson(res, 400, { error: 'invalid_payload' });
+  }
+
+  try {
+    const template = await storage.createPromptTemplate(normalizePromptTemplateInput(body));
+    return sendJson(res, 201, template);
+  } catch (error) {
+    return sendJson(res, 400, { error: error.message });
+  }
+}
+
+async function handlePromptTemplateGet(res, templateId) {
+  const template = await storage.getPromptTemplate(templateId);
+  if (!template) {
+    return sendJson(res, 404, { error: 'prompt_template_not_found' });
+  }
+  return sendJson(res, 200, template);
+}
+
+async function handlePromptTemplatePatch(req, res, templateId) {
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return sendJson(res, 400, { error: 'invalid_payload' });
+  }
+  if (!Object.keys(body).length) {
+    return sendJson(res, 400, { error: 'empty_patch' });
+  }
+
+  try {
+    const template = await storage.updatePromptTemplate(templateId, normalizePromptTemplatePatch(body));
+    if (!template) {
+      return sendJson(res, 404, { error: 'prompt_template_not_found' });
+    }
+    return sendJson(res, 200, template);
+  } catch (error) {
+    return sendJson(res, 400, { error: error.message });
+  }
+}
+
+async function handlePromptTemplateDelete(res, templateId) {
+  const success = await storage.deletePromptTemplate(templateId);
+  if (!success) {
+    return sendJson(res, 404, { error: 'prompt_template_not_found' });
+  }
+  return sendNoContent(res);
 }
 
 function isMcpPath(pathname) {
@@ -1057,6 +1214,33 @@ async function handleRequest(req, res) {
     return sendMethodNotAllowed(res);
   }
 
+  if (pathname === '/api/prompt-templates') {
+    if (req.method === 'GET') {
+      return handlePromptTemplatesList(res, url);
+    }
+    if (req.method === 'POST') {
+      return handlePromptTemplateCreate(req, res);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
+  if (pathname.startsWith('/api/prompt-templates/')) {
+    const templateId = pathname.split('/').pop();
+    if (!templateId) {
+      return sendJson(res, 400, { error: 'prompt_template_id_required' });
+    }
+    if (req.method === 'GET') {
+      return handlePromptTemplateGet(res, templateId);
+    }
+    if (req.method === 'PATCH') {
+      return handlePromptTemplatePatch(req, res, templateId);
+    }
+    if (req.method === 'DELETE') {
+      return handlePromptTemplateDelete(res, templateId);
+    }
+    return sendMethodNotAllowed(res);
+  }
+
   if (pathname === '/api/designs') {
     if (req.method === 'GET') {
       return handleDesignList(res, url);
@@ -1375,6 +1559,7 @@ async function start() {
     serverVersion: process.env.MCP_SERVER_VERSION,
     authToken: process.env.MCP_AUTH_TOKEN,
     uipro,
+    extractionPipeline,
   });
 
   server.listen(DEFAULT_PORT, () => {
