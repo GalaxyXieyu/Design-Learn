@@ -438,7 +438,7 @@
     if (!container) return;
     app.state.libraryItemsByKey = {};
     if (!items.length && !app.state.batchTask) {
-      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--vscode-descriptionForeground);">暂无记录</div>';
+      container.innerHTML = '<div class="history-empty">暂无记录</div>';
       return;
     }
 
