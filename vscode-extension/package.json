@@ -2,7 +2,7 @@
   "name": "design-learn",
   "displayName": "Design-Learn",
   "description": "在 VSCode 中提取网页设计风格，AI 智能分析，保存到项目目录",
-  "version": "1.0.60",
+  "version": "1.0.63",
   "publisher": "design-learn",
   "icon": "media/icon.png",
   "engines": {
@@ -119,6 +119,11 @@
           "type": "array",
           "default": [],
           "description": "提示词模板列表"
+        },
+        "designLearn.selectedPromptTemplateId": {
+          "type": "string",
+          "default": "",
+          "description": "当前选中的提示词模板 ID（为空表示使用默认模板）"
         },
         "designLearn.extraction": {
           "type": "object",
