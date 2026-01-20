@@ -72,7 +72,7 @@ export class AIAnalyzer {
             throw new Error('AI 配置未加载');
         }
 
-        const systemPrompt = this.getSystemPrompt();
+        const systemPrompt = await this.getSystemPrompt();
         const userPrompt = this.buildUserPrompt(snapshot);
 
         const response = await this.callAI(systemPrompt, userPrompt);
@@ -98,7 +98,7 @@ export class AIAnalyzer {
             throw new Error('snapshot_required');
         }
 
-        const systemPrompt = this.getSystemPrompt();
+        const systemPrompt = await this.getSystemPrompt();
         const maxInputTokens = this.DEFAULT_MAX_INPUT_TOKENS;
         const systemPromptTokens = this.estimateTokens(systemPrompt);
         const availableTokens = maxInputTokens - this.OUTPUT_TOKEN_RESERVE - this.SYSTEM_PROMPT_RESERVE - systemPromptTokens;
@@ -122,7 +122,17 @@ export class AIAnalyzer {
     /**
      * 获取 System Prompt
      */
-    private getSystemPrompt(): string {
+    private async getSystemPrompt(): Promise<string> {
+        const serverTemplate = await this.loadServerTemplateContent();
+        if (serverTemplate) {
+            return serverTemplate;
+        }
+
+        const localTemplate = this.loadLocalTemplateContent();
+        if (localTemplate) {
+            return localTemplate;
+        }
+
         return `你是一位资深的前端设计系统专家，擅长从网页源码中提取设计规范并输出专业的设计系统文档。
 
 ## 你的任务
@@ -168,6 +178,78 @@ export class AIAnalyzer {
 13. 约定与最佳实践（Do & Don't）
 
 请确保输出内容详尽、专业、可直接用于团队开发参考。`;
+    }
+
+    private loadLocalTemplateContent(): string | null {
+        const config = vscode.workspace.getConfiguration('designLearn');
+        const templates = config.get<any[]>('promptTemplates', []);
+        const activeTemplate = templates.find(t => t?.active);
+        if (activeTemplate?.prompt && typeof activeTemplate.prompt === 'string') {
+            const trimmed = activeTemplate.prompt.trim();
+            return trimmed ? trimmed : null;
+        }
+        return null;
+    }
+
+    private async loadServerTemplateContent(): Promise<string | null> {
+        const config = vscode.workspace.getConfiguration('designLearn');
+        const serverUrl = config.get<string>('serverUrl', 'http://localhost:3100');
+
+        try {
+            const result = await this.requestServerJson(
+                `${serverUrl}/api/prompt-templates?type=styleguide&default=true`
+            );
+            const items = Array.isArray(result?.items) ? result.items : [];
+            const template = items[0];
+            if (template?.content && typeof template.content === 'string') {
+                const trimmed = template.content.trim();
+                return trimmed ? trimmed : null;
+            }
+        } catch {
+            return null;
+        }
+
+        return null;
+    }
+
+    private requestServerJson(url: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            const http = require('http');
+            const urlObj = new URL(url);
+            const options = {
+                hostname: urlObj.hostname,
+                port: urlObj.port,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 5000
+            };
+
+            const req = http.request(options, (res: any) => {
+                let data = '';
+                res.on('data', (chunk: string) => (data += chunk));
+                res.on('end', () => {
+                    try {
+                        const json = data ? JSON.parse(data) : {};
+                        if (res.statusCode && res.statusCode >= 400) {
+                            reject(new Error(json.error || `HTTP ${res.statusCode}`));
+                        } else {
+                            resolve(json);
+                        }
+                    } catch {
+                        resolve({});
+                    }
+                });
+            });
+
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('timeout'));
+            });
+
+            req.end();
+        });
     }
 
     private calculateBatchLimits(snapshots: Snapshot[], availableTokens: number) {
