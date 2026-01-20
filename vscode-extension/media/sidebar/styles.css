@@ -206,9 +206,9 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .setting-toggle input:checked + .slider:before { transform: translateX(14px); }
 
 /* 空状态 */
-.empty-state { text-align: center; padding: 16px; color: var(--vscode-descriptionForeground); }
+.empty-state { text-align: center; padding: 16px; color: var(--vscode-foreground); }
 .empty-state svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
-.empty-state p { font-size: 11px; }
+.empty-state p { font-size: 12px; font-weight: 500; }
 
 /* 任务列表 */
 .task-item { padding: 8px 10px; background: var(--vscode-input-background); border-radius: 6px; margin-bottom: 6px; }
