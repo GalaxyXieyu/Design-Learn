@@ -18,6 +18,7 @@ const {
 } = require('./paths');
 const { ensureDir, writeJson, readJson, writeText, readText, removePath } = require('./fileStore');
 const { openDatabase } = require('./sqliteStore');
+const { PROMPT_TEMPLATE_LIMITS } = require('../promptTemplates');
 
 async function createStorage(options = {}) {
   const dataDir = resolveDataDir(options.dataDir);
@@ -813,10 +814,6 @@ async function deleteRule(db, dataDir, ruleId) {
   await writeRuleIndex(db, dataDir);
 }
 
-const PROMPT_TEMPLATE_NAME_MAX = 100;
-const PROMPT_TEMPLATE_DESC_MAX = 500;
-const PROMPT_TEMPLATE_CONTENT_MAX = 50000;
-
 function normalizePromptTemplateString(value, field, maxLength) {
   if (typeof value !== 'string') {
     throw new Error(`${field}_required`);
@@ -863,10 +860,12 @@ function normalizePromptTemplateInput(input) {
   const now = new Date().toISOString();
   return {
     id: input.id || crypto.randomUUID(),
-    name: normalizePromptTemplateString(input.name, 'name', PROMPT_TEMPLATE_NAME_MAX),
+    name: normalizePromptTemplateString(input.name, 'name', PROMPT_TEMPLATE_LIMITS.name),
     type: normalizePromptTemplateString(input.type, 'type'),
-    content: normalizePromptTemplateString(input.content, 'content', PROMPT_TEMPLATE_CONTENT_MAX),
-    description: typeof input.description === 'string' ? input.description.trim().slice(0, PROMPT_TEMPLATE_DESC_MAX) : '',
+    content: normalizePromptTemplateString(input.content, 'content', PROMPT_TEMPLATE_LIMITS.content),
+    description: typeof input.description === 'string'
+      ? input.description.trim().slice(0, PROMPT_TEMPLATE_LIMITS.description)
+      : '',
     isActive: input.isActive === true,
     isDefault: input.isDefault === true,
     metadata: normalizePromptTemplateMetadata(input.metadata),
@@ -878,19 +877,19 @@ function normalizePromptTemplateInput(input) {
 function normalizePromptTemplatePatch(patch = {}) {
   const normalized = {};
   if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
-    normalized.name = normalizePromptTemplateString(patch.name, 'name', PROMPT_TEMPLATE_NAME_MAX);
+    normalized.name = normalizePromptTemplateString(patch.name, 'name', PROMPT_TEMPLATE_LIMITS.name);
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'type')) {
     normalized.type = normalizePromptTemplateString(patch.type, 'type');
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'content')) {
-    normalized.content = normalizePromptTemplateString(patch.content, 'content', PROMPT_TEMPLATE_CONTENT_MAX);
+    normalized.content = normalizePromptTemplateString(patch.content, 'content', PROMPT_TEMPLATE_LIMITS.content);
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'description')) {
     if (patch.description === null || patch.description === undefined) {
       normalized.description = '';
     } else if (typeof patch.description === 'string') {
-      normalized.description = patch.description.trim().slice(0, PROMPT_TEMPLATE_DESC_MAX);
+      normalized.description = patch.description.trim().slice(0, PROMPT_TEMPLATE_LIMITS.description);
     } else {
       throw new Error('description_invalid');
     }
