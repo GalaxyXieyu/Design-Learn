@@ -50,6 +50,13 @@ async function createStorage(options = {}) {
     listRules: (versionId) => listRules(db, dataDir, versionId),
     getRule: (ruleId) => getRule(db, dataDir, ruleId),
     deleteRule: (ruleId) => deleteRule(db, dataDir, ruleId),
+    listPromptTemplates: (filters) => listPromptTemplates(db, filters),
+    getPromptTemplate: (templateId) => getPromptTemplate(db, templateId),
+    createPromptTemplate: (input) => createPromptTemplate(db, input),
+    updatePromptTemplate: (templateId, patch) => updatePromptTemplate(db, templateId, patch),
+    deletePromptTemplate: (templateId) => deletePromptTemplate(db, templateId),
+    setPromptTemplateActive: (templateId) => setPromptTemplateActive(db, templateId),
+    setPromptTemplateDefault: (templateId) => setPromptTemplateDefault(db, templateId),
     // 任务管理方法
     createTask: (input) => createTask(db, input),
     listTasks: (filters) => listTasks(db, filters),
@@ -804,6 +811,258 @@ async function deleteRule(db, dataDir, ruleId) {
   await removePath(row.raw_path);
 
   await writeRuleIndex(db, dataDir);
+}
+
+const PROMPT_TEMPLATE_NAME_MAX = 100;
+const PROMPT_TEMPLATE_DESC_MAX = 500;
+const PROMPT_TEMPLATE_CONTENT_MAX = 50000;
+
+function normalizePromptTemplateString(value, field, maxLength) {
+  if (typeof value !== 'string') {
+    throw new Error(`${field}_required`);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${field}_required`);
+  }
+  if (maxLength && trimmed.length > maxLength) {
+    throw new Error(`${field}_too_long`);
+  }
+  return trimmed;
+}
+
+function normalizePromptTemplateMetadata(metadata) {
+  if (metadata === undefined) {
+    return {};
+  }
+  if (metadata === null) {
+    return {};
+  }
+  if (typeof metadata !== 'object' || Array.isArray(metadata)) {
+    throw new Error('metadata_invalid');
+  }
+  return metadata;
+}
+
+function mapPromptTemplateRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    content: row.content,
+    description: row.description || '',
+    isActive: row.is_active === 1,
+    isDefault: row.is_default === 1,
+    metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {},
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizePromptTemplateInput(input) {
+  const now = new Date().toISOString();
+  return {
+    id: input.id || crypto.randomUUID(),
+    name: normalizePromptTemplateString(input.name, 'name', PROMPT_TEMPLATE_NAME_MAX),
+    type: normalizePromptTemplateString(input.type, 'type'),
+    content: normalizePromptTemplateString(input.content, 'content', PROMPT_TEMPLATE_CONTENT_MAX),
+    description: typeof input.description === 'string' ? input.description.trim().slice(0, PROMPT_TEMPLATE_DESC_MAX) : '',
+    isActive: input.isActive === true,
+    isDefault: input.isDefault === true,
+    metadata: normalizePromptTemplateMetadata(input.metadata),
+    createdAt: input.createdAt || now,
+    updatedAt: input.updatedAt || now,
+  };
+}
+
+function normalizePromptTemplatePatch(patch = {}) {
+  const normalized = {};
+  if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
+    normalized.name = normalizePromptTemplateString(patch.name, 'name', PROMPT_TEMPLATE_NAME_MAX);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'type')) {
+    normalized.type = normalizePromptTemplateString(patch.type, 'type');
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'content')) {
+    normalized.content = normalizePromptTemplateString(patch.content, 'content', PROMPT_TEMPLATE_CONTENT_MAX);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'description')) {
+    if (patch.description === null || patch.description === undefined) {
+      normalized.description = '';
+    } else if (typeof patch.description === 'string') {
+      normalized.description = patch.description.trim().slice(0, PROMPT_TEMPLATE_DESC_MAX);
+    } else {
+      throw new Error('description_invalid');
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'isActive')) {
+    normalized.isActive = patch.isActive === true;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'isDefault')) {
+    normalized.isDefault = patch.isDefault === true;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'metadata')) {
+    normalized.metadata = normalizePromptTemplateMetadata(patch.metadata);
+  }
+  return normalized;
+}
+
+function listPromptTemplates(db, filters = {}) {
+  const clauses = [];
+  const args = [];
+
+  if (filters.type) {
+    clauses.push('type = ?');
+    args.push(filters.type);
+  }
+  if (filters.isActive !== undefined) {
+    clauses.push('is_active = ?');
+    args.push(filters.isActive ? 1 : 0);
+  }
+  if (filters.isDefault !== undefined) {
+    clauses.push('is_default = ?');
+    args.push(filters.isDefault ? 1 : 0);
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const limit = Number.isFinite(filters.limit) ? Math.max(1, Math.min(filters.limit, 100)) : null;
+  const offset = Number.isFinite(filters.offset) ? Math.max(filters.offset, 0) : null;
+  const limitClause = limit ? `LIMIT ${limit}` : '';
+  const offsetClause = offset ? `OFFSET ${offset}` : '';
+
+  const rows = db
+    .prepare(`SELECT * FROM prompt_templates ${whereClause} ORDER BY updated_at DESC ${limitClause} ${offsetClause}`)
+    .all(...args);
+  return rows.map(mapPromptTemplateRow);
+}
+
+function getPromptTemplate(db, templateId) {
+  const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
+  return row ? mapPromptTemplateRow(row) : null;
+}
+
+async function createPromptTemplate(db, input) {
+  const template = normalizePromptTemplateInput(input);
+
+  if (template.isActive) {
+    db.prepare('UPDATE prompt_templates SET is_active = 0 WHERE type = ?').run(template.type);
+  }
+  if (template.isDefault) {
+    db.prepare('UPDATE prompt_templates SET is_default = 0 WHERE type = ?').run(template.type);
+  }
+
+  db.prepare(
+    `INSERT INTO prompt_templates (
+      id, name, type, content, description, is_active, is_default, metadata_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    template.id,
+    template.name,
+    template.type,
+    template.content,
+    template.description || null,
+    template.isActive ? 1 : 0,
+    template.isDefault ? 1 : 0,
+    JSON.stringify(template.metadata || {}),
+    template.createdAt,
+    template.updatedAt
+  );
+
+  return template;
+}
+
+async function updatePromptTemplate(db, templateId, patch) {
+  const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
+  if (!row) {
+    return null;
+  }
+
+  const normalized = normalizePromptTemplatePatch(patch);
+  const now = new Date().toISOString();
+  const updates = [];
+  const args = [];
+
+  const nextType = normalized.type || row.type;
+  const nextIsActive = normalized.isActive ?? row.is_active === 1;
+  const nextIsDefault = normalized.isDefault ?? row.is_default === 1;
+
+  if (nextIsActive) {
+    db.prepare('UPDATE prompt_templates SET is_active = 0 WHERE type = ?').run(nextType);
+  }
+  if (nextIsDefault) {
+    db.prepare('UPDATE prompt_templates SET is_default = 0 WHERE type = ?').run(nextType);
+  }
+
+  if (normalized.name !== undefined) {
+    updates.push('name = ?');
+    args.push(normalized.name);
+  }
+  if (normalized.type !== undefined) {
+    updates.push('type = ?');
+    args.push(normalized.type);
+  }
+  if (normalized.content !== undefined) {
+    updates.push('content = ?');
+    args.push(normalized.content);
+  }
+  if (normalized.description !== undefined) {
+    updates.push('description = ?');
+    args.push(normalized.description || null);
+  }
+  if (normalized.isActive !== undefined) {
+    updates.push('is_active = ?');
+    args.push(normalized.isActive ? 1 : 0);
+  }
+  if (normalized.isDefault !== undefined) {
+    updates.push('is_default = ?');
+    args.push(normalized.isDefault ? 1 : 0);
+  }
+  if (normalized.metadata !== undefined) {
+    updates.push('metadata_json = ?');
+    args.push(JSON.stringify(normalized.metadata || {}));
+  }
+
+  updates.push('updated_at = ?');
+  args.push(now);
+
+  if (updates.length === 1) {
+    return mapPromptTemplateRow(row);
+  }
+
+  args.push(templateId);
+  db.prepare(`UPDATE prompt_templates SET ${updates.join(', ')} WHERE id = ?`).run(...args);
+  return getPromptTemplate(db, templateId);
+}
+
+async function deletePromptTemplate(db, templateId) {
+  const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
+  if (!row) {
+    return false;
+  }
+  db.prepare('DELETE FROM prompt_templates WHERE id = ?').run(templateId);
+  return true;
+}
+
+async function setPromptTemplateActive(db, templateId) {
+  const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
+  if (!row) {
+    return null;
+  }
+  const now = new Date().toISOString();
+  db.prepare('UPDATE prompt_templates SET is_active = 0 WHERE type = ?').run(row.type);
+  db.prepare('UPDATE prompt_templates SET is_active = 1, updated_at = ? WHERE id = ?').run(now, templateId);
+  return getPromptTemplate(db, templateId);
+}
+
+async function setPromptTemplateDefault(db, templateId) {
+  const row = db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(templateId);
+  if (!row) {
+    return null;
+  }
+  const now = new Date().toISOString();
+  db.prepare('UPDATE prompt_templates SET is_default = 0 WHERE type = ?').run(row.type);
+  db.prepare('UPDATE prompt_templates SET is_default = 1, updated_at = ? WHERE id = ?').run(now, templateId);
+  return getPromptTemplate(db, templateId);
 }
 
 // ==================== 任务管理 ====================
