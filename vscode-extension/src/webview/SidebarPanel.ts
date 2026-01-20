@@ -92,7 +92,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       try {
         const result = await serverClient.requestToServer(
           'GET',
-          '/api/prompt-templates?type=styleguide',
+          '/api/prompt-templates?type=styleguide&limit=100',
           null
         );
         const items = Array.isArray(result.items) ? result.items : [];
@@ -258,6 +258,17 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       },
       savePromptTemplate: async (message) => savePromptTemplate(message.template),
       deletePromptTemplate: async (message) => deletePromptTemplate(message.templateId),
+      confirmDeleteTemplate: async (message) => {
+        const result = await vscode.window.showWarningMessage(
+          '确定要删除这个模板吗？',
+          { modal: true },
+          '删除',
+          '取消'
+        );
+        if (result === '删除') {
+          postMessage({ type: 'executeDeleteTemplate', templateId: message.templateId });
+        }
+      },
       openSettingsPanel: () => vscode.commands.executeCommand('design-learn.openSettings'),
       saveConfig: (message) => configService.saveConfig(message.config),
       startDesignPolling: () => pollingService.start(),

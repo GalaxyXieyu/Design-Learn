@@ -544,6 +544,16 @@ async function handlePromptTemplatePatch(req, res, templateId) {
 }
 
 async function handlePromptTemplateDelete(res, templateId) {
+  const template = storage.getPromptTemplate(templateId);
+
+  // Prevent deletion of system templates
+  if (template?.metadata?.system === true) {
+    return sendJson(res, 403, {
+      error: 'cannot_delete_system_template',
+      message: '系统模板不能删除'
+    });
+  }
+
   const removed = await storage.deletePromptTemplate(templateId);
   if (!removed) {
     return sendJson(res, 404, { error: 'prompt_template_not_found' });
@@ -1591,6 +1601,10 @@ server.on('clientError', (err, socket) => {
 
 async function start() {
   storage = await createStorage({ dataDir });
+
+  // Initialize default templates on startup
+  await ensurePromptTemplateDefault(PROMPT_TEMPLATE_DEFAULT_TYPE);
+
   uipro = createUipro({ dataDir });
   extractionPipeline = createExtractionPipeline({ storage });
   previewPipeline = createPreviewPipeline({ storage });

@@ -43,14 +43,14 @@
     }
     const options = [
       `<option value=\"\">${defaultLabel}</option>`,
-      ...items.map((item) => {
-        let suffix = '';
-        if (item.system && item.isDefault) suffix = '（系统默认）';
-        else if (item.system) suffix = '（系统）';
-        else if (item.isDefault) suffix = '（默认）';
-        const label = item.name ? `${item.name}${suffix}` : `未命名模板${suffix}`;
-        return `<option value=\"${escapeHtml(item.id)}\">${escapeHtml(label)}</option>`;
-      })
+      ...items
+        .filter((item) => !item.isDefault)  // Don't show default item again
+        .map((item) => {
+          let suffix = '';
+          if (item.system) suffix = '（系统）';
+          const label = item.name ? `${item.name}${suffix}` : `未命名模板${suffix}`;
+          return `<option value=\"${escapeHtml(item.id)}\">${escapeHtml(label)}</option>`;
+        })
     ];
     select.innerHTML = options.join('');
     const rawSelected = app.state.selectedPromptTemplateId;
@@ -83,6 +83,7 @@
   }
 
   function openTemplateModal(template) {
+    console.log('[DEBUG] openTemplateModal called with:', template);
     const modal = getEl('templateModal');
     const title = getEl('templateModalTitle');
     const nameInput = getEl('templateModalName');
@@ -93,6 +94,7 @@
     if (template) {
       editingTemplateId = template.id;
       editingTemplateIsSystem = template.system === true;
+      console.log('[DEBUG] Set editing state:', { editingTemplateId, editingTemplateIsSystem });
       title.textContent = '编辑提示词模板';
       nameInput.value = template.name || '';
       promptInput.value = template.prompt || '';
@@ -162,13 +164,24 @@
   }
 
   function deleteTemplateModal() {
-    if (!editingTemplateId || editingTemplateIsSystem) return;
-    if (!confirm('确定要删除这个模板吗?')) return;
-    if (app.state.selectedPromptTemplateId === editingTemplateId) {
+    console.log('[DEBUG] Delete clicked:', { editingTemplateId, editingTemplateIsSystem });
+    if (!editingTemplateId || editingTemplateIsSystem) {
+      console.log('[DEBUG] Delete blocked - editingTemplateId:', editingTemplateId, 'isSystem:', editingTemplateIsSystem);
+      return;
+    }
+    // Send confirmation request to extension host
+    app.postMessage({
+      type: 'confirmDeleteTemplate',
+      templateId: editingTemplateId
+    });
+  }
+
+  function confirmDeleteTemplate(templateId) {
+    if (app.state.selectedPromptTemplateId === templateId) {
       app.state.selectedPromptTemplateId = '';
       app.postMessage({ type: 'selectPromptTemplate', templateId: null });
     }
-    app.postMessage({ type: 'deletePromptTemplate', templateId: editingTemplateId });
+    app.postMessage({ type: 'deletePromptTemplate', templateId: templateId });
     closeTemplateModal();
   }
 
@@ -179,5 +192,6 @@
   app.ui.closeTemplateModal = closeTemplateModal;
   app.ui.saveTemplateModal = saveTemplateModal;
   app.ui.deleteTemplateModal = deleteTemplateModal;
+  app.ui.confirmDeleteTemplate = confirmDeleteTemplate;
   app.ui.createTemplate = handleCreateTemplate;
 })();

@@ -9,20 +9,6 @@ const vscode = acquireVsCodeApi();
 // State
 let currentPage = 'models';
 let models = [];
-let templates = [];
-let editingTemplateId = null;
-let editingTemplateCreatedAt = null;
-let config = {
-  inlineCSS: true,
-  includeImages: true,
-  includeFonts: true,
-  analyzeColors: true,
-  analyzeTypography: true,
-  analyzeLayout: true,
-  analyzeComponents: true,
-  analyzeAccessibility: true,
-  reportLanguage: 'zh'
-};
 
 // ============================================================================
 // 1. Initialization
@@ -212,172 +198,6 @@ function testModel(modelId) {
   });
 }
 
-function setActiveTemplate(templateId) {
-  templates.forEach(t => t.active = (t.id === templateId));
-  vscode.postMessage({ type: 'saveTemplates', templates });
-  renderTemplates();
-}
-
-// ============================================================================
-// 4. Templates Management
-// ============================================================================
-
-function openAddTemplateForm() {
-  editingTemplateId = null;
-  editingTemplateCreatedAt = null;
-  renderTemplateForm();
-}
-
-function renderTemplateForm(template = {}) {
-  const container = document.getElementById('templatesContainer');
-  if (!container) return;
-  const isEditing = !!editingTemplateId;
-  const title = isEditing ? '编辑模板' : '添加新模板';
-  const saveLabel = isEditing ? '保存修改' : '保存模板';
-  const html = `
-    <div class="card">
-      <h3 class="card-title">${title}</h3>
-      <div class="form-group">
-        <label>模板名称</label>
-        <input type="text" id="templateName" class="input" placeholder="例如: 完整分析, 快速分析">
-      </div>
-      <div class="form-group">
-        <label>提示词内容</label>
-        <textarea id="templatePrompt" class="prompt-edit-area" placeholder="输入您的提示词..."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="templateActive">
-          <span class="checkbox-custom"></span>
-          <span>设为默认模板</span>
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn-primary" id="saveTemplateBtn">${saveLabel}</button>
-        <button class="btn-secondary" id="cancelTemplateBtn">取消</button>
-      </div>
-    </div>`;
-  container.innerHTML = html;
-  const nameInput = document.getElementById('templateName');
-  const promptInput = document.getElementById('templatePrompt');
-  const activeInput = document.getElementById('templateActive');
-  if (nameInput) nameInput.value = template.name || '';
-  if (promptInput) promptInput.value = template.prompt || '';
-  if (activeInput) activeInput.checked = !!template.active;
-  document.getElementById('saveTemplateBtn')?.addEventListener('click', saveTemplate);
-  document.getElementById('cancelTemplateBtn')?.addEventListener('click', loadData);
-}
-
-function saveTemplate() {
-  const template = {
-    id: editingTemplateId || Date.now().toString(),
-    name: document.getElementById('templateName').value,
-    prompt: document.getElementById('templatePrompt').value,
-    active: document.getElementById('templateActive').checked,
-    createdAt: editingTemplateCreatedAt || new Date().toISOString(),
-    isUpdate: !!editingTemplateId
-  };
-
-  if (!template.name || !template.prompt) {
-    alert('请填写必填项');
-    return;
-  }
-
-  vscode.postMessage({
-    type: 'saveTemplate',
-    template: template
-  });
-  editingTemplateId = null;
-  editingTemplateCreatedAt = null;
-}
-
-function renderTemplates() {
-  const container = document.getElementById('templatesContainer');
-  if (!container) return;
-  if (templates.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-        <p>还没有自定义模板</p>
-        <p style="font-size:14px;color:var(--text-secondary);">点击右上角按钮创建提示词模板</p>
-      </div>`;
-    return;
-  }
-  container.innerHTML = templates.map(template => {
-    const prompt = (template.prompt || '').trim();
-    const desc = prompt.length > 100 ? `${prompt.substring(0, 100)}...` : (prompt || '（暂无内容）');
-    const badgeText = template.system ? '系统默认' : (template.active ? '默认' : '');
-    const badge = badgeText ? `<span class="template-badge">${badgeText}</span>` : '';
-    const deleteBtn = template.system ? '' : `<button class="btn-secondary btn-sm" data-action="deleteTemplate" data-id="${template.id}">删除</button>`;
-    return `
-      <div class="template-card${template.active ? ' active' : ''}">
-        <div class="template-header">
-          <div class="template-info">
-            <div class="template-name">${template.name}</div>
-            <div class="template-desc">${desc}</div>
-          </div>
-          ${badge}
-        </div>
-        <div class="template-actions">
-          <button class="btn-secondary btn-sm" data-action="setActiveTemplate" data-id="${template.id}">${template.active ? '默认' : '设为默认'}</button>
-          <button class="btn-secondary btn-sm" data-action="editTemplate" data-id="${template.id}">编辑</button>
-          ${deleteBtn}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function deleteTemplate(templateId) {
-  if (confirm('确定要删除这个模板吗?')) {
-    vscode.postMessage({
-      type: 'deleteTemplate',
-      templateId: templateId
-    });
-  }
-}
-
-function editTemplate(templateId) {
-  const template = templates.find(t => t.id === templateId);
-  if (!template) {
-    alert('未找到模板');
-    return;
-  }
-  editingTemplateId = template.id;
-  editingTemplateCreatedAt = template.createdAt || null;
-  renderTemplateForm(template);
-}
-
-function handleTemplateAction(event) {
-  const target = event.target?.closest?.('[data-action]');
-  if (!target) return;
-  const action = target.dataset.action;
-  const templateId = target.dataset.id;
-  if (!templateId) return;
-  switch (action) {
-    case 'setActiveTemplate':
-      setActiveTemplate(templateId);
-      break;
-    case 'deleteTemplate':
-      deleteTemplate(templateId);
-      break;
-    case 'editTemplate':
-      editTemplate(templateId);
-      break;
-    default:
-      break;
-  }
-}
-
-// ============================================================================
-// 5. Configuration
-// ============================================================================
-
-function saveConfig() {
-  vscode.postMessage({
-    type: 'saveConfig',
-    config: config
-  });
-}
 
 // ============================================================================
 // 6. Data Loading & Communication
@@ -395,11 +215,7 @@ function handleExtensionMessage(event) {
   switch (message.type) {
     case 'updateData':
       models = message.models || [];
-      templates = message.templates || [];
-      config = message.config || config;
       renderModels();
-      renderTemplates();
-      updateConfigUI();
       break;
 
     case 'showMessage':
@@ -435,28 +251,6 @@ function handleExtensionMessage(event) {
       alert('错误: ' + message.error);
       break;
   }
-}
-
-function updateConfigUI() {
-  const inlineCSS = document.getElementById('inlineCSS');
-  const includeImages = document.getElementById('includeImages');
-  const includeFonts = document.getElementById('includeFonts');
-  const analyzeColors = document.getElementById('analyzeColors');
-  const analyzeTypography = document.getElementById('analyzeTypography');
-  const analyzeLayout = document.getElementById('analyzeLayout');
-  const analyzeComponents = document.getElementById('analyzeComponents');
-  const analyzeAccessibility = document.getElementById('analyzeAccessibility');
-  const reportLanguage = document.getElementById('reportLanguage');
-
-  if (inlineCSS) inlineCSS.checked = config.inlineCSS;
-  if (includeImages) includeImages.checked = config.includeImages;
-  if (includeFonts) includeFonts.checked = config.includeFonts;
-  if (analyzeColors) analyzeColors.checked = config.analyzeColors;
-  if (analyzeTypography) analyzeTypography.checked = config.analyzeTypography;
-  if (analyzeLayout) analyzeLayout.checked = config.analyzeLayout;
-  if (analyzeComponents) analyzeComponents.checked = config.analyzeComponents;
-  if (analyzeAccessibility) analyzeAccessibility.checked = config.analyzeAccessibility;
-  if (reportLanguage) reportLanguage.value = config.reportLanguage;
 }
 
 // ============================================================================
