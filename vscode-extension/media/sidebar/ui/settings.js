@@ -19,7 +19,13 @@
 
   function openPromptTemplateConfig() {
     closeSettingsMenu();
-    app.postMessage({ type: 'openSettingsPanel', section: 'promptTemplates' });
+    if (app.ui.openTemplateEditor) {
+      app.ui.openTemplateEditor();
+      return;
+    }
+    if (app.ui.openTemplateModal) {
+      app.ui.openTemplateModal(null);
+    }
   }
 
   function setMode(mode) {
