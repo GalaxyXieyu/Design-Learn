@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const initSqlJs = require('sql.js');
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -131,7 +131,7 @@ function migrate(db) {
     return;
   }
 
-  if (version !== 0 && version !== 1) {
+  if (version !== 0 && version !== 1 && version !== 2) {
     throw new Error(`Unsupported schema version ${version}`);
   }
 
@@ -188,11 +188,27 @@ function migrate(db) {
       FOREIGN KEY (version_id) REFERENCES versions(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS prompt_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      description TEXT,
+      is_active INTEGER DEFAULT 0,
+      is_default INTEGER DEFAULT 0,
+      metadata_json TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_versions_design_id ON versions(design_id);
     CREATE INDEX IF NOT EXISTS idx_components_design_id ON components(design_id);
     CREATE INDEX IF NOT EXISTS idx_components_version_id ON components(version_id);
     CREATE INDEX IF NOT EXISTS idx_rules_version_id ON rules(version_id);
     CREATE INDEX IF NOT EXISTS idx_designs_updated_at ON designs(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_prompt_templates_type ON prompt_templates(type);
+    CREATE INDEX IF NOT EXISTS idx_prompt_templates_active ON prompt_templates(type, is_active);
+    CREATE INDEX IF NOT EXISTS idx_prompt_templates_default ON prompt_templates(type, is_default);
 
     -- 任务队列表
     CREATE TABLE IF NOT EXISTS tasks (
