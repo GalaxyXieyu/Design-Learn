@@ -436,13 +436,24 @@ async function ensurePromptTemplateDefault(type) {
     return;
   }
 
-  const templates = storage.listPromptTemplates({ type: resolvedType });
-  if (!templates.length) {
-    const builtIn = getPromptTemplateDefault(resolvedType);
-    if (!builtIn) {
-      return;
+  let templates = storage.listPromptTemplates({ type: resolvedType });
+  const builtIn = getPromptTemplateDefault(resolvedType);
+  if (builtIn) {
+    const builtInTemplate = templates.find((template) =>
+      template?.metadata?.system === true || template?.name === builtIn.name
+    );
+    if (!builtInTemplate) {
+      await storage.createPromptTemplate({ ...builtIn, isDefault: templates.length === 0 });
+      templates = storage.listPromptTemplates({ type: resolvedType });
+    } else if (!builtInTemplate?.metadata?.system) {
+      await storage.updatePromptTemplate(builtInTemplate.id, {
+        metadata: { ...(builtInTemplate.metadata || {}), system: true },
+      });
+      templates = storage.listPromptTemplates({ type: resolvedType });
     }
-    await storage.createPromptTemplate({ ...builtIn, isDefault: true });
+  }
+
+  if (!templates.length) {
     return;
   }
 
@@ -640,6 +651,11 @@ async function handleImportUrl(req, res) {
     const existing = requestedDesign ? null : storage.listDesigns().find((item) => item.url === rawUrl);
     const now = new Date().toISOString();
     const useAI = !!body?.options?.useAI;
+    const hasPromptTemplateId = Object.prototype.hasOwnProperty.call(body?.options || {}, 'promptTemplateId');
+    const promptTemplateIdRaw = body?.options?.promptTemplateId;
+    const promptTemplateId = hasPromptTemplateId && typeof promptTemplateIdRaw === 'string'
+      ? promptTemplateIdRaw.trim() || null
+      : (hasPromptTemplateId ? null : undefined);
 
     let designId = requestedDesign?.id || existing?.id || null;
     if (!designId) {
@@ -660,6 +676,7 @@ async function handleImportUrl(req, res) {
           processingError: null,
           aiRequested: useAI,
           aiCompleted: false,
+          ...(promptTemplateId !== undefined ? { promptTemplateId } : {}),
           tags: [],
         },
       });
@@ -678,6 +695,7 @@ async function handleImportUrl(req, res) {
         processingError: null,
         aiRequested: useAI,
         ...(useAI ? { aiCompleted: false } : {}),
+        ...(promptTemplateId !== undefined ? { promptTemplateId } : {}),
       },
     });
 

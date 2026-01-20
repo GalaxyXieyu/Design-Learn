@@ -9,6 +9,9 @@
       if (msg.type === 'updateModels') {
         app.ui.updateModels(msg.models || [], msg.selectedModelId || '');
       }
+      if (msg.type === 'updatePromptTemplates' && app.ui.updatePromptTemplates) {
+        app.ui.updatePromptTemplates(msg.templates || [], msg.selectedTemplateId || '');
+      }
       if (msg.type === 'updateDesigns') app.ui.renderDesigns(msg.items || []);
       if (msg.type === 'updateConfig') app.ui.updateConfig(msg.config || {});
       if (msg.type === 'extracting') app.ui.setExtracting(!!msg.status);

@@ -4,7 +4,7 @@ import { toAnalyzerSnapshot } from '../utils/snapshotMapper';
 import { ServerClient } from './serverClient';
 
 export class AiAnalysisService {
-  private readonly _pendingAiJobs = new Map<string, { designId: string }>();
+  private readonly _pendingAiJobs = new Map<string, { designId: string; templateId?: string | null }>();
   private readonly _analysisInFlight = new Set<string>();
   private readonly _serverClient: ServerClient;
 
@@ -12,9 +12,9 @@ export class AiAnalysisService {
     this._serverClient = serverClient;
   }
 
-  public trackJob(jobId: string, designId: string) {
+  public trackJob(jobId: string, designId: string, templateId?: string | null) {
     if (jobId && designId) {
-      this._pendingAiJobs.set(jobId, { designId });
+      this._pendingAiJobs.set(jobId, { designId, templateId });
     }
   }
 
@@ -89,7 +89,7 @@ export class AiAnalysisService {
         if (job.status !== 'completed') continue;
         this._pendingAiJobs.delete(jobId);
         if (this._analysisInFlight.has(data.designId)) continue;
-        void this._runAiAnalysisForDesign(data.designId);
+        void this._runAiAnalysisForDesign(data.designId, data.templateId);
       }
     }
 
@@ -105,11 +105,12 @@ export class AiAnalysisService {
       if (meta.processingStatus === 'failed' || meta.processingMessage === 'failed') continue;
       const jobStatus = meta.processingJobStatus;
       if (jobStatus === 'running' || jobStatus === 'queued') continue;
-      void this._runAiAnalysisForDesign(designId);
+      const templateId = meta?.promptTemplateId || null;
+      void this._runAiAnalysisForDesign(designId, templateId);
     }
   }
 
-  private async _runAiAnalysisForDesign(designId: string) {
+  private async _runAiAnalysisForDesign(designId: string, templateId?: string | null) {
     this._analysisInFlight.add(designId);
     try {
       await this._updateDesignProcessing(designId, {
@@ -150,10 +151,11 @@ export class AiAnalysisService {
       }
 
       const analyzer = new AIAnalyzer();
+      const systemPrompt = await this._loadTemplatePrompt(templateId);
       const analyzerSnapshots = snapshots.map((item: any) => toAnalyzerSnapshot(item));
       const analysis = analyzerSnapshots.length > 1
-        ? await analyzer.analyzeBatch(analyzerSnapshots)
-        : await analyzer.analyze(analyzerSnapshots[0]);
+        ? await analyzer.analyzeBatch(analyzerSnapshots, { systemPrompt: systemPrompt || undefined })
+        : await analyzer.analyze(analyzerSnapshots[0], { systemPrompt: systemPrompt || undefined });
 
       if (analysis?.markdown) {
         await this._serverClient.requestToServer(
@@ -185,6 +187,26 @@ export class AiAnalysisService {
       vscode.window.showWarningMessage(`AI 分析失败: ${err?.message || String(err)}`);
     } finally {
       this._analysisInFlight.delete(designId);
+    }
+  }
+
+  private async _loadTemplatePrompt(templateId?: string | null) {
+    const resolvedId = typeof templateId === 'string' ? templateId.trim() : '';
+    if (!resolvedId) return null;
+    try {
+      const result = await this._serverClient.requestToServer(
+        'GET',
+        `/api/prompt-templates/${encodeURIComponent(resolvedId)}`,
+        null
+      );
+      const content = typeof result?.content === 'string' ? result.content.trim() : '';
+      return content || null;
+    } catch {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      const templates = config.get<any[]>('promptTemplates', []);
+      const local = templates.find(t => t?.id === resolvedId);
+      const prompt = typeof local?.prompt === 'string' ? local.prompt.trim() : '';
+      return prompt || null;
     }
   }
 

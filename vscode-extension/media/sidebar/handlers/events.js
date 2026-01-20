@@ -29,6 +29,13 @@
     if (libraryStack) libraryStack.addEventListener('change', () => app.ui.setLibraryStack && app.ui.setLibraryStack(libraryStack.value));
     if (librarySearchBtn) librarySearchBtn.addEventListener('click', () => app.ui.librarySearch && app.ui.librarySearch());
 
+    const templateSelect = getEl('promptTemplateSelect');
+    if (templateSelect) {
+      templateSelect.addEventListener('change', () => {
+        if (app.ui.handleTemplateSelectChange) app.ui.handleTemplateSelectChange();
+      });
+    }
+
     const historyList = getEl('historyList');
     if (historyList) {
       historyList.addEventListener('click', app.ui.handleHistoryListClick);
@@ -68,10 +75,11 @@
           return;
         }
         if (inputEl && url !== rawUrl) inputEl.value = url;
+        const templateId = app.state.selectedPromptTemplateId || null;
         if (app.state.currentMode === 'all') {
-          app.postMessage({ type: 'extractAll', url: url, useAI: true });
+          app.postMessage({ type: 'extractAll', url: url, useAI: true, templateId });
         } else {
-          app.postMessage({ type: 'extractWithAI', url: url });
+          app.postMessage({ type: 'extractWithAI', url: url, templateId });
         }
       });
     }
@@ -142,6 +150,21 @@
         case 'openServerConfig':
           app.ui.openServerModal();
           app.ui.closeSettingsMenu();
+          break;
+        case 'openTemplateEditor':
+          if (app.ui.openTemplateEditor) app.ui.openTemplateEditor();
+          break;
+        case 'createTemplate':
+          if (app.ui.createTemplate) app.ui.createTemplate();
+          break;
+        case 'closeTemplateModal':
+          if (app.ui.closeTemplateModal) app.ui.closeTemplateModal();
+          break;
+        case 'saveTemplateModal':
+          if (app.ui.saveTemplateModal) app.ui.saveTemplateModal();
+          break;
+        case 'deleteTemplateModal':
+          if (app.ui.deleteTemplateModal) app.ui.deleteTemplateModal();
           break;
         case 'setMode':
           app.ui.setMode(el.dataset.mode);

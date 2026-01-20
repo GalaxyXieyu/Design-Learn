@@ -10,6 +10,10 @@ export interface AnalysisResult {
     format: string;
 }
 
+export interface AnalysisOptions {
+    systemPrompt?: string;
+}
+
 export class AIAnalyzer {
     private config: {
         apiKey: string;
@@ -65,14 +69,14 @@ export class AIAnalyzer {
     /**
      * 分析快照
      */
-    async analyze(snapshot: Snapshot): Promise<AnalysisResult> {
+    async analyze(snapshot: Snapshot, options: AnalysisOptions = {}): Promise<AnalysisResult> {
         this.loadConfig();
 
         if (!this.config) {
             throw new Error('AI 配置未加载');
         }
 
-        const systemPrompt = await this.getSystemPrompt();
+        const systemPrompt = options.systemPrompt || await this.getSystemPrompt();
         const userPrompt = this.buildUserPrompt(snapshot);
 
         const response = await this.callAI(systemPrompt, userPrompt);
@@ -88,7 +92,7 @@ export class AIAnalyzer {
     /**
      * 批量分析多个快照
      */
-    async analyzeBatch(snapshots: Snapshot[]): Promise<AnalysisResult> {
+    async analyzeBatch(snapshots: Snapshot[], options: AnalysisOptions = {}): Promise<AnalysisResult> {
         this.loadConfig();
 
         if (!this.config) {
@@ -98,7 +102,7 @@ export class AIAnalyzer {
             throw new Error('snapshot_required');
         }
 
-        const systemPrompt = await this.getSystemPrompt();
+        const systemPrompt = options.systemPrompt || await this.getSystemPrompt();
         const maxInputTokens = this.DEFAULT_MAX_INPUT_TOKENS;
         const systemPromptTokens = this.estimateTokens(systemPrompt);
         const availableTokens = maxInputTokens - this.OUTPUT_TOKEN_RESERVE - this.SYSTEM_PROMPT_RESERVE - systemPromptTokens;

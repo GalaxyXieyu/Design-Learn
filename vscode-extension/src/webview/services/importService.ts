@@ -28,7 +28,7 @@ export class ImportService {
     this._pollingService = pollingService;
   }
 
-  public async importUrl(url: string, useAI: boolean) {
+  public async importUrl(url: string, useAI: boolean, templateId?: string | null) {
     const normalizedUrl = normalizeUrlInput(url);
     if (!normalizedUrl) {
       vscode.window.showErrorMessage('请输入有效的 URL');
@@ -45,13 +45,14 @@ export class ImportService {
     this._postMessage({ type: 'extracting', status: true });
 
     try {
+      const promptTemplateId = typeof templateId === 'string' && templateId.trim() ? templateId.trim() : null;
       const result = await this._serverClient.requestToServer(
         'POST',
         '/api/import/url',
-        { url: normalizedUrl, options: { useAI: !!useAI } }
+        { url: normalizedUrl, options: { useAI: !!useAI, promptTemplateId } }
       );
       if (useAI && result?.job?.id && result?.designId) {
-        this._aiService.trackJob(result.job.id, result.designId);
+        this._aiService.trackJob(result.job.id, result.designId, promptTemplateId);
       }
       await this._designService.loadDesigns();
       this._pollingService.start();
@@ -100,9 +101,10 @@ export class ImportService {
     }
   }
 
-  public async importAllRoutes(baseUrl: string, useAI: boolean) {
+  public async importAllRoutes(baseUrl: string, useAI: boolean, templateId?: string | null) {
     const normalizedBaseUrl = normalizeUrlInput(baseUrl);
     if (!normalizedBaseUrl) return;
+    const promptTemplateId = typeof templateId === 'string' && templateId.trim() ? templateId.trim() : null;
 
     try {
       const result = await this._serverClient.requestToServer(
@@ -158,7 +160,7 @@ export class ImportService {
         });
 
         // 所有路由都不触发 AI，最后统一触发
-        const payload: Record<string, any> = { url: fullUrl, options: { useAI: false } };
+        const payload: Record<string, any> = { url: fullUrl, options: { useAI: false, promptTemplateId } };
         if (designId) {
           payload.designId = designId;
         }
@@ -176,7 +178,7 @@ export class ImportService {
           total: orderedRoutes.length,
           route: 'AI 分析中...'
         });
-        this._aiService.trackJob('batch-' + Date.now(), designId);
+        this._aiService.trackJob('batch-' + Date.now(), designId, promptTemplateId);
       }
 
       this._postMessage({ type: 'batchImportCompleted', designId });

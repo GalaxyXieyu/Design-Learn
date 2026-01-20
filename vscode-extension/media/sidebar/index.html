@@ -69,6 +69,14 @@
         <button class="mode-btn active" id="modeCurrent" data-action="setMode" data-mode="current">当前页面</button>
         <button class="mode-btn" id="modeAll" data-action="setMode" data-mode="all">全部路由 ≤10</button>
       </div>
+      <div class="template-row">
+        <div class="template-label">分析模板</div>
+        <div class="template-controls">
+          <select id="promptTemplateSelect" class="history-select"></select>
+          <button class="template-btn" data-action="openTemplateEditor">编辑</button>
+          <button class="template-btn primary" data-action="createTemplate">新增</button>
+        </div>
+      </div>
     </div>
 
     <!-- 模版库区域 -->
@@ -133,6 +141,24 @@
         <button class="modal-btn modal-btn-secondary" id="modelModalCloseBtn">关闭</button>
         <button class="modal-btn modal-btn-primary" id="modelModalSaveBtn" style="display:none;">保存</button>
         <button class="modal-btn modal-btn-primary" id="modelModalAddBtn">添加模型</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示词模板模态框 -->
+  <div class="modal" id="templateModal">
+    <div class="modal-content template-modal">
+      <div class="modal-header" id="templateModalTitle">提示词模板</div>
+      <input type="text" id="templateModalName" class="modal-input" placeholder="模板名称">
+      <textarea id="templateModalPrompt" class="modal-textarea" placeholder="输入提示词内容..."></textarea>
+      <label class="modal-checkbox">
+        <input type="checkbox" id="templateModalDefault">
+        <span>设为默认模板</span>
+      </label>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-danger" id="templateModalDelete" data-action="deleteTemplateModal" style="display:none;">删除</button>
+        <button class="modal-btn modal-btn-secondary" data-action="closeTemplateModal">取消</button>
+        <button class="modal-btn modal-btn-primary" data-action="saveTemplateModal">保存</button>
       </div>
     </div>
   </div>

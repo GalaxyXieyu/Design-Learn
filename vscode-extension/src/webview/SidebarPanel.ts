@@ -86,16 +86,113 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       uiproService,
     };
 
+    const loadPromptTemplates = async () => {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      const selectedTemplateId = config.get<string>('selectedPromptTemplateId', '');
+      try {
+        const result = await serverClient.requestToServer(
+          'GET',
+          '/api/prompt-templates?type=styleguide',
+          null
+        );
+        const items = Array.isArray(result.items) ? result.items : [];
+        const templates = items.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          prompt: item.content,
+          isDefault: !!item.isDefault,
+          system: !!item?.metadata?.system,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }));
+        postMessage({ type: 'updatePromptTemplates', templates, selectedTemplateId });
+      } catch {
+        const localTemplates = config.get<any[]>('promptTemplates', []);
+        const templates = localTemplates.map((item: any) => ({
+          ...item,
+          isDefault: !!item.active,
+          system: !!item?.system,
+        }));
+        postMessage({ type: 'updatePromptTemplates', templates, selectedTemplateId });
+      }
+    };
+
+    const savePromptTemplate = async (template: any) => {
+      if (!template || !template.name || !template.prompt) {
+        vscode.window.showWarningMessage('模板名称和提示词内容不能为空');
+        return;
+      }
+      const config = vscode.workspace.getConfiguration('designLearn');
+      try {
+        const payload = {
+          name: template.name,
+          type: 'styleguide',
+          content: template.prompt,
+          description: template.description || '',
+          isDefault: template.active === true,
+        };
+        if (template?.isUpdate && template.id) {
+          await serverClient.requestToServer(
+            'PATCH',
+            `/api/prompt-templates/${encodeURIComponent(template.id)}`,
+            payload
+          );
+        } else {
+          await serverClient.requestToServer('POST', '/api/prompt-templates', {
+            id: template.id,
+            ...payload,
+          });
+        }
+        await loadPromptTemplates();
+        vscode.window.showInformationMessage(`模板 "${template.name}" 已保存`);
+      } catch {
+        const templates = config.get<any[]>('promptTemplates', []);
+        const normalizedTemplate = { ...template };
+        delete normalizedTemplate.isUpdate;
+        if (normalizedTemplate.active) {
+          templates.forEach(t => t.active = false);
+        }
+        const existingIndex = templates.findIndex(t => t.id === normalizedTemplate.id);
+        if (existingIndex >= 0) {
+          templates[existingIndex] = normalizedTemplate;
+        } else {
+          templates.push(normalizedTemplate);
+        }
+        await config.update('promptTemplates', templates, vscode.ConfigurationTarget.Global);
+        await loadPromptTemplates();
+        vscode.window.showInformationMessage(`模板 "${template.name}" 已保存（本地）`);
+      }
+    };
+
+    const deletePromptTemplate = async (templateId: string) => {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      if (!templateId) return;
+      try {
+        await serverClient.requestToServer(
+          'DELETE',
+          `/api/prompt-templates/${encodeURIComponent(templateId)}`,
+          null
+        );
+        await loadPromptTemplates();
+      } catch {
+        const templates = config.get<any[]>('promptTemplates', []);
+        const filtered = templates.filter(t => t.id !== templateId);
+        await config.update('promptTemplates', filtered, vscode.ConfigurationTarget.Global);
+        await loadPromptTemplates();
+      }
+    };
+
     const router = new MessageRouter({
-      extract: (message) => importService.importUrl(message.url, false),
-      extractWithAI: (message) => importService.importUrl(message.url, true),
-      extractAll: (message) => importService.importAllRoutes(message.url, message.useAI),
+      extract: (message) => importService.importUrl(message.url, false, message.templateId),
+      extractWithAI: (message) => importService.importUrl(message.url, true, message.templateId),
+      extractAll: (message) => importService.importAllRoutes(message.url, message.useAI, message.templateId),
       scanRoutes: (message) => importService.scanRoutes(message.url),
       loadData: () => {
         setImmediate(() => {
           modelService.loadModels();
           void designService.loadDesigns();
           configService.loadConfig();
+          void loadPromptTemplates();
           void uiproService.loadMeta();
           void serverClient.checkServerStatus((connected, url) => {
             postMessage({ type: 'serverStatus', connected, url });
@@ -154,6 +251,13 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
         if (!text) return;
         await vscode.env.clipboard.writeText(text);
       },
+      selectPromptTemplate: async (message) => {
+        const config = vscode.workspace.getConfiguration('designLearn');
+        const templateId = typeof message?.templateId === 'string' ? message.templateId : '';
+        await config.update('selectedPromptTemplateId', templateId || '', vscode.ConfigurationTarget.Global);
+      },
+      savePromptTemplate: async (message) => savePromptTemplate(message.template),
+      deletePromptTemplate: async (message) => deletePromptTemplate(message.templateId),
       openSettingsPanel: () => vscode.commands.executeCommand('design-learn.openSettings'),
       saveConfig: (message) => configService.saveConfig(message.config),
       startDesignPolling: () => pollingService.start(),
@@ -181,6 +285,7 @@ export class SidebarPanel implements vscode.WebviewViewProvider {
       'utils/dom.js',
       'state/store.js',
       'ui/models.js',
+      'ui/templates.js',
       'ui/historyList.js',
       'ui/settings.js',
       'ui/serverModal.js',

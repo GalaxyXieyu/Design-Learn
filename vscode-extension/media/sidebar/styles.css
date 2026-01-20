@@ -123,6 +123,21 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* 提示词模板 */
+.template-row { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.template-label { font-size: 11px; color: var(--vscode-descriptionForeground); }
+.template-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.template-controls .history-select { flex: 1 1 160px; min-width: 120px; }
+.template-btn { height: 30px; padding: 0 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 8px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); font-size: 11px; cursor: pointer; }
+.template-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.template-btn.primary { background: var(--accent); color: white; border: none; }
+.template-btn.primary:hover { opacity: 0.9; }
+
+.template-modal { max-width: 520px; }
+.modal-textarea { width: 100%; min-height: 160px; padding: 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; color: var(--vscode-input-foreground); font-size: 11px; margin-bottom: 10px; resize: vertical; }
+.modal-textarea:focus { outline: none; border-color: var(--accent); }
+.modal-checkbox { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--vscode-foreground); margin-bottom: 12px; }
+
 /* 折叠面板 */
 .panel { background: var(--vscode-editor-background); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; cursor: pointer; user-select: none; }
@@ -229,6 +244,8 @@ body { font-family: var(--vscode-font-family); font-size: 13px; color: var(--vsc
 .modal-btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .modal-btn-primary { background: var(--accent); color: white; }
 .modal-btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.modal-btn-danger { background: #ef4444; color: white; }
+.modal-btn-danger:hover { opacity: 0.92; }
 
 /* 模型配置弹窗列表 */
 .modal-model-list { display: flex; flex-direction: column; gap: 6px; }

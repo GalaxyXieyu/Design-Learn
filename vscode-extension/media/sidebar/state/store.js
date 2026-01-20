@@ -6,6 +6,8 @@
     models: [],
     selectedModelId: '',
     currentMode: 'current',
+    promptTemplates: [],
+    selectedPromptTemplateId: '',
     allDesigns: [],
     libraryItemsByKey: {},
     libraryGroupCollapsed: { processing: false, failed: false, completed: false },

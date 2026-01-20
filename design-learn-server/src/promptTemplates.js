@@ -75,6 +75,7 @@ const PROMPT_TEMPLATE_DEFAULTS = {
     type: PROMPT_TEMPLATE_DEFAULT_TYPE,
     description: '内置 styleguide 默认提示词',
     content: STYLEGUIDE_DEFAULT_CONTENT,
+    metadata: { system: true },
   },
 };
 
