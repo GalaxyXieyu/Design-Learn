@@ -153,6 +153,8 @@ chrome://extensions/ → 开发者模式 → 加载已解压的扩展程序 → 
 
 > Edge: `edge://extensions/` | Brave: `brave://extensions/`
 
+提示词模板当前使用插件本地存储（`promptTemplates` / `content`），不与服务端模板自动同步。
+
 
 ## 项目结构
 
