@@ -267,7 +267,7 @@ function openAddTemplateForm() {
         <label class="checkbox-label">
           <input type="checkbox" id="templateActive">
           <span class="checkbox-custom"></span>
-          <span>设为活跃模板</span>
+          <span>设为默认模板</span>
         </label>
       </div>
       <div class="form-actions">
@@ -318,10 +318,10 @@ function renderTemplates() {
           <div class="template-name">${template.name}</div>
           <div class="template-desc">${template.prompt.substring(0, 100)}...</div>
         </div>
-        ${template.active ? '<span class="template-badge">使用中</span>' : ''}
+        ${template.active ? '<span class="template-badge">默认</span>' : ''}
       </div>
       <div class="template-actions">
-        <button class="btn-secondary btn-sm" onclick="setActiveTemplate('${template.id}')">${template.active ? '已启用' : '启用'}</button>
+        <button class="btn-secondary btn-sm" onclick="setActiveTemplate('${template.id}')">${template.active ? '默认' : '设为默认'}</button>
         <button class="btn-secondary btn-sm" onclick="deleteTemplate('${template.id}')">删除</button>
       </div>
     </div>`).join('');

@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ServerClient } from './services/serverClient';
 
 export class SettingsPanel {
   public static currentPanel: SettingsPanel | undefined;
 
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
+  private readonly _serverClient: ServerClient;
   private _disposables: vscode.Disposable[] = [];
 
   public static createOrShow(extensionUri: vscode.Uri) {
@@ -44,6 +46,10 @@ export class SettingsPanel {
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._panel = panel;
     this._extensionUri = extensionUri;
+    this._serverClient = new ServerClient(() => {
+      const config = vscode.workspace.getConfiguration('designLearn');
+      return config.get<string>('serverUrl', 'http://localhost:3100');
+    });
 
     // Set the webview's initial html content
     this._update();
@@ -97,7 +103,7 @@ export class SettingsPanel {
         break;
 
       case 'loadData':
-        this._loadAndSendData();
+        void this._loadAndSendData();
         this._loadHistoryStats();
         break;
 
@@ -110,11 +116,11 @@ export class SettingsPanel {
         break;
 
       case 'saveTemplate':
-        this._saveTemplate(message.template);
+        void this._saveTemplate(message.template);
         break;
 
       case 'deleteTemplate':
-        this._deleteTemplate(message.templateId);
+        void this._deleteTemplate(message.templateId);
         break;
 
       case 'saveConfig':
@@ -126,7 +132,7 @@ export class SettingsPanel {
         break;
 
       case 'saveTemplates':
-        this._saveAllTemplates(message.templates);
+        void this._saveAllTemplates(message.templates);
         break;
 
       case 'testConnection':
@@ -138,11 +144,11 @@ export class SettingsPanel {
     }
   }
 
-  private _loadAndSendData() {
+  private async _loadAndSendData() {
     const config = vscode.workspace.getConfiguration('designLearn');
 
     const models = config.get<any[]>('aiModels', []);
-    const templates = config.get<any[]>('promptTemplates', []);
+    const templates = await this._loadPromptTemplates(config);
     const extractConfig = {
       inlineCSS: config.get<boolean>('extraction.inlineCSS', true),
       includeImages: config.get<boolean>('extraction.includeImages', true),
@@ -161,6 +167,27 @@ export class SettingsPanel {
       templates: templates,
       config: extractConfig
     });
+  }
+
+  private async _loadPromptTemplates(config: vscode.WorkspaceConfiguration) {
+    try {
+      const result = await this._serverClient.requestToServer(
+        'GET',
+        '/api/prompt-templates?type=styleguide',
+        null
+      );
+      const items = Array.isArray(result.items) ? result.items : [];
+      return items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        prompt: item.content,
+        active: !!item.isDefault,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt
+      }));
+    } catch {
+      return config.get<any[]>('promptTemplates', []);
+    }
   }
 
   private async _saveModel(model: any) {
@@ -190,32 +217,61 @@ export class SettingsPanel {
 
   private async _saveTemplate(template: any) {
     const config = vscode.workspace.getConfiguration('designLearn');
-    const templates = config.get<any[]>('promptTemplates', []);
-
-    // If this template is set to active, deactivate others
-    if (template.active) {
-      templates.forEach(t => t.active = false);
+    if (!template || !template.name || !template.prompt) {
+      vscode.window.showWarningMessage('模板名称和提示词内容不能为空');
+      return;
     }
 
-    const existingIndex = templates.findIndex(t => t.id === template.id);
-    if (existingIndex >= 0) {
-      templates[existingIndex] = template;
-    } else {
-      templates.push(template);
-    }
+    try {
+      await this._serverClient.requestToServer('POST', '/api/prompt-templates', {
+        id: template.id,
+        name: template.name,
+        type: 'styleguide',
+        content: template.prompt,
+        description: template.description || '',
+        isDefault: template.active === true
+      });
+      void this._loadAndSendData();
+      vscode.window.showInformationMessage(`模板 "${template.name}" 已保存`);
+      return;
+    } catch {
+      const templates = config.get<any[]>('promptTemplates', []);
 
-    await config.update('promptTemplates', templates, vscode.ConfigurationTarget.Global);
-    this._loadAndSendData();
-    vscode.window.showInformationMessage(`模板 "${template.name}" 已保存`);
+      if (template.active) {
+        templates.forEach(t => t.active = false);
+      }
+
+      const existingIndex = templates.findIndex(t => t.id === template.id);
+      if (existingIndex >= 0) {
+        templates[existingIndex] = template;
+      } else {
+        templates.push(template);
+      }
+
+      await config.update('promptTemplates', templates, vscode.ConfigurationTarget.Global);
+      void this._loadAndSendData();
+      vscode.window.showInformationMessage(`模板 "${template.name}" 已保存（本地）`);
+    }
   }
 
   private async _deleteTemplate(templateId: string) {
     const config = vscode.workspace.getConfiguration('designLearn');
-    const templates = config.get<any[]>('promptTemplates', []);
+    if (!templateId) return;
 
-    const filtered = templates.filter(t => t.id !== templateId);
-    await config.update('promptTemplates', filtered, vscode.ConfigurationTarget.Global);
-    this._loadAndSendData();
+    try {
+      await this._serverClient.requestToServer(
+        'DELETE',
+        `/api/prompt-templates/${encodeURIComponent(templateId)}`,
+        null
+      );
+      void this._loadAndSendData();
+      return;
+    } catch {
+      const templates = config.get<any[]>('promptTemplates', []);
+      const filtered = templates.filter(t => t.id !== templateId);
+      await config.update('promptTemplates', filtered, vscode.ConfigurationTarget.Global);
+      void this._loadAndSendData();
+    }
   }
 
   private async _saveConfig(config: any) {
@@ -247,8 +303,21 @@ export class SettingsPanel {
 
   private async _saveAllTemplates(templates: any[]) {
     const config = vscode.workspace.getConfiguration('designLearn');
-    await config.update('promptTemplates', templates, vscode.ConfigurationTarget.Global);
-    this._loadAndSendData();
+    const active = Array.isArray(templates) ? templates.find(t => t.active) : null;
+    if (!active?.id) {
+      return;
+    }
+    try {
+      await this._serverClient.requestToServer(
+        'PATCH',
+        `/api/prompt-templates/${encodeURIComponent(active.id)}`,
+        { isDefault: true }
+      );
+      void this._loadAndSendData();
+    } catch {
+      await config.update('promptTemplates', templates || [], vscode.ConfigurationTarget.Global);
+      void this._loadAndSendData();
+    }
   }
 
   private async _loadHistoryStats() {
