@@ -20,6 +20,8 @@ Thumbs.db
 # IDE
 .idea/
 .vscode-test/
+.claude/
+.cursor/
 
 # 日志
 *.log
@@ -27,3 +29,8 @@ npm-debug.log*
 
 # 生成的模板输出
 template/
+
+# 本地工具/缓存
+.designlearn/
+.factory/
+.tmp/

@@ -5,17 +5,17 @@
 ## 一、当前冗余点与影响
 
 ### 1) 数据目录重复落盘
-- 现象：仓库内存在 `data/` 与 `design-learn-server/data/` 两套数据库。
+- 现象：仓库内存在 `data/` 与 `server/data/` 两套数据库。
 - 原因：不同入口的默认数据目录不一致（MCP stdio 默认 `~/.design-learn/data`，其他入口可能走 `process.cwd()/data`）。
 - 影响：同一数据被分裂到不同目录，MCP 与 HTTP/脚本看到的数据不一致。
 
 涉及文件：
-- `design-learn-server/src/stdio.js`（默认 `~/.design-learn/data`）
-- `design-learn-server/src/storage/paths.js`（`resolveDataDir` 仍是 `process.cwd()/data`）
+- `server/src/stdio.js`（默认 `~/.design-learn/data`）
+- `server/src/storage/paths.js`（`resolveDataDir` 仍是 `process.cwd()/data`）
 - `scripts/verify-backend.sh`（调用 `createStorage()` 默认落在 cwd）
 
 ### 2) 路由扫描逻辑重复
-- `design-learn-server/src/server.js` 内部实现一套路由扫描与 sitemap 解析。
+- `server/src/server.js` 内部实现一套路由扫描与 sitemap 解析。
 - `scripts/lib/route-scanner.js` 有另一套 Playwright 扫描 + sitemap 解析。
 - `chrome-extension/content/route-scanner.js` 还有一套内容脚本版本。
 
@@ -61,7 +61,7 @@ shared/
 **目标**：无论从哪里启动，默认都落在 `~/.design-learn/data`。
 
 改动建议：
-1. `design-learn-server/src/storage/paths.js`
+1. `server/src/storage/paths.js`
    - 修改 `resolveDataDir()` 默认值为 `~/.design-learn/data`。
    - 原因：`createStorage()` 被多处直接调用，统一默认值可以彻底消除分裂。
 2. `scripts/verify-backend.sh`
@@ -82,7 +82,7 @@ shared/
    - 仅保留 Chrome 消息监听与页面环境调用，核心逻辑改为调用 shared。
 4. 更新 `scripts/lib/route-scanner.js`
    - Playwright 的 `page.evaluate()` 调用 shared 逻辑，sitemap 解析复用 shared。
-5. 更新 `design-learn-server/src/server.js`
+5. 更新 `server/src/server.js`
    - 保留 Playwright/HTTP 调度，但排序、过滤、sitemap 解析统一用 shared。
 
 ### C. 抽取页面提取器共享逻辑
@@ -96,7 +96,7 @@ shared/
    - 薄适配层：调用 shared 输出快照。
 3. 更新 `scripts/lib/extractor.js`
    - `page.evaluate()` 直接执行 shared 的 DOM 逻辑。
-4. `design-learn-server/src/pipeline/index.js`
+4. `server/src/pipeline/index.js`
    - 继续走 `scripts/lib/extractor.js`，无感升级。
 
 ### D. 抽取 AI 分析器共享逻辑
@@ -116,7 +116,7 @@ shared/
 ## 四、迁移顺序（建议）
 
 1. **统一数据目录**
-   - 改 `design-learn-server/src/storage/paths.js`
+   - 改 `server/src/storage/paths.js`
    - 改 `scripts/verify-backend.sh`
    - 更新 `README.md` 数据目录说明
 2. **抽取 shared 目录（只写新文件）**
@@ -128,7 +128,7 @@ shared/
 3. **接入 shared（保留旧接口）**
    - 先改 `scripts/lib/extractor.js` / `scripts/lib/route-scanner.js`
    - 再改 `chrome-extension/content/extractor.js` / `chrome-extension/content/route-scanner.js`
-   - 再改 `design-learn-server/src/server.js` / `chrome-extension/lib/ai-analyzer.js` / `scripts/lib/ai-analyzer.js`
+   - 再改 `server/src/server.js` / `chrome-extension/lib/ai-analyzer.js` / `scripts/lib/ai-analyzer.js`
 4. **验证与对齐**
    - 对比快照结构字段、路由扫描结果、AI prompt 输出一致性
 5. **删除冗余实现**

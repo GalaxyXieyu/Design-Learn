@@ -162,7 +162,7 @@ chrome://extensions/ → 开发者模式 → 加载已解压的扩展程序 → 
 Design-Learn/
 ├── chrome-extension/      # Chrome 插件（零依赖）
 ├── vscode-extension/      # VSCode 扩展
-├── design-learn-server/   # 后端服务（Node.js + SQLite）
+├── server/   # 后端服务（Node.js + SQLite）
 ├── data/                  # 服务端数据
 └── scripts/               # 工具脚本
 ```

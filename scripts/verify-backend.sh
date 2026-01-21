@@ -8,7 +8,7 @@ VERIFY_URL="${VERIFY_URL:-}"
 
 export DESIGN_LEARN_DATA_DIR="${DATA_DIR}"
 
-node "$ROOT_DIR/design-learn-server/src/server.js" &
+node "$ROOT_DIR/server/src/server.js" &
 SERVER_PID=$!
 
 echo "[verify] server pid=${SERVER_PID}"
@@ -108,7 +108,7 @@ curl -fsS -X PUT "http://localhost:${PORT}/api/config" \
 curl -fsS "http://localhost:${PORT}/api/config" > /tmp/design-learn-config-get.json
 
 COMPONENT_ID=$(ROOT_DIR="$ROOT_DIR" node - <<'NODE'
-const { createStorage } = require(process.env.ROOT_DIR + '/design-learn-server/src/storage');
+const { createStorage } = require(process.env.ROOT_DIR + '/server/src/storage');
 
 async function main() {
   const storage = await createStorage({

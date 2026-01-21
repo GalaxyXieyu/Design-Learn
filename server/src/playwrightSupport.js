@@ -23,7 +23,15 @@ function installPlaywright(logger) {
     });
     child.stdout?.on('data', (chunk) => logger?.(chunk.toString()));
     child.stderr?.on('data', (chunk) => logger?.(chunk.toString()));
-    child.on('error', reject);
+    child.on('error', (error) => {
+      if (error?.code === 'ENOENT') {
+        const notInstalled = new Error('playwright_not_installed');
+        notInstalled.cause = error;
+        reject(notInstalled);
+        return;
+      }
+      reject(error);
+    });
     child.on('exit', (code) => {
       if (code === 0) resolve();
       else reject(new Error(`npm_install_failed:${code ?? 'unknown'}`));
@@ -43,7 +51,14 @@ async function ensurePlaywrightInstalled(options = {}) {
       installPromise = null;
     });
   }
-  await installPromise;
+  try {
+    await installPromise;
+  } catch (error) {
+    if (error?.message === 'playwright_not_installed') {
+      throw error;
+    }
+    throw new Error('playwright_not_installed');
+  }
 }
 
 async function loadPlaywright(options = {}) {

@@ -60,7 +60,7 @@ export class ImportService {
       const msg = err?.message || 'unknown_error';
       if (msg === 'playwright_not_installed') {
         vscode.window.showErrorMessage(
-          '服务端未安装 Playwright，无法通过 URL 导入。请在 design-learn-server 目录执行 npm install playwright。'
+          '服务端未安装 Playwright，无法通过 URL 导入。请在 server 目录执行 npm install playwright。'
         );
       } else {
         vscode.window.showErrorMessage(`导入失败: ${msg}`);

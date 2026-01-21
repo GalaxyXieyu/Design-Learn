@@ -45,9 +45,9 @@ echo ""
 # 4. 打包新的 .vsix
 echo "4️⃣  打包新的 .vsix..."
 if command -v vsce &> /dev/null; then
-  vsce package --out "design-learn-$VERSION.vsix"
+  vsce package --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix"
 else
-  npx vsce package --out "design-learn-$VERSION.vsix"
+  npx vsce package --allow-package-all-secrets --allow-package-env-file --out "design-learn-$VERSION.vsix"
 fi
 echo "✅ 打包完成"
 echo ""

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVER_DIR="${ROOT_DIR}/design-learn-server"
+SERVER_DIR="${ROOT_DIR}/server"
 PORT="${PORT:-3000}"
 DATA_DIR="${DESIGN_LEARN_DATA_DIR:-$ROOT_DIR/data}"
 KEEP_TARBALL="${KEEP_TARBALL:-}"

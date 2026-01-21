@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { createStorage } = require('../design-learn-server/src/storage');
+const { createStorage } = require('../server/src/storage');
 
 async function main() {
   const storage = await createStorage({

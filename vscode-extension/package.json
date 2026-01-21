@@ -2,7 +2,7 @@
   "name": "design-learn",
   "displayName": "Design-Learn",
   "description": "在 VSCode 中提取网页设计风格，AI 智能分析，保存到项目目录",
-  "version": "1.0.64",
+  "version": "1.0.66",
   "publisher": "design-learn",
   "icon": "media/icon.png",
   "engines": {
@@ -154,8 +154,8 @@
         "designLearn.server": {
           "type": "object",
           "default": {
-            "entry": "${workspaceFolder}/design-learn-server/src/server.js",
-            "cwd": "${workspaceFolder}/design-learn-server",
+            "entry": "${workspaceFolder}/server/src/server.js",
+            "cwd": "${workspaceFolder}/server",
             "port": 3100,
             "nodePath": "",
             "dataDir": "${workspaceFolder}/data",

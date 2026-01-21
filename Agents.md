@@ -46,24 +46,24 @@ Claude Code ───────┘    - /mcp (SSE)
 ### Server Development
 
 ```bash
-# Install dependencies (must be in design-learn-server directory)
-cd design-learn-server
+# Install dependencies (must be in server directory)
+cd server
 npm install
 
 # Rebuild native modules if needed
 npm rebuild better-sqlite3
 
 # Start server (default port 3100)
-node design-learn-server/src/server.js
+node server/src/server.js
 
 # Start with custom port
-PORT=3200 node design-learn-server/src/server.js
+PORT=3200 node server/src/server.js
 
 # Start via CLI
-node design-learn-server/src/cli.js
+node server/src/cli.js
 
 # MCP stdio mode (for Claude Code integration)
-node design-learn-server/src/stdio.js
+node server/src/stdio.js
 ```
 
 ### VSCode Extension Development
@@ -129,7 +129,7 @@ curl http://localhost:3100/api/designs
 
 ### MCP Tool Implementation
 
-MCP tools are defined in [design-learn-server/src/mcp/index.js](design-learn-server/src/mcp/index.js):
+MCP tools are defined in [server/src/mcp/index.js](server/src/mcp/index.js):
 
 ```javascript
 // Tool registration pattern
@@ -147,7 +147,7 @@ server.registerTool(toolName, schema, handler);
 
 ### Storage Layer Pattern
 
-Storage operations follow a consistent pattern in [design-learn-server/src/storage/index.js](design-learn-server/src/storage/index.js):
+Storage operations follow a consistent pattern in [server/src/storage/index.js](server/src/storage/index.js):
 
 ```javascript
 // 1. Normalize input data
@@ -165,7 +165,7 @@ await writeDesignIndex(db, dataDir);
 
 ### Extraction Pipeline
 
-The extraction pipeline ([design-learn-server/src/pipeline/index.js](design-learn-server/src/pipeline/index.js)) handles:
+The extraction pipeline ([server/src/pipeline/index.js](server/src/pipeline/index.js)) handles:
 - Job queue management with status tracking
 - SSE progress streaming to clients
 - Browser import (from Chrome extension)
@@ -173,7 +173,7 @@ The extraction pipeline ([design-learn-server/src/pipeline/index.js](design-lear
 
 ### Task Management System
 
-Task management API ([design-learn-server/src/server.js](design-learn-server/src/server.js:361-473)):
+Task management API ([server/src/server.js](server/src/server.js:361-473)):
 - Create tasks for URL extraction
 - Track status: pending → running → completed/failed
 - Group tasks by domain
@@ -193,7 +193,7 @@ Task management API ([design-learn-server/src/server.js](design-learn-server/src
 - **Optional**: Playwright is NOT required for basic operation
 - **Used For**: Server-side URL extraction (`/api/import/url`) and route scanning (`/api/scan-routes`)
 - **Fallback**: Returns `playwright_not_installed` error if not available
-- **Installation**: `npm install playwright` in `design-learn-server/` if needed
+- **Installation**: `npm install playwright` in `server/` if needed
 
 ### Database Schema
 
@@ -206,7 +206,7 @@ Key tables in SQLite:
 
 ### File Path Conventions
 
-All file paths use helper functions from [design-learn-server/src/storage/paths.js](design-learn-server/src/storage/paths.js):
+All file paths use helper functions from [server/src/storage/paths.js](server/src/storage/paths.js):
 - `getDesignDir(dataDir, designId)` → `data/designs/{designId}/`
 - `getVersionDir(dataDir, designId, versionNumber)` → `data/designs/{designId}/versions/{versionNumber}/`
 - `getComponentCodePath(...)` → `data/designs/{designId}/versions/{versionNumber}/components/{componentId}/code.json`
@@ -451,10 +451,10 @@ Add to Claude Code MCP configuration:
 
 ```bash
 # Install dependencies first
-cd design-learn-server && npm install
+cd server && npm install
 
 # Add MCP server
-claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
+claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/server/src/stdio.js
 
 # Verify
 claude mcp list
@@ -480,20 +480,20 @@ When configured, Claude Code can use these tools:
 
 ### Adding a New MCP Tool
 
-1. Define tool schema in [design-learn-server/src/mcp/index.js](design-learn-server/src/mcp/index.js) `tools` object
+1. Define tool schema in [server/src/mcp/index.js](server/src/mcp/index.js) `tools` object
 2. Implement handler in `createToolHandlers()` function
 3. Register tool with `server.registerTool(toolName, schema, handler)`
 
 ### Adding a New REST Endpoint
 
-1. Add route handler function in [design-learn-server/src/server.js](design-learn-server/src/server.js)
+1. Add route handler function in [server/src/server.js](server/src/server.js)
 2. Add routing logic in `handleRequest()` function
 3. Update root endpoint documentation in `handleRoot()`
 
 ### Extending Storage Schema
 
-1. Update SQLite schema in [design-learn-server/src/storage/sqliteStore.js](design-learn-server/src/storage/sqliteStore.js)
-2. Add normalization function in [design-learn-server/src/storage/index.js](design-learn-server/src/storage/index.js)
+1. Update SQLite schema in [server/src/storage/sqliteStore.js](server/src/storage/sqliteStore.js)
+2. Add normalization function in [server/src/storage/index.js](server/src/storage/index.js)
 3. Implement CRUD operations following existing patterns
 4. Update index generation if needed
 

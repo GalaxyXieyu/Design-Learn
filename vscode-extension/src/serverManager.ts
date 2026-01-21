@@ -95,7 +95,7 @@ export class ServerManager implements vscode.Disposable {
               if (selection !== '修复（npm rebuild）') return;
 
               try {
-                this.output.appendLine('[server] running: npm rebuild (design-learn-server)');
+                this.output.appendLine('[server] running: npm rebuild (server)');
                 await new Promise<void>((resolve, reject) => {
                   const rebuild = spawn('npm', ['rebuild'], { cwd, env, shell: true });
                   rebuild.stdout?.on('data', (chunk) => this.output.append(chunk.toString()));
@@ -169,8 +169,8 @@ export class ServerManager implements vscode.Disposable {
     const config = vscode.workspace.getConfiguration('designLearn');
     const serverConfig = config.get<any>('server') || {};
     const workspaceRoot = workspaceFolder.uri.fsPath;
-    const entryTemplate = serverConfig.entry || '${workspaceFolder}/design-learn-server/src/server.js';
-    const cwdTemplate = serverConfig.cwd || '${workspaceFolder}/design-learn-server';
+    const entryTemplate = serverConfig.entry || '${workspaceFolder}/server/src/server.js';
+    const cwdTemplate = serverConfig.cwd || '${workspaceFolder}/server';
 
     const entry = entryTemplate.replace('${workspaceFolder}', workspaceRoot);
     const cwd = cwdTemplate.replace('${workspaceFolder}', workspaceRoot);

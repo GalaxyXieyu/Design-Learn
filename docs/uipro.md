@@ -18,32 +18,32 @@
 
 UI UX Pro Max 的知识库不是 JSON/SQLite，而是 **CSV + 搜索脚本**（我们已将其数据与检索逻辑内置到 Design-Learn Server）。
 
-- CSV 数据位置（内置默认）：`design-learn-server/src/uipro/data/`
+- CSV 数据位置（内置默认）：`server/src/uipro/data/`
 - CSV 数据位置（上游参考）：`.shared/ui-ux-pro-max/data/*.csv`、`.shared/ui-ux-pro-max/data/stacks/*.csv`
 - Domain（9 类）：`style`、`prompt`、`color`、`chart`、`landing`、`product`、`ux`、`typography`、`icons`
 - Stack（11 类）：`html-tailwind`、`react`、`nextjs`、`vue`、`nuxtjs`、`nuxt-ui`、`svelte`、`swiftui`、`react-native`、`flutter`、`shadcn`
 
-Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`design-learn-server/src/uipro/config.js:1`
+Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`server/src/uipro/config.js:1`
 
 ## 三、整合策略（保持体验一致）
 
 ### 3.1 “默认基础数据”怎么落地
 
-- 默认内置一份 UIPro CSV：`design-learn-server/src/uipro/data/`
+- 默认内置一份 UIPro CSV：`server/src/uipro/data/`
 - 运行时允许覆盖（便于以后做同步）：
   1. `DESIGN_LEARN_UIPRO_DATA_DIR`（最高优先级）
   2. `${DESIGN_LEARN_DATA_DIR}/uipro/`（用户数据目录下的 uipro）
-  3. 内置 `design-learn-server/src/uipro/data/`
+  3. 内置 `server/src/uipro/data/`
 
-实现参考：`design-learn-server/src/uipro/index.js:18`
+实现参考：`server/src/uipro/index.js:18`
 
 ### 3.2 BM25 迁移到 Node（不依赖 Python）
 
 迁移范围：
 
-- BM25 算法：`design-learn-server/src/uipro/bm25.js:1`
-- CSV 解析（含引号/逗号/换行）：`design-learn-server/src/uipro/csv.js:1`
-- domain/stack 配置与 domain 自动检测：`design-learn-server/src/uipro/config.js:1`
+- BM25 算法：`server/src/uipro/bm25.js:1`
+- CSV 解析（含引号/逗号/换行）：`server/src/uipro/csv.js:1`
+- domain/stack 配置与 domain 自动检测：`server/src/uipro/config.js:1`
 
 ## 四、MCP 工具（P0：能用、可组合）
 
@@ -59,8 +59,8 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
 
 实现位置（两套 MCP 传输保持一致）：
 
-- HTTP MCP：`design-learn-server/src/mcp/index.js:10`
-- stdio MCP：`design-learn-server/src/stdio.js:150`
+- HTTP MCP：`server/src/mcp/index.js:10`
+- stdio MCP：`server/src/stdio.js:150`
 
 ## 五、与现有 Design-Learn 工具如何“结合起来一起用”
 
@@ -79,9 +79,9 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
 ## 六、后续增强（P1/P2）
 
 - 同步脚本：从 GitHub Release 下载 zip，把 `.shared/ui-ux-pro-max/data/` 同步到 `${DESIGN_LEARN_DATA_DIR}/uipro/`
-  - 脚本：`design-learn-server/scripts/sync-uipro-release.js`
-  - 示例（GitHub Release）：`DESIGN_LEARN_DATA_DIR=./data node design-learn-server/scripts/sync-uipro-release.js --repo <owner/name> --tag latest`
-  - 示例（离线 zip）：`DESIGN_LEARN_DATA_DIR=./data node design-learn-server/scripts/sync-uipro-release.js --source ./uipro.zip`
+  - 脚本：`server/scripts/sync-uipro-release.js`
+  - 示例（GitHub Release）：`DESIGN_LEARN_DATA_DIR=./data node server/scripts/sync-uipro-release.js --repo <owner/name> --tag latest`
+  - 示例（离线 zip）：`DESIGN_LEARN_DATA_DIR=./data node server/scripts/sync-uipro-release.js --source ./uipro.zip`
 - 聚合搜索工具：已提供 `search_library`，后续可优化排序/去重策略
 - SQLite/FTS5（可选）：当数据量变大或需要复杂过滤时再引入（RFC：`docs/uipro-sqlite-fts5.md`）
 
@@ -89,7 +89,7 @@ Domain/Stack 配置（源自上游 CSV 约定）以本仓库实现为准：`desi
 
 ## 参考文件
 
-- `design-learn-server/src/uipro/index.js:1`
-- `design-learn-server/src/mcp/index.js:1`
-- `design-learn-server/src/stdio.js:1`
-- `design-learn-server/src/uipro/config.js:1`
+- `server/src/uipro/index.js:1`
+- `server/src/mcp/index.js:1`
+- `server/src/stdio.js:1`
+- `server/src/uipro/config.js:1`

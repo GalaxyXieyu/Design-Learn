@@ -105,8 +105,8 @@ vsce package
   "designLearn.reportLanguage": "zh",
 
   "designLearn.server": {
-    "entry": "${workspaceFolder}/design-learn-server/src/server.js",
-    "cwd": "${workspaceFolder}/design-learn-server",
+    "entry": "${workspaceFolder}/server/src/server.js",
+    "cwd": "${workspaceFolder}/server",
     "port": 3100,
     "autoStart": true
   }

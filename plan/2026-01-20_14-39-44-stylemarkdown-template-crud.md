@@ -70,7 +70,7 @@ References
 - vscode-extension/media/webview/main.js:244
 - chrome-extension/lib/ai-analyzer.js:306
 - chrome-extension/options/js/components/PromptTemplateManager.js:25
-- design-learn-server/src/server.js:273
-- design-learn-server/src/server.js:1050
-- design-learn-server/src/storage/sqliteStore.js:128
-- design-learn-server/src/storage/index.js:22
+- server/src/server.js:273
+- server/src/server.js:1050
+- server/src/storage/sqliteStore.js:128
+- server/src/storage/index.js:22

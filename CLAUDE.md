@@ -16,7 +16,7 @@
 
 ```bash
 # Server
-cd design-learn-server && npm install
+cd server && npm install
 node src/server.js                    # HTTP server (port 3100)
 node src/stdio.js                     # MCP stdio mode
 
@@ -81,7 +81,7 @@ Claude Code ───────┘    - /mcp (SSE)
 ### Server
 
 ```bash
-cd design-learn-server
+cd server
 npm install
 npm rebuild better-sqlite3           # 如需重建原生模块
 
@@ -129,8 +129,8 @@ curl http://localhost:3100/api/health # 健康检查
 ### Setup
 
 ```bash
-cd design-learn-server && npm install
-claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
+cd server && npm install
+claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/server/src/stdio.js
 claude mcp list
 ```
 
@@ -160,9 +160,9 @@ claude mcp list
 
 ### Core Modules
 
-- **MCP Tools**: [design-learn-server/src/mcp/index.js](design-learn-server/src/mcp/index.js)
-- **Storage**: [design-learn-server/src/storage/index.js](design-learn-server/src/storage/index.js)
-- **Pipeline**: [design-learn-server/src/pipeline/index.js](design-learn-server/src/pipeline/index.js)
+- **MCP Tools**: [server/src/mcp/index.js](server/src/mcp/index.js)
+- **Storage**: [server/src/storage/index.js](server/src/storage/index.js)
+- **Pipeline**: [server/src/pipeline/index.js](server/src/pipeline/index.js)
 
 ---
 
@@ -271,7 +271,7 @@ curl http://localhost:3100/api/health # 测试端点
 Design-Learn/
 ├── chrome-extension/     # 浏览器插件（零依赖）
 ├── vscode-extension/     # VSCode 扩展
-├── design-learn-server/  # 后端服务
+├── server/  # 后端服务
 ├── data/                 # 数据存储
 │   ├── database.sqlite
 │   └── designs/

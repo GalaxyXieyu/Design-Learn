@@ -4,7 +4,7 @@
 # 
 # 使用方法：
 # 在 Trae 的 MCP Server 配置中，将 Command 设置为该脚本的绝对路径。
-# 例如：/Volumes/DATABASE/code/mcp/Design-Learn/design-learn-server/scripts/start-server.sh
+# 例如：/Volumes/DATABASE/code/mcp/Design-Learn/server/scripts/start-server.sh
 
 # 设置 Node 路径 (根据 `which node` 结果)
 NODE_PATH="/opt/homebrew/bin/node"

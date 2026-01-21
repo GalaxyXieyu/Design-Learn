@@ -828,7 +828,7 @@ Claude Code ───────┘    - /mcp (SSE/stdio)
                   <span class="codeblock__label">Server</span>
                   <button class="copy" type="button" data-copy-target="#server-start">Copy</button>
                 </div>
-                <pre id="server-start"><code>cd design-learn-server
+                <pre id="server-start"><code>cd server
 npm install
 node src/server.js</code></pre>
               </div>
@@ -844,7 +844,7 @@ node src/server.js</code></pre>
                   <span class="codeblock__label">MCP stdio</span>
                   <button class="copy" type="button" data-copy-target="#mcp-setup">Copy</button>
                 </div>
-                <pre id="mcp-setup"><code>claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/design-learn-server/src/stdio.js
+                <pre id="mcp-setup"><code>claude mcp add -s user design-learn -- node /YOUR/PATH/Design-Learn/server/src/stdio.js
 claude mcp list</code></pre>
               </div>
             </div>
@@ -1039,7 +1039,7 @@ npm run compile
             <pre id="repo-tree"><code>Design-Learn/
 ├── chrome-extension/      # Chrome 插件（零依赖）
 ├── vscode-extension/      # VSCode 扩展
-├── design-learn-server/   # 后端服务（Node.js + SQLite）
+├── server/   # 后端服务（Node.js + SQLite）
 ├── data/                  # 服务端数据目录（默认）
 ├── docs/                  # 设计文档与实现记录
 └── scripts/               # 工具脚本</code></pre>
@@ -1107,7 +1107,7 @@ npm run compile
           <details>
             <summary>better-sqlite3 报错？</summary>
             <div class="muted" style="margin-top: calc(3 * var(--G))">
-              在 <code>design-learn-server/</code> 目录执行 <code>npm rebuild better-sqlite3</code> 重新编译原生模块。
+              在 <code>server/</code> 目录执行 <code>npm rebuild better-sqlite3</code> 重新编译原生模块。
             </div>
           </details>
 

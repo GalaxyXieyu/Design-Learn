@@ -5,7 +5,7 @@
 
 ## 1. 背景与动机
 
-当前 UIPro 数据以 CSV 形式内置在 `design-learn-server/src/uipro/data/`，查询使用 Node 版 BM25（`design-learn-server/src/uipro/bm25.js`）。
+当前 UIPro 数据以 CSV 形式内置在 `server/src/uipro/data/`，查询使用 Node 版 BM25（`server/src/uipro/bm25.js`）。
 
 当出现以下需求时，SQLite/FTS5 可能更合适：
 
@@ -23,7 +23,7 @@
 
 **非目标**
 
-1. 本轮不修改 `design-learn-server/src/storage/sqliteStore.js` 的 `SCHEMA_VERSION`。
+1. 本轮不修改 `server/src/storage/sqliteStore.js` 的 `SCHEMA_VERSION`。
 2. 本轮不引入线上默认走 SQLite 查询；仍以 BM25 为默认实现。
 
 ## 3. 现状（BM25 + CSV）
@@ -31,11 +31,11 @@
 关键实现：
 
 - 数据目录优先级：`DESIGN_LEARN_UIPRO_DATA_DIR` > `${DESIGN_LEARN_DATA_DIR}/uipro/` > 内置 `src/uipro/data/`
-- BM25：`design-learn-server/src/uipro/bm25.js`
-- CSV 解析：`design-learn-server/src/uipro/csv.js`
-- Domain/Stack 配置：`design-learn-server/src/uipro/config.js`
+- BM25：`server/src/uipro/bm25.js`
+- CSV 解析：`server/src/uipro/csv.js`
+- Domain/Stack 配置：`server/src/uipro/config.js`
 
-基线 benchmark：`design-learn-server/scripts/benchmark-uipro.js`
+基线 benchmark：`server/scripts/benchmark-uipro.js`
 
 ## 4. SQLite/FTS5 方案草案
 
@@ -94,13 +94,13 @@
 运行：
 
 ```bash
-node design-learn-server/scripts/benchmark-uipro.js
+node server/scripts/benchmark-uipro.js
 ```
 
 可选：
 
 ```bash
-DESIGN_LEARN_UIPRO_DATA_DIR=./data/uipro node design-learn-server/scripts/benchmark-uipro.js --iterations 30
+DESIGN_LEARN_UIPRO_DATA_DIR=./data/uipro node server/scripts/benchmark-uipro.js --iterations 30
 ```
 
 ### 7.2 FTS5 对比（未来实现后）
@@ -113,8 +113,8 @@ DESIGN_LEARN_UIPRO_DATA_DIR=./data/uipro node design-learn-server/scripts/benchm
 
 ## 8. 参考
 
-- `design-learn-server/src/uipro/index.js:1`
-- `design-learn-server/src/uipro/config.js:1`
-- `design-learn-server/src/storage/sqliteStore.js:1`
-- `design-learn-server/scripts/benchmark-uipro.js:1`
+- `server/src/uipro/index.js:1`
+- `server/src/uipro/config.js:1`
+- `server/src/storage/sqliteStore.js:1`
+- `server/scripts/benchmark-uipro.js:1`
 
