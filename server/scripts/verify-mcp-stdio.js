@@ -7,6 +7,7 @@ const path = require('path');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 const { ListToolsResultSchema, CallToolResultSchema } = require('@modelcontextprotocol/sdk/types.js');
+const { createStorage } = require('../src/storage');
 
 function parseArgs(argv) {
   const args = {};
@@ -42,6 +43,37 @@ function createTempDataDir() {
   return fs.mkdtempSync(base);
 }
 
+async function seedData(dataDir) {
+  const storage = await createStorage({ dataDir });
+  try {
+    const design = await storage.createDesign({
+      name: 'Verify Landing',
+      url: 'http://127.0.0.1:4010/index.html',
+      source: 'verify',
+      metadata: { tags: ['verify'] },
+    });
+    const version = await storage.createVersion({
+      designId: design.id,
+      styleguideMarkdown: '',
+      rules: {},
+      snapshots: [
+        {
+          title: 'Verify Landing',
+          url: 'http://127.0.0.1:4010/index.html',
+          html: '<main><section class="hero">Hello Verify</section></main>',
+          css: '.hero { color: #123456; padding: 24px; }',
+          metadata: { viewport: { width: 1440, height: 900 } },
+          extractedAt: new Date().toISOString(),
+        },
+      ],
+      createdBy: 'verify',
+    });
+    return { design, version };
+  } finally {
+    storage.close();
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -52,6 +84,7 @@ async function main() {
   const serverRoot = path.resolve(__dirname, '..');
   const entry = args.stdioEntry ? path.resolve(serverRoot, args.stdioEntry) : path.join(serverRoot, 'src', 'stdio.js');
   const dataDir = createTempDataDir();
+  const seeded = await seedData(dataDir);
 
   const client = new Client({ name: 'design-learn-mcp-stdio-verify', version: '1.0.0' });
   const transport = new StdioClientTransport({
@@ -74,32 +107,13 @@ async function main() {
 
     console.log(`[mcp] tools: ${tools.tools.length}`);
     for (const name of [
-      'list_uipro_domains',
-      'list_uipro_stacks',
-      'search_uipro',
-      'search_uipro_stack',
+      'list_versions',
+      'get_version',
+      'save_design_analysis',
       'search_library',
     ]) {
       console.log(`[mcp] has ${name}: ${toolNames.has(name)}`);
     }
-
-    const result = await client.request(
-      {
-        method: 'tools/call',
-        params: { name: 'search_uipro', arguments: { query: 'glassmorphism', domain: 'style', limit: 1 } },
-      },
-      CallToolResultSchema
-    );
-    const text = result.content?.[0]?.text || '';
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = null;
-    }
-
-    console.log('[mcp] search_uipro parse_ok:', Boolean(parsed && typeof parsed === 'object'));
-    console.log('[mcp] search_uipro contains Glassmorphism:', /Glassmorphism/i.test(text));
 
     if (toolNames.has('search_library')) {
       const libraryResult = await client.request(
@@ -122,6 +136,43 @@ async function main() {
       console.log('[mcp] search_library designs_ok:', designsOk);
       console.log('[mcp] search_library uipro_ok:', uiproOk);
       console.log('[mcp] search_library uipro contains Glassmorphism:', /Glassmorphism/i.test(libraryText));
+    }
+
+    if (toolNames.has('get_version') && toolNames.has('save_design_analysis')) {
+      const versionResult = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'get_version',
+            arguments: { designId: seeded.design.id, snapshotLimit: 1, htmlLimit: 20, cssLimit: 20 },
+          },
+        },
+        CallToolResultSchema
+      );
+      const versionText = versionResult.content?.[0]?.text || '';
+      const versionPayload = JSON.parse(versionText);
+      console.log('[mcp] get_version design_match:', versionPayload.designId === seeded.design.id);
+      console.log('[mcp] get_version snapshot_count:', versionPayload.snapshotCount === 1);
+      console.log('[mcp] get_version html_truncated:', versionPayload.snapshots?.[0]?.htmlTruncated === true);
+
+      const saveResult = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'save_design_analysis',
+            arguments: {
+              designId: seeded.design.id,
+              styleguideMarkdown: '# Verify Report\n\n- hero uses accent color',
+              rules: { colors: ['#123456'] },
+              analysisSource: 'verify-script',
+            },
+          },
+        },
+        CallToolResultSchema
+      );
+      const saveText = saveResult.content?.[0]?.text || '';
+      const savePayload = JSON.parse(saveText);
+      console.log('[mcp] save_design_analysis saved:', savePayload.styleguideSaved === true);
     }
   } finally {
     try {

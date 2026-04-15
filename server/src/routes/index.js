@@ -1,4 +1,5 @@
 const { registerRootRoutes } = require('./root');
+const { registerAnalysisRoutes } = require('./analysis');
 const { registerImportRoutes } = require('./import');
 const { registerDesignRoutes } = require('./designs');
 const { registerVersionRoutes } = require('./versions');
@@ -12,6 +13,7 @@ const { registerScanRoutes } = require('./scanRoutes');
 
 function registerRoutes(router, deps) {
   registerRootRoutes(router, deps);
+  registerAnalysisRoutes(router, deps);
   registerImportRoutes(router, deps);
   registerConfigRoutes(router, deps);
   registerPromptTemplateRoutes(router, deps);
