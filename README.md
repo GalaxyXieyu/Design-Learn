@@ -115,7 +115,7 @@ Claude Code ───────┘    - SQLite + 文件存储
   "mcpServers": {
     "design-learn": {
       "command": "npx",
-      "args": ["-y", "design-learn-server", "design-learn-mcp"]
+      "args": ["-y", "-p", "design-learn-server", "design-learn-mcp"]
     }
   }
 }
@@ -201,6 +201,12 @@ Design-Learn/
 
 ## 更新日志
 
+**v3.1 (2026-04-15)**
+- 新增 `design-learn-server` 的 `npx`/npm 分发链路，可直接通过 npm 获取服务端与 MCP stdio CLI
+- 修正 Claude Code MCP 的 `npx` 调用方式，支持通过 `npx -y -p design-learn-server design-learn-mcp` 直接启动
+- VSCode 扩展在工作区缺少本地 server 时，支持回退到全局安装的 `design-learn-server`
+- 补充服务端 README 的 `npx` 启动说明，方便团队直接安装使用
+
 **v3.0 (2025-11-27)**
 - 新增提示词模板管理系统
 - 支持多版本模板保存
@@ -225,4 +231,4 @@ MIT License
 
 ## Author
 
-**GalaxyXieyu** | v3.0.0 | 2025-11-27
+**GalaxyXieyu** | v3.1.0 | 2026-04-15

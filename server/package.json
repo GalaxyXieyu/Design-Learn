@@ -1,6 +1,6 @@
 {
   "name": "design-learn-server",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": false,
   "description": "Design-Learn server skeleton for REST/WS/MCP routes",
   "main": "src/server.js",

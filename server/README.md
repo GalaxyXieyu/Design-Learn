@@ -17,7 +17,7 @@ npx design-learn-server --port 3000 --data-dir ./data
 ## MCP stdio (npx)
 
 ```bash
-npx design-learn-server design-learn-mcp
+npx -y -p design-learn-server design-learn-mcp
 ```
 
 Optional flags:

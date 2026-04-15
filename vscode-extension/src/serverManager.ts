@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -172,12 +172,22 @@ export class ServerManager implements vscode.Disposable {
     const entryTemplate = serverConfig.entry || '${workspaceFolder}/server/src/server.js';
     const cwdTemplate = serverConfig.cwd || '${workspaceFolder}/server';
 
-    const entry = entryTemplate.replace('${workspaceFolder}', workspaceRoot);
-    const cwd = cwdTemplate.replace('${workspaceFolder}', workspaceRoot);
+    let entry = entryTemplate.replace('${workspaceFolder}', workspaceRoot);
+    let cwd = cwdTemplate.replace('${workspaceFolder}', workspaceRoot);
 
+    // 如果工作区内没有服务器文件，尝试查找全局安装的 design-learn-server
     if (!fs.existsSync(entry)) {
-      vscode.window.showErrorMessage(`未找到服务入口文件: ${entry}`);
-      return null;
+      const globalEntry = this.findGlobalServerEntry();
+      if (globalEntry) {
+        this.output.appendLine(`[server] 使用全局安装的 design-learn-server: ${globalEntry}`);
+        entry = globalEntry;
+        cwd = path.dirname(entry);
+      } else {
+        vscode.window.showErrorMessage(
+          `未找到服务入口文件: ${entry}\n\n提示: 可以通过 npm install -g design-learn-server 全局安装，或在设置中配置 designLearn.server.entry`
+        );
+        return null;
+      }
     }
 
     return {
@@ -187,5 +197,73 @@ export class ServerManager implements vscode.Disposable {
       nodePath: serverConfig.nodePath,
       dataDir: serverConfig.dataDir
     };
+  }
+
+  /**
+   * 查找全局安装的 design-learn-server 入口文件
+   */
+  private findGlobalServerEntry(): string | null {
+    // 方法1: 尝试通过 npm root -g 获取全局 node_modules 路径
+    try {
+      const globalRoot = execSync('npm root -g', { encoding: 'utf-8', timeout: 5000 }).trim();
+      const globalEntry = path.join(globalRoot, 'design-learn-server', 'src', 'server.js');
+      if (fs.existsSync(globalEntry)) {
+        return globalEntry;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 方法2: 检查常见的全局安装路径
+    const possiblePaths = this.getCommonGlobalPaths();
+    for (const basePath of possiblePaths) {
+      const entry = path.join(basePath, 'design-learn-server', 'src', 'server.js');
+      if (fs.existsSync(entry)) {
+        return entry;
+      }
+    }
+
+    // 方法3: 尝试通过 npx 解析包路径
+    try {
+      const result = execSync('npm list -g design-learn-server --parseable 2>/dev/null || true', {
+        encoding: 'utf-8',
+        timeout: 5000
+      }).trim();
+      if (result) {
+        const entry = path.join(result, 'src', 'server.js');
+        if (fs.existsSync(entry)) {
+          return entry;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
+  }
+
+  /**
+   * 获取常见的全局 node_modules 路径
+   */
+  private getCommonGlobalPaths(): string[] {
+    const home = process.env.HOME || process.env.USERPROFILE || '';
+    const isWindows = process.platform === 'win32';
+
+    if (isWindows) {
+      const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+      return [
+        path.join(appData, 'npm', 'node_modules'),
+        path.join(home, 'AppData', 'Local', 'npm', 'node_modules'),
+        'C:\\Program Files\\nodejs\\node_modules',
+        'C:\\Program Files (x86)\\nodejs\\node_modules',
+      ];
+    } else {
+      return [
+        '/usr/local/lib/node_modules',
+        '/usr/lib/node_modules',
+        path.join(home, '.npm-global', 'lib', 'node_modules'),
+        path.join(home, '.nvm', 'versions', 'node', process.version, 'lib', 'node_modules'),
+      ];
+    }
   }
 }
