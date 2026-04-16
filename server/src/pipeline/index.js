@@ -1,7 +1,5 @@
 const { EventEmitter } = require('events');
 const { randomUUID } = require('crypto');
-const path = require('path');
-const { pathToFileURL } = require('url');
 const { ensurePlaywrightInstalled, loadPlaywright } = require('../playwrightSupport');
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -295,11 +293,9 @@ async function extractWithPlaywright(url, options = {}, report) {
     onProgress: (message) => report(8, message),
   });
 
-  const extractorPath = path.resolve(__dirname, '../../../scripts/lib/extractor.js');
   let extractPage;
   try {
-    const extractorModule = await import(pathToFileURL(extractorPath).href);
-    extractPage = extractorModule.extractPage;
+    ({ extractPage } = require('./extractor'));
   } catch (error) {
     throw new Error('extractor_script_missing');
   }

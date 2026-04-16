@@ -74,7 +74,7 @@ curl -X POST http://localhost:3000/api/import/url \\
   -d '{\"url\":\"https://example.com\"}'
 ```
 
-If `playwright` or `scripts/lib/extractor.js` is missing, the job will fail with `playwright_not_installed` or `extractor_script_missing`.
+If `playwright` or the bundled `src/pipeline/extractor.js` is missing, the job will fail with `playwright_not_installed` or `extractor_script_missing`.
 
 ### Progress stream
 
